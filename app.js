@@ -1,110 +1,86 @@
-
 (async()=>{
-const root=document.getElementById('aspen-overnight');
-const el=id=>root.querySelector('#'+id);
-let data, inventory;
-try {
- const load=async path=>{const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error(path);return r.json();};
- [data,inventory]=await Promise.all([load('./map-data.json'),load('./overnight-options.json')]);
- if(inventory.schema_version!==1 || !Array.isArray(inventory.places))throw new Error('Inventory format');
- const ids=new Set();
- for(const p of inventory.places){
-  if(!/^[a-z0-9_-]+$/.test(p.id)||ids.has(p.id)||!Array.isArray(p.coordinates)||p.coordinates.length!==2||!p.coordinates.every(Number.isFinite)||Math.abs(p.coordinates[0])>180||Math.abs(p.coordinates[1])>90)throw new Error('Invalid location');
-  ids.add(p.id);
-  for(const url of [p.source,p.mapSource,p.access?.evidence?.source_url].filter(Boolean))if(!['https:','http:'].includes(new URL(url).protocol))throw new Error('Invalid source');
- }
- data.places=inventory.places;
- el('ap-source-status').textContent=inventory.notice;
-} catch(error) {
- el('ap-loading').textContent='Location data could not load. Refresh to retry.';
- el('ap-source-status').textContent='Data unavailable. No locations or permissions can be evaluated.';
- return;
+'use strict';
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const mobile=()=>matchMedia('(max-width:760px)').matches;
+let map,markers,baseLayer,data,inventory,places=[],kind='all',selected=null;
+let trip={resort:'aspen',arrive:'2027-01-15',depart:'2027-01-17',vehicle:'passenger_car'},plan={a:null,b:null};
+const storageKey='ohvernight-trip-v1';
+function controlsReady(ready){document.querySelectorAll('button').forEach(b=>{if(b.id!=='sheet-toggle')b.disabled=!ready;});}
+controlsReady(false);
+try{const saved=JSON.parse(localStorage.getItem(storageKey)||'null');if(saved){trip={...trip,...saved.trip};plan={...plan,...saved.plan};}}catch{}
+function persist(){try{localStorage.setItem(storageKey,JSON.stringify({trip,plan}));}catch{}}
+const ll=p=>[p.coordinates[1],p.coordinates[0]];
+const resort=()=>data.resorts.find(r=>r.id===trip.resort);
+const distance=p=>map?map.distance(ll(p),ll(resort()))/1609.344:null;
+const distanceText=p=>distance(p)===null?'Distance unavailable':distance(p).toFixed(1)+' mi direct';
+const type=p=>({campground:'CAMPGROUND',dispersed:'DISPERSED AREA',lodging:'ROOM BACKUP'}[p.kind]||'LOCATION');
+const visible=()=>places.filter(p=>(kind==='all'||p.kind===kind)&&($('show-conflicts').checked||p.status!=='excluded'));
+function expand(value){$('sheet').classList.toggle('expanded',value);document.body.classList.toggle('sheet-open',value);$('sheet-toggle').setAttribute('aria-expanded',String(value));$('sheet-action').textContent=value?'More map ↓':'Expand ↑';}
+$('sheet-toggle').addEventListener('click',()=>expand(!$('sheet').classList.contains('expanded')));
+function fillTrip(){for(const key of ['resort','arrive','depart','vehicle'])$(key).value=trip[key];}
+$('edit-trip').onclick=()=>{fillTrip();$('trip-error').hidden=true;$('trip-dialog').showModal();};
+$('close-trip').onclick=()=>$('trip-dialog').close();
+$('trip-form').onsubmit=event=>{event.preventDefault();const next=Object.fromEntries(['resort','arrive','depart','vehicle'].map(k=>[k,$(k).value]));if(!TripRules.tripDays(next.arrive,next.depart)){$('trip-error').textContent='Choose a departure after arrival, within 366 nights.';$('trip-error').hidden=false;return;}trip=next;persist();$('trip-dialog').close();render();fit();};
+function setKind(value){kind=value;document.querySelectorAll('[data-kind]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.kind===value)));render();}
+document.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>setKind(b.dataset.kind));
+$('show-conflicts').onchange=()=>render();
+function selectedDetails(){
+ const p=places.find(p=>p.id===selected);
+ if(!p){$('detail').innerHTML='';return;}
+ const directions='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(p.coordinates[1]+','+p.coordinates[0]);
+ const listingLabel=p.kind==='lodging'?'Official site & booking ↗':'Official listing & camping details ↗';
+ $('detail').innerHTML='<span class="eyebrow">'+esc(type(p))+'</span><h2>'+esc(p.name)+'</h2><a class="official-link" href="'+esc(p.source)+'" target="_blank" rel="noopener noreferrer">'+listingLabel+'</a><span class="status '+(p.status==='excluded'?'conflict':'')+'">'+esc(p.label)+'</span><p class="why">'+esc(p.tripNote)+'</p><p>'+esc(p.note)+'</p><h3>Before you commit</h3><ul>'+p.unknowns.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul><div class="actions"><button data-save="a" aria-pressed="'+(plan.a===p.id)+'">'+(plan.a===p.id?'Saved as Plan A':'Save as Plan A')+'</button><button data-save="b" aria-pressed="'+(plan.b===p.id)+'">'+(plan.b===p.id?'Saved as backup':'Save as backup')+'</button></div><p class="muted">Saving a place does not confirm it is suitable or available.</p><div class="links"><a href="'+directions+'" target="_blank" rel="noopener noreferrer">Open directions ↗</a><span>'+esc(distanceText(p))+' to '+esc(resort().name)+'</span></div><details><summary>Evidence, location accuracy & review date</summary><p>Listing reviewed '+esc(p.checked_on)+'. '+esc(p.locationBasis)+'.</p><p><a href="'+esc(p.mapSource)+'" target="_blank" rel="noopener noreferrer">Location source ↗</a></p>'+(p.access?'<p><a href="'+esc(p.access.evidence.source_url)+'" target="_blank" rel="noopener noreferrer">USFS vehicle designation ↗</a> · '+esc(p.access.id)+' · retrieved '+esc(p.access.evidence.retrieved_at.slice(0,10))+'</p>':'')+'<p>Distances are straight-line, not driving distances. Directions may not reflect closures or permission to use the approach.</p></details>';
+ $('detail').querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>{const slot=b.dataset.save,other=slot==='a'?'b':'a';plan[slot]=plan[slot]===p.id?null:p.id;if(plan[other]===p.id)plan[other]=null;persist();renderPlan();selectedDetails();});
 }
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let destination='aspen',selected='difficult',projection,zoom,camera,width=0,height=0,validDates=true;
-const design={panel:'side',minorRoads:true};
-const currentResort=()=>data.resorts.find(r=>r.id===destination);
-const currentPlace=()=>data.places.find(p=>p.id===selected);
-const visiblePlaces=()=>data.places.filter(p=>(el('ap-kind').value==='all'||p.kind===el('ap-kind').value)&&(p.status!=='excluded'||el('ap-show-excluded').checked));
-const distance=p=>typeof d3==='undefined'?null:d3.geoDistance(p.coordinates,currentResort().coordinates)*3958.7613;
-const distanceText=p=>distance(p)===null?'Map distance unavailable':distance(p).toFixed(1)+' mi straight line';
-function dates(){
- const start=el('ap-arrive').value,end=el('ap-depart').value;
- validDates=Boolean(TripRules.tripDays(start,end));
- el('ap-error').hidden=validDates;
- el('ap-error').textContent='Choose a departure after arrival, within 366 nights.';
- const fmt=s=>new Date(s+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
- el('ap-trip-summary').textContent=validDates?fmt(start)+' – '+fmt(end):'Check your dates';
+function renderPlan(){
+ const rows=['a','b'].map(slot=>{const p=places.find(p=>p.id===plan[slot]);return p?'<div class="plan-row"><span><strong>'+ (slot==='a'?'PLAN A':'BACKUP')+'</strong> · '+esc(p.name)+'<small>'+esc(p.label)+'</small></span><button data-open-plan="'+p.id+'" aria-label="View '+esc(p.name)+'">View</button><button data-clear="'+slot+'" aria-label="Remove '+(slot==='a'?'Plan A':'backup')+'">×</button></div>':'';}).join('');
+ $('saved-plan').innerHTML=rows?'<h2>Your overnight plan</h2>'+rows+'<p class="plan-note">Saved on this device · still needs confirmation</p>':'';
+ $('saved-plan').querySelectorAll('[data-open-plan]').forEach(b=>b.onclick=()=>{setKind('all');$('show-conflicts').checked=true;choose(b.dataset.openPlan);});
+ $('saved-plan').querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>{plan[b.dataset.clear]=null;persist();renderPlan();selectedDetails();});
 }
-function details(){
- const p=currentPlace(),r=currentResort();
- if(!p){el('ap-detail').innerHTML='<p>No locations match these filters. Try another category or show mismatches.</p>';return;}
- el('ap-detail').innerHTML='<h3>'+esc(p.name)+'</h3><span class="ap-status '+(p.status==='excluded'?'blocked':'')+'">'+esc(p.label)+'</span><dl><dt>Relative to '+esc(r.name)+'</dt><dd>'+esc(distanceText(p))+'</dd><dt>Road distance / drive time</dt><dd>Not calculated</dd><dt>For your dates and vehicle</dt><dd>'+esc(p.tripNote)+'</dd></dl><p>'+esc(p.note)+'</p><p><strong>Still to confirm:</strong> '+esc(p.unknowns.join(' · '))+'</p><details><summary>Sources and last review</summary><p><a target="_blank" rel="noopener noreferrer" href="'+esc(p.source)+'">Official listing / booking information</a></p><p>Listing reviewed '+esc(p.checked_on)+'. This does not confirm availability or current conditions.</p>'+(p.access?'<p><a target="_blank" rel="noopener noreferrer" href="'+esc(p.access.evidence.source_url)+'">USFS vehicle designation</a> · '+esc(p.access.id)+' · retrieved '+esc(p.access.evidence.retrieved_at.slice(0,10))+'</p>':'')+'<p><a target="_blank" rel="noopener noreferrer" href="'+esc(p.mapSource)+'">Location source</a> · '+esc(p.locationBasis)+'.</p></details>';
+function render(){
+ places=inventory.places.map(p=>TripRules.evaluate(p,trip));
+ const shown=visible().sort((a,b)=>(a.status==='excluded')-(b.status==='excluded') || (distance(a)||0)-(distance(b)||0));
+ if(!shown.some(p=>p.id===selected))selected=shown[0]?.id||null;
+ const conflicts=places.filter(p=>p.status==='excluded').length;
+ $('results-summary').textContent=places.length+' sourced places · '+conflicts+' date / vehicle conflicts';
+ const fmt=s=>new Date(s+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'});
+ $('trip-caption').textContent=resort().name+' · '+fmt(trip.arrive)+'–'+fmt(trip.depart);
+ $('trip-insight').innerHTML='<strong>No confirmed vehicle overnights yet.</strong><span>'+conflicts+(conflicts===1?' place conflicts':' places conflict')+' with this trip. Other camping options still need access and permission checks.</span><br><button class="text-button" id="room-backups">Explore a room backup →</button>';
+ $('room-backups').onclick=()=>{setKind('lodging');expand(true);};
+ $('list').innerHTML=shown.length?shown.map(p=>'<button class="place-card" data-place="'+p.id+'" aria-pressed="'+(p.id===selected)+'"><span class="card-top"><span>'+esc(type(p))+'</span><span class="distance">'+esc(distanceText(p))+'</span></span><h3>'+esc(p.name)+'</h3><span class="status '+(p.status==='excluded'?'conflict':'')+'">'+esc(p.label)+'</span></button>').join(''):'<p class="empty">No places match. Try another stay type or include conflicts.</p>';
+ $('list').querySelectorAll('[data-place]').forEach(b=>b.onclick=()=>choose(b.dataset.place));
+ renderPlan();selectedDetails();renderMarkers();
 }
-function list(){
- el('ap-list').innerHTML=visiblePlaces().map(p=>'<button class="ap-choice" type="button" data-place="'+p.id+'" aria-pressed="'+(selected===p.id)+'"><strong>'+p.number+'. '+esc(p.name)+'</strong><span>'+esc(p.label)+' · '+esc(distanceText(p))+'</span></button>').join('');
+function choose(id){selected=id;render();const p=places.find(p=>p.id===selected);if(p&&map){expand(false);map.panTo(ll(p),{animate:!matchMedia('(prefers-reduced-motion:reduce)').matches});}if(mobile())expand(true);$('detail').scrollIntoView({block:'start',behavior:'instant'});}
+function renderMarkers(){
+ if(!map)return;markers.clearLayers();
+ for(const r of data.resorts){const marker=L.marker(ll(r),{icon:L.divIcon({className:'pin resort',html:'<span class="pin-badge">'+esc(r.symbol)+'</span>',iconSize:[44,44],iconAnchor:[18,18]}),title:r.name,keyboard:true}).addTo(markers);marker.bindTooltip(esc(r.name),{permanent:r.id===trip.resort,direction:'right',offset:[14,0],className:'map-label'});marker.on('click',()=>{trip.resort=r.id;persist();render();});}
+ for(const p of visible()){const marker=L.marker(ll(p),{icon:L.divIcon({className:'pin '+(p.status==='excluded'?'conflict ':'')+(p.id===selected?'active':''),html:'<span class="pin-badge">'+(p.kind==='lodging'?'R':p.number)+'</span>',iconSize:[44,44],iconAnchor:[18,18]}),title:p.name+': '+p.label,keyboard:true,zIndexOffset:p.id===selected?1000:0}).addTo(markers);marker.bindTooltip(esc(p.name),{direction:'top',offset:[0,-20],className:'map-label'});marker.on('click',()=>choose(p.id));}
 }
-function pinMarkup(){
- el('ap-pins').innerHTML=data.resorts.map(r=>'<button class="ap-pin ap-resort" type="button" data-resort="'+r.id+'" aria-label="Select '+esc(r.name)+'" aria-pressed="'+(destination===r.id)+'"><span class="ap-marker">'+r.symbol+'</span><span class="ap-pinlabel">'+esc(r.name)+'</span></button>').join('')+visiblePlaces().map(p=>'<button class="ap-pin ap-place '+(p.status==='excluded'?'ap-excluded':'')+'" type="button" data-place="'+p.id+'" aria-label="Select '+esc(p.name)+': '+esc(p.label)+'" aria-pressed="'+(selected===p.id)+'"><span class="ap-marker">'+p.number+'</span>'+(selected===p.id?'<span class="ap-pinlabel">'+esc(p.name)+'</span>':'')+'</button>').join('');
- positionPins();
+function fit(){if(!map||!data)return;expand(false);map.invalidateSize();map.fitBounds(data.resorts.concat(inventory.places).map(ll),{paddingTopLeft:mobile()?[38,135]:[440,110],paddingBottomRight:mobile()?[40,Math.max(innerHeight*.30,205)+80]:[70,80],maxZoom:13,animate:false});}
+function switchMap(mode){
+ if(!map)return;if(baseLayer)map.removeLayer(baseLayer);
+ const service=mode==='satellite'?'USGSImageryOnly':'USGSTopo';
+ let failures=0;
+ baseLayer=L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/'+service+'/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16,maxZoom:19,minZoom:5,attribution:'Imagery / map: <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map" target="_blank" rel="noopener noreferrer">USGS The National Map</a>',keepBuffer:1});
+ baseLayer.on('tileerror',()=>{failures++;if(failures>=3){$('map-status').textContent='Some map tiles could not load. Try the other map style or check your connection. Place details remain available.';$('map-status').hidden=false;}});
+ baseLayer.on('tileload',()=>{if(failures<3)$('map-status').hidden=true;});baseLayer.addTo(map);
+ for(const id of ['satellite','terrain'])$(id).setAttribute('aria-pressed',String((mode==='satellite')===(id==='satellite')));
 }
-function positionPins(){
- if(!projection||!camera)return;
- for(const button of el('ap-pins').querySelectorAll('button')){
-  const record=button.dataset.resort?data.resorts.find(p=>p.id===button.dataset.resort):data.places.find(p=>p.id===button.dataset.place);
-  const point=camera.apply(projection(record.coordinates));
-  button.style.transform='translate('+(point[0]-22)+'px,'+(point[1]-22)+'px)';
-  button.hidden=point[0]<0||point[1]<0||point[0]>width||point[1]>height;
-  const label=button.querySelector('.ap-pinlabel');
-  if(label){label.style.left=point[0]<100?'0':point[0]>width-100?'100%':'50%';label.style.transform=point[0]<100?'none':point[0]>width-100?'translateX(-100%)':'translateX(-50%)';}
- }
- const a=projection.invert(camera.invert([30,height-25])),b=projection.invert(camera.invert([130,height-25]));
- const miles=d3.geoDistance(a,b)*3958.7613;
- const step=[.1,.25,.5,1,2,5,10].filter(n=>n<=miles).pop()||.1;
- el('ap-scale').innerHTML='<span style="width:'+(100*step/miles).toFixed(1)+'px"></span>'+step+' mi';
-}
-function draw(){
- if(typeof d3==='undefined')return;
- width=el('ap-map').clientWidth;height=el('ap-map').clientHeight;
- if(!width||!height)return;
- const fitCoordinates=data.resorts.concat(data.places).map(p=>p.coordinates);
- const horizontalPadding=width<480?20:35;
- projection=d3.geoMercator().fitExtent([[horizontalPadding,65],[width-horizontalPadding,height-45]],{type:'MultiPoint',coordinates:fitCoordinates});
- const path=d3.geoPath(projection);
- const svg=d3.select(el('ap-svg')).attr('viewBox','0 0 '+width+' '+height);
- const base=d3.select(el('ap-geography'));base.selectAll('*').remove();
- base.append('g').selectAll('path').data(data.waterways.features).join('path').attr('d',path).attr('fill','none').attr('stroke','var(--ap-river)').attr('stroke-width',1.4).attr('vector-effect','non-scaling-stroke');
- const main=data.roads.features.filter(f=>f.properties.kind==='major');
- if(design.minorRoads)base.append('g').selectAll('path').data(data.roads.features.filter(f=>f.properties.kind==='minor')).join('path').attr('d',path).attr('fill','none').attr('stroke','var(--ap-road)').attr('stroke-width',.8).attr('vector-effect','non-scaling-stroke');
- base.append('g').selectAll('path').data(main).join('path').attr('d',path).attr('fill','none').attr('stroke','var(--ap-casing)').attr('stroke-width',6).attr('vector-effect','non-scaling-stroke');
- base.append('g').selectAll('path').data(main).join('path').attr('d',path).attr('fill','none').attr('stroke','var(--ap-major)').attr('stroke-width',2.5).attr('vector-effect','non-scaling-stroke');
- if(!zoom){
-  camera=d3.zoomIdentity;
-  zoom=d3.zoom().scaleExtent([1,6]).filter(event=>event.type==='wheel'?event.ctrlKey:(!event.button)).on('zoom',event=>{camera=event.transform;base.attr('transform',camera);positionPins();});
-  svg.call(zoom).on('dblclick.zoom',null);
- }
- zoom.extent([[0,0],[width,height]]).translateExtent([[-width*.4,-height*.4],[width*1.4,height*1.4]]);
- svg.call(zoom.transform,camera);
- el('ap-loading').hidden=true;
- positionPins();
-}
-function refresh(){
- dates();
- const trip={arrive:el('ap-arrive').value,depart:el('ap-depart').value,vehicle:el('ap-vehicle').value};
- data.places=inventory.places.map(p=>TripRules.evaluate(p,trip));
- if(!visiblePlaces().some(p=>p.id===selected))selected=visiblePlaces()[0]?.id||null;
- list();details();pinMarkup();
-}
-function chooseResort(id){destination=id;el('ap-resort').value=id;refresh();if(zoom)d3.select(el('ap-svg')).call(zoom.transform,d3.zoomIdentity);}
-function choosePlace(id){selected=id;refresh();if(zoom){const point=camera.apply(projection(currentPlace().coordinates));if(point[0]<24||point[1]<24||point[0]>width-24||point[1]>height-24)d3.select(el('ap-svg')).call(zoom.transform,d3.zoomIdentity);}}
-root.addEventListener('click',event=>{const button=event.target.closest('button');if(!button)return;const scope=button.classList.contains('ap-pin')?'#ap-pins':'#ap-list';if(button.dataset.resort){const id=button.dataset.resort;chooseResort(id);root.querySelector('#ap-pins [data-resort="'+id+'"]').focus({preventScroll:true});}else if(button.dataset.place){const id=button.dataset.place;choosePlace(id);root.querySelector(scope+' [data-place="'+id+'"]').focus({preventScroll:true});}});
-el('ap-resort').addEventListener('change',()=>chooseResort(el('ap-resort').value));
-el('ap-arrive').addEventListener('change',refresh);el('ap-depart').addEventListener('change',refresh);
-for(const id of ['ap-show-excluded','ap-vehicle','ap-kind'])el(id).addEventListener('change',refresh);
-el('ap-in').addEventListener('click',()=>{if(zoom)d3.select(el('ap-svg')).call(zoom.scaleBy,1.6);});
-el('ap-out').addEventListener('click',()=>{if(zoom)d3.select(el('ap-svg')).call(zoom.scaleBy,1/1.6);});
-el('ap-fit').addEventListener('click',()=>{if(zoom)d3.select(el('ap-svg')).call(zoom.transform,d3.zoomIdentity);});
-refresh();
-if(typeof d3==='undefined'){el('ap-loading').textContent='Map library unavailable. The place list and source links remain available.';for(const id of ['ap-in','ap-out','ap-fit'])el(id).disabled=true;}
-else{draw();new ResizeObserver(draw).observe(el('ap-map'));}
+try{
+ const load=async path=>{const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw Error('Location data unavailable');return r.json();};
+ [data,inventory]=await Promise.all([load('./destinations.json'),load('./overnight-options.json')]);
+ if(inventory.schema_version!==1||!Array.isArray(inventory.places)||!Array.isArray(data.resorts))throw Error('Invalid location data');
+ const ids=new Set();for(const p of inventory.places){if(!/^[a-z0-9_-]+$/.test(p.id)||ids.has(p.id)||!Array.isArray(p.coordinates)||p.coordinates.length!==2||!p.coordinates.every(Number.isFinite)||Math.abs(p.coordinates[0])>180||Math.abs(p.coordinates[1])>90)throw Error('Invalid location');ids.add(p.id);for(const url of [p.source,p.mapSource,p.access?.evidence?.source_url].filter(Boolean))if(!['https:','http:'].includes(new URL(url).protocol))throw Error('Invalid source');}
+ if(!data.resorts.some(r=>r.id===trip.resort))trip.resort='aspen';
+ if(!TripRules.tripDays(trip.arrive,trip.depart)){trip.arrive='2027-01-15';trip.depart='2027-01-17';}
+ if(!['passenger_car','high_clearance','motorhome'].includes(trip.vehicle))trip.vehicle='passenger_car';
+ for(const slot of ['a','b'])if(!ids.has(plan[slot]))plan[slot]=null;
+ if(typeof L!=='undefined'){
+ map=L.map('map',{zoomControl:false,minZoom:5,maxZoom:19,preferCanvas:true}).setView([39.18,-106.83],12);markers=L.layerGroup().addTo(map);L.control.scale({position:'bottomleft',imperial:true,metric:false}).addTo(map);switchMap('satellite');
+ }else{$('map-status').textContent='Map library unavailable. You can still compare places below.';$('map-status').hidden=false;}
+ $('satellite').onclick=()=>switchMap('satellite');$('terrain').onclick=()=>switchMap('terrain');$('fit').onclick=fit;$('zoom-in').onclick=()=>map?.zoomIn();$('zoom-out').onclick=()=>map?.zoomOut();
+ render();fit();fillTrip();controlsReady(true);if(!map)for(const id of ['satellite','terrain','fit','zoom-in','zoom-out'])$(id).disabled=true;window.addEventListener('resize',()=>{map?.invalidateSize();});
+}catch(error){controlsReady(false);$('results-summary').textContent='Location data could not load.';$('list').innerHTML='<p class="empty">Refresh to retry. No places can be evaluated until the location data loads.</p>';$('map-status').textContent='Location data unavailable. Refresh to retry.';$('map-status').hidden=false;}
 })();

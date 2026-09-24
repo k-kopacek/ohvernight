@@ -1,122 +1,27 @@
 <!doctype html>
 <html lang="en"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Explore sourced campgrounds, a dispersed camping area and a room backup near Aspen Snowmass. Compare date and vehicle limitations.">
-<meta name="robots" content="noindex,nofollow">
-<meta name="color-scheme" content="light dark">
-<title>Overnight · Aspen Snowmass</title>
-<link rel="icon" href="data:,">
-<style>html{color-scheme:light dark;background:light-dark(#f2f6f8,#111e28)}body{margin:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}#aspen-overnight{max-width:1440px;margin:auto;min-height:100vh}@media(pointer:coarse){#aspen-overnight .ap-mapnav button{min-height:44px;min-width:44px}#aspen-overnight .ap-checkbox{min-height:44px}}</style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Find an overnight plan near Aspen Snowmass. Compare vehicle access, seasonal restrictions and room backups on a satellite map.">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#20241e">
+<title>ohvernight — Stay close. Know before you go.</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="./vendor/leaflet.css"><link rel="stylesheet" href="./styles.css">
 </head><body>
-<noscript>This map needs JavaScript to load overnight-options.json and evaluate your trip. No confirmed winter vehicle-sleeping options are listed.</noscript>
-<div id="aspen-overnight" aria-label="Aspen overnight planner map concept">
-<style>
-#aspen-overnight{color-scheme:light dark;--ap-bg:light-dark(#f2f6f8,#111e28);--ap-panel:light-dark(#fff,#1a2b36);--ap-map:light-dark(#e7f0ed,#1b302e);--ap-ink:light-dark(#163544,#ecf4f7);--ap-sub:light-dark(#526974,#b1c6ce);--ap-line:light-dark(#c5d5dc,#405b67);--ap-blue:light-dark(#0c597c,#96d8f7);--ap-selected:light-dark(#e8f3fa,#263f50);--ap-amber:light-dark(#7c4c0b,#ffcf91);--ap-amber-bg:light-dark(#fff1d7,#413324);--ap-red:light-dark(#943e3b,#ffb5ae);--ap-red-bg:light-dark(#fae8e5,#4d292a);--ap-road:light-dark(#abb9ae,#667967);--ap-casing:light-dark(#f8fbf3,#253d37);--ap-major:light-dark(#788d79,#96ab92);--ap-river:light-dark(#83bfcf,#416e84);font:400 16px/1.5 system-ui,sans-serif;color:var(--ap-ink);background:var(--ap-bg);border:1px solid var(--ap-line);border-radius:14px;overflow:hidden}
-#aspen-overnight *{box-sizing:border-box}
-#aspen-overnight h2,#aspen-overnight h3,#aspen-overnight p{margin:0}
-#aspen-overnight h2{font:500 22px/1.3 system-ui,sans-serif}
-#aspen-overnight h3{font:500 18px/1.35 system-ui,sans-serif}
-#aspen-overnight button,#aspen-overnight input,#aspen-overnight select{font:inherit;color:inherit}
-#aspen-overnight button{cursor:pointer}
-#aspen-overnight .ap-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:18px 22px;background:var(--ap-panel);border-bottom:1px solid var(--ap-line)}
-#aspen-overnight .ap-brand{font-size:20px;font-weight:500;letter-spacing:-.5px}
-#aspen-overnight .ap-region{font-size:14px;color:var(--ap-sub)}
-#aspen-overnight .ap-controls{display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(130px,1fr) minmax(130px,1fr);gap:16px;padding:18px 22px;background:var(--ap-panel)}
-#aspen-overnight label.ap-field{display:block;font-size:14px;font-weight:500;min-width:0}
-#aspen-overnight .ap-field input,#aspen-overnight .ap-field select{display:block;width:100%;height:44px;min-width:0;border:1px solid var(--ap-line);border-radius:7px;padding:8px 10px;margin-top:5px;background:var(--ap-panel);font-size:16px;font-weight:400}
-#aspen-overnight .ap-notice{padding:10px 22px;background:var(--ap-amber-bg);color:var(--ap-amber);font-size:14px}
-#aspen-overnight .ap-work{display:grid;grid-template-columns:minmax(0,1fr) 300px;align-items:start}
-#aspen-overnight .ap-map-area{min-width:0;position:relative}
-#aspen-overnight .ap-map{height:500px;position:relative;overflow:hidden;background:var(--ap-map);isolation:isolate}
-#aspen-overnight .ap-map svg{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
-#aspen-overnight .ap-map svg:active{cursor:grabbing}
-#aspen-overnight .ap-pins{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-#aspen-overnight .ap-pin{position:absolute;left:0;top:0;display:flex;align-items:center;justify-content:center;min-width:44px;width:44px;height:44px;pointer-events:auto;border:0;background:transparent;padding:0}
-#aspen-overnight .ap-pin .ap-marker{display:flex;align-items:center;justify-content:center;width:29px;height:29px;border-radius:50%;background:var(--ap-amber-bg);color:var(--ap-amber);border:2px solid var(--ap-amber);font-size:14px;font-weight:500;box-shadow:0 1px 4px #0003}
-#aspen-overnight .ap-pin.ap-resort .ap-marker{border-radius:6px;color:var(--ap-blue);border-color:var(--ap-blue);background:var(--ap-panel)}
-#aspen-overnight .ap-pin.ap-resort[aria-pressed="true"] .ap-marker{color:var(--ap-panel);background:var(--ap-blue)}
-#aspen-overnight .ap-pin.ap-excluded .ap-marker{color:var(--ap-red);border-color:var(--ap-red);background:var(--ap-red-bg)}
-#aspen-overnight .ap-pin.ap-place[aria-pressed="true"] .ap-marker{outline:3px solid var(--ap-panel);box-shadow:0 0 0 5px var(--ap-ink)}
-#aspen-overnight .ap-pin .ap-pinlabel{position:absolute;top:36px;left:50%;transform:translateX(-50%);color:var(--ap-ink);font-size:13px;font-weight:500;white-space:nowrap;text-shadow:0 1px 1px var(--ap-map),1px 0 1px var(--ap-map),-1px 0 1px var(--ap-map),0 -1px 1px var(--ap-map);pointer-events:none}
-#aspen-overnight .ap-pin.ap-place .ap-pinlabel{top:auto;bottom:38px}
-#aspen-overnight .ap-mapnav{position:absolute;right:12px;top:12px;display:flex;gap:6px;align-items:center}
-#aspen-overnight .ap-mapnav button{height:40px;min-width:40px;padding:6px 12px;border:1px solid var(--ap-line);background:var(--ap-panel);border-radius:6px;color:var(--ap-ink);font-size:14px}
-#aspen-overnight .ap-north{position:absolute;left:16px;top:14px;font-size:14px;font-weight:500;color:var(--ap-sub);pointer-events:none}
-#aspen-overnight .ap-scale{position:absolute;bottom:12px;left:16px;font-size:12px;color:var(--ap-ink);pointer-events:none}
-#aspen-overnight .ap-scale span{display:block;border:1px solid var(--ap-ink);border-top:0;height:6px;margin-bottom:2px}
-#aspen-overnight .ap-loading{position:absolute;left:20px;top:65px;color:var(--ap-sub);font-size:14px;background:var(--ap-panel);padding:8px 12px;border-radius:6px}
-#aspen-overnight .ap-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;padding:12px 18px;background:var(--ap-panel);font-size:13px;border-top:1px solid var(--ap-line);border-bottom:1px solid var(--ap-line)}
-#aspen-overnight .ap-legend span{display:inline-flex;align-items:center;gap:6px}
-#aspen-overnight .ap-key{width:12px;height:12px;display:inline-block;border:2px solid currentColor;border-radius:50%}
-#aspen-overnight .ap-key.mountain{border-radius:2px;color:var(--ap-blue)}
-#aspen-overnight .ap-key.review{color:var(--ap-amber);background:var(--ap-amber-bg)}
-#aspen-overnight .ap-key.excluded{color:var(--ap-red);background:var(--ap-red-bg)}
-#aspen-overnight .ap-attribution{font-size:12px;color:var(--ap-sub);padding:10px 18px}
-#aspen-overnight a{color:var(--ap-blue);text-underline-offset:2px}
-#aspen-overnight .ap-side{padding:20px;background:var(--ap-panel);border-left:1px solid var(--ap-line);min-height:100%;min-width:0}
-#aspen-overnight .ap-small{font-size:14px;color:var(--ap-sub)}
-#aspen-overnight .ap-status{display:inline-block;color:var(--ap-amber);background:var(--ap-amber-bg);padding:3px 7px;border-radius:4px;font-size:13px;margin:8px 0 12px}
-#aspen-overnight .ap-status.blocked{color:var(--ap-red);background:var(--ap-red-bg)}
-#aspen-overnight .ap-choice{display:block;text-align:left;width:100%;border:1px solid var(--ap-line);border-radius:8px;margin-top:10px;padding:10px 12px;background:var(--ap-panel)}
-#aspen-overnight .ap-choice[aria-pressed="true"]{background:var(--ap-selected);border-color:var(--ap-blue)}
-#aspen-overnight .ap-choice span{display:block;font-size:14px;color:var(--ap-sub);margin-top:2px}
-#aspen-overnight .ap-choice strong{font-size:14px;font-weight:500}
-#aspen-overnight .ap-checkbox{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:14px;min-height:30px}
-#aspen-overnight .ap-checkbox input{width:16px;height:16px}
-#aspen-overnight .ap-detail{border-top:1px solid var(--ap-line);padding-top:18px;margin-top:18px}
-#aspen-overnight .ap-detail dl{display:grid;grid-template-columns:1fr;gap:2px;margin:0 0 12px;font-size:14px}
-#aspen-overnight .ap-detail dt{color:var(--ap-sub);margin-top:8px}
-#aspen-overnight .ap-detail dd{margin:0}
-#aspen-overnight .ap-detail p{font-size:14px;margin:10px 0}
-#aspen-overnight details{font-size:14px;margin-top:14px}
-#aspen-overnight summary{color:var(--ap-blue);cursor:pointer;min-height:32px}
-#aspen-overnight .ap-foot{padding:12px 20px;border-top:1px solid var(--ap-line);font-size:14px;color:var(--ap-sub);background:var(--ap-panel)}
-#aspen-overnight .ap-error{color:var(--ap-red);padding:0 22px 12px;background:var(--ap-panel);font-size:14px}
-#aspen-overnight [hidden]{display:none!important}
-#aspen-overnight[data-panel="below"] .ap-work{grid-template-columns:1fr}
-#aspen-overnight[data-panel="below"] .ap-side{border-left:0;border-top:1px solid var(--ap-line)}
-@media(max-width:760px){#aspen-overnight .ap-work{grid-template-columns:1fr}#aspen-overnight .ap-side{border-left:0;border-top:1px solid var(--ap-line)}#aspen-overnight .ap-map{height:420px}#aspen-overnight .ap-pin .ap-pinlabel{display:none}#aspen-overnight .ap-pin.ap-resort[aria-pressed="true"] .ap-pinlabel{display:block}}
-@media(max-width:480px){#aspen-overnight .ap-controls{grid-template-columns:1fr 1fr;padding:16px;gap:12px}#aspen-overnight .ap-controls label:first-child{grid-column:1/-1}#aspen-overnight .ap-top,#aspen-overnight .ap-notice{padding-left:16px;padding-right:16px}#aspen-overnight .ap-map{height:360px}#aspen-overnight .ap-mapnav{right:8px;gap:4px}#aspen-overnight .ap-mapnav button{padding:6px 10px}#aspen-overnight .ap-choice{min-height:54px}}
-@media(max-width:380px){#aspen-overnight .ap-controls{grid-template-columns:1fr}#aspen-overnight .ap-pin.ap-resort[aria-pressed="true"] .ap-pinlabel{display:none}}
-</style>
-<header class="ap-top"><span class="ap-brand">Overnight</span><span class="ap-region">Aspen Snowmass · Four mountains, one trip</span></header>
-<div class="ap-controls">
-<label class="ap-field">Where are you skiing?<select id="ap-resort"><option value="aspen">Aspen Mountain</option><option value="highlands">Aspen Highlands</option><option value="buttermilk">Buttermilk</option><option value="snowmass">Snowmass</option></select></label>
-<label class="ap-field">Arrive<input id="ap-arrive" type="date" value="2027-01-15" required></label>
-<label class="ap-field">Depart<input id="ap-depart" type="date" value="2027-01-17" required></label>
-<label class="ap-field">Vehicle<select id="ap-vehicle"><option value="passenger_car">Passenger car / SUV</option><option value="high_clearance">High clearance</option><option value="motorhome">Motorhome</option></select></label>
-</div>
-<p id="ap-error" class="ap-error" role="alert" hidden></p>
-<div class="ap-notice" id="ap-source-status" role="status">Loading sourced overnight options…</div>
-<div class="ap-work">
-<section class="ap-map-area" aria-label="Map of Aspen mountain bases and campground examples">
-<div class="ap-map" id="ap-map">
-<svg id="ap-svg" aria-label="Sourced road map. Select a mountain or campsite using the map pins or adjacent list." role="img"><g id="ap-geography"></g></svg>
-<div id="ap-pins" class="ap-pins"></div>
-<span class="ap-north" aria-hidden="true">N ↑</span>
-<div class="ap-mapnav" aria-label="Map controls"><button type="button" id="ap-out" aria-label="Zoom out">−</button><button type="button" id="ap-in" aria-label="Zoom in">+</button><button type="button" id="ap-fit">Fit area</button></div>
-<div class="ap-scale" id="ap-scale" aria-hidden="true"></div>
-<div class="ap-loading" id="ap-loading" role="status">Loading map…</div>
-</div>
-<div class="ap-legend"><span><i class="ap-key mountain" aria-hidden="true"></i>Mountain base</span><span><i class="ap-key review" aria-hidden="true"></i>Needs review</span><span><i class="ap-key excluded" aria-hidden="true"></i>Date / vehicle mismatch</span></div>
-<div class="ap-attribution">Map data: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>, <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener noreferrer">ODbL</a> · <a href="./map-data.json" download>Download map data</a> · <a href="./overnight-options.json" download>Download location data</a>. Partial orientation map; roads do not establish legal access.</div>
-</section>
-<aside class="ap-side" aria-label="Campground list and selected place">
-<h2>Explore nearby</h2>
-<p class="ap-small" id="ap-trip-summary" aria-live="polite"></p>
-<p class="ap-small" style="margin-top:8px">Camping assumes sleeping inside your vehicle; room backups are separate.</p>
-<label class="ap-field">Stay type<select id="ap-kind"><option value="all">All overnight options</option><option value="campground">Campgrounds</option><option value="dispersed">Dispersed camping</option><option value="lodging">Room backups</option></select></label>
-<div id="ap-list"></div>
-<label class="ap-checkbox"><input id="ap-show-excluded" type="checkbox" checked>Show date / vehicle mismatches</label>
-<div id="ap-detail" class="ap-detail" aria-live="polite"></div>
-</aside>
-</div>
-<footer class="ap-foot">Five sourced places / areas, not a complete inventory. No confirmed winter vehicle-sleeping options. Availability and current conditions require confirmation. Roads cover only part of this map.</footer>
-
-<script src="./d3.min.js"></script>
-<script src="./trip-rules.js"></script>
-<script src="./app.js"></script>
-</div>
-
-</body></html>
+<main id="app">
+<div id="map" aria-label="Interactive map of overnight options near Aspen Snowmass"></div>
+<header class="topbar"><a class="brand" href="./" aria-label="ohvernight home"><span class="brand-mark" aria-hidden="true">o</span>ohvernight<span class="beta">FIELD TEST</span></a><button id="edit-trip" class="trip-button" aria-haspopup="dialog"><span id="trip-caption">Aspen Mountain · Jan 15–17</span><span class="edit-label">Edit trip ↗</span></button></header>
+<div class="map-tools" aria-label="Map controls"><div class="basemaps"><button id="satellite" aria-pressed="true">Satellite</button><button id="terrain" aria-pressed="false">Topo</button></div><button id="fit" aria-label="Fit all locations on map">Fit area</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button></div>
+<p id="map-status" class="map-status" role="status" hidden></p>
+<section id="sheet" class="sheet" aria-label="Overnight trip planner">
+<div class="sheet-header"><button id="sheet-toggle" class="sheet-toggle" aria-expanded="false"><span class="handle" aria-hidden="true"></span><span class="eyebrow">ASPEN / SNOWMASS</span><span class="sheet-title">Find your overnight.<span id="sheet-action">Expand ↑</span></span></button><p id="results-summary" role="status">Loading sourced places…</p></div>
+<div class="sheet-body">
+<div id="trip-insight" class="insight"></div>
+<nav class="filters" aria-label="Stay type"><button data-kind="all" aria-pressed="true">All</button><button data-kind="campground" aria-pressed="false">Campgrounds</button><button data-kind="dispersed" aria-pressed="false">Dispersed</button><button data-kind="lodging" aria-pressed="false">Rooms</button></nav>
+<label class="check"><input id="show-conflicts" type="checkbox" checked> Include date / vehicle conflicts</label>
+<section id="saved-plan" class="saved-plan" aria-label="Your saved plan"></section>
+<div id="list" aria-label="Overnight locations"></div>
+<section id="detail" class="detail" aria-live="polite"></section>
+<footer><p>Five sourced places and areas. Availability is not checked. Satellite imagery does not show current snow or road conditions.</p><details><summary>Data & credits</summary><p>Imagery / topo: <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map" target="_blank" rel="noopener noreferrer">USGS The National Map</a>. Location geometry: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>, ODbL.</p><p><a href="./overnight-options.json" download>Location data</a> · <a href="./map-data.json" download>Map source data</a></p><p>Ownership and water research feeds are not used to approve these places. Camping assumes sleeping inside your vehicle; rooms are separate backups.</p></details></footer>
+</div></section>
+<dialog id="trip-dialog" aria-labelledby="trip-title"><form id="trip-form"><header><div><span class="eyebrow">MAKE IT YOUR TRIP</span><h1 id="trip-title">Where are you headed?</h1></div><button id="close-trip" type="button" class="close" aria-label="Close trip settings">×</button></header><label>Mountain<select id="resort"><option value="aspen">Aspen Mountain</option><option value="highlands">Aspen Highlands</option><option value="buttermilk">Buttermilk</option><option value="snowmass">Snowmass</option></select></label><div class="date-fields"><label>Arrive<input id="arrive" type="date" value="2027-01-15" required></label><label>Depart<input id="depart" type="date" value="2027-01-17" required></label></div><label>Your vehicle<select id="vehicle"><option value="passenger_car">Passenger car / SUV</option><option value="high_clearance">High-clearance vehicle</option><option value="motorhome">Motorhome / RV</option></select></label><p class="muted">We check mapped vehicle seasons and published setup requirements. Current snow, availability and overnight permission still need confirmation.</p><p id="trip-error" class="error" role="alert" hidden></p><button class="primary" type="submit">Update my trip →</button></form></dialog>
+<noscript><p class="map-status">JavaScript is required to load places and evaluate your trip.</p></noscript>
+</main><script src="./vendor/leaflet.js"></script><script src="./trip-rules.js"></script><script src="./app.js"></script></body></html>
