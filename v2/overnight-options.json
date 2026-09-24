@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "updated": "2026-09-24",
+  "notice": "Five sourced places and areas. No confirmed winter vehicle-sleeping options. Check current access, restrictions and availability with the linked sources.",
+  "places": [
+    {
+      "id": "difficult",
+      "number": 1,
+      "name": "Difficult Campground",
+      "coordinates": [
+        -106.773336,
+        39.1416
+      ],
+      "note": "Established campground east of Aspen. Verify current bear-related setup restrictions, vehicle sleeping and operating dates before choosing a site.",
+      "source": "https://www.recreation.gov/camping/campgrounds/231880",
+      "mapSource": "https://www.openstreetmap.org/way/665968061",
+      "locationBasis": "Approximate point calculated from the mapped campground boundary",
+      "kind": "campground",
+      "checked_on": "2026-09-24",
+      "unknowns": [
+        "Current operating dates",
+        "Vehicle sleeping permission",
+        "Full approach and snow conditions",
+        "Availability and current restrictions"
+      ],
+      "access": {
+        "id": "mvum-13310065",
+        "designations": {
+          "passenger_car": {
+            "designation": "open",
+            "dates_open": "05/27-09/26"
+          },
+          "high_clearance": {
+            "designation": "open",
+            "dates_open": "05/27-09/26"
+          },
+          "motorhome": {
+            "designation": "open",
+            "dates_open": "05/27-09/26"
+          }
+        },
+        "evidence": {
+          "source_url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_02/MapServer/1",
+          "agency": "USFS",
+          "retrieved_at": "2026-09-24T16:16:41.616772Z",
+          "last_verified": null,
+          "confidence": "high",
+          "verification_method": "arcgis_rest_query",
+          "notes": "MVUM designation is not current passability or overnight permission."
+        }
+      }
+    },
+    {
+      "id": "silverbar",
+      "number": 2,
+      "name": "Silver Bar Campground",
+      "coordinates": [
+        -106.8930108,
+        39.1463047
+      ],
+      "note": "The official listing describes walk-in, tent-only sites. It does not support this car/SUV sleeping setup. Winter access is also unverified.",
+      "source": "https://www.recreation.gov/camping/campgrounds/231881",
+      "mapSource": "https://www.openstreetmap.org/node/5964652426",
+      "locationBasis": "Mapped campground point",
+      "kind": "campground",
+      "checked_on": "2026-09-24",
+      "unknowns": [
+        "Current operating dates",
+        "Vehicle sleeping permission",
+        "Full approach and snow conditions",
+        "Availability and current restrictions"
+      ],
+      "tent_only": true,
+      "access": {
+        "id": "mvum-13315296",
+        "designations": {
+          "passenger_car": {
+            "designation": "open",
+            "dates_open": "05/27-10/03"
+          },
+          "high_clearance": {
+            "designation": "open",
+            "dates_open": "05/27-10/03"
+          },
+          "motorhome": {
+            "designation": "open",
+            "dates_open": "05/27-10/03"
+          }
+        },
+        "evidence": {
+          "source_url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_02/MapServer/1",
+          "agency": "USFS",
+          "retrieved_at": "2026-09-24T16:16:41.633804Z",
+          "last_verified": null,
+          "confidence": "high",
+          "verification_method": "arcgis_rest_query",
+          "notes": "MVUM designation is not current passability or overnight permission."
+        }
+      }
+    },
+    {
+      "id": "silverbell",
+      "name": "Silver Bell Campground",
+      "coordinates": [
+        -106.8955613625,
+        39.14272606875
+      ],
+      "kind": "campground",
+      "checked_on": "2026-09-24",
+      "note": "Offers standard RV/trailer sites as well as tent-only and walk-in sites. Choose the correct site type; current operating dates and availability need confirmation.",
+      "source": "https://www.recreation.gov/camping/campgrounds/231882",
+      "mapSource": "https://www.openstreetmap.org/way/714888258",
+      "locationBasis": "Approximate orientation point averaged from the mapped campground road; not an individual campsite",
+      "unknowns": [
+        "Current operating dates",
+        "Suitable individual site",
+        "Full approach and snow conditions",
+        "Availability and current restrictions"
+      ],
+      "number": 3,
+      "access": {
+        "id": "mvum-13310199",
+        "designations": {
+          "passenger_car": {
+            "designation": "open",
+            "dates_open": "05/27-10/03"
+          },
+          "high_clearance": {
+            "designation": "open",
+            "dates_open": "05/27-10/03"
+          },
+          "motorhome": {
+            "designation": "open",
+            "dates_open": "05/27-10/03"
+          }
+        },
+        "evidence": {
+          "source_url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_02/MapServer/1",
+          "agency": "USFS",
+          "retrieved_at": "2026-09-24T16:16:41.621195Z",
+          "last_verified": null,
+          "confidence": "high",
+          "verification_method": "arcgis_rest_query",
+          "notes": "MVUM designation is not current passability or overnight permission."
+        }
+      }
+    },
+    {
+      "id": "lincolncreek",
+      "name": "Lincoln Creek dispersed camping area",
+      "coordinates": [
+        -106.691097,
+        39.115492
+      ],
+      "kind": "dispersed",
+      "checked_on": "2026-09-24",
+      "requires_high_clearance": true,
+      "note": "Forest Service lists 22 first-come car-camping sites with no fee, water or toilets; five-day maximum. High clearance required; 4\u00d74 recommended. This pin locates the area, not an individual campsite. Winter access is unverified.",
+      "source": "https://www.fs.usda.gov/r02/whiteriver/recreation/lincoln-creek-dispersed-camping",
+      "mapSource": "https://www.fs.usda.gov/r02/whiteriver/recreation/lincoln-creek-dispersed-camping",
+      "locationBasis": "Agency-published area coordinate; individual campsite locations not mapped",
+      "unknowns": [
+        "Exact available campsite",
+        "Winter and snow access",
+        "Current restrictions",
+        "Vehicle suitability beyond clearance"
+      ],
+      "number": 4
+    },
+    {
+      "id": "stmoritz",
+      "name": "St. Moritz Lodge",
+      "coordinates": [
+        -106.82655122857143,
+        39.190777514285706
+      ],
+      "kind": "lodging",
+      "checked_on": "2026-09-24",
+      "note": "Room and private-hostel accommodation at 334 West Hyman Avenue, Aspen. A room backup if camping is unsuitable; no nightly rate or vacancy is assumed.",
+      "source": "https://www.stmoritzlodge.com/",
+      "mapSource": "https://www.openstreetmap.org/way/228443931",
+      "locationBasis": "Approximate building point from OpenStreetMap, matched to the operator\u2019s street address",
+      "unknowns": [
+        "Availability for your dates",
+        "Total price and cancellation terms",
+        "Parking arrangements for your vehicle"
+      ],
+      "number": 5
+    }
+  ]
+}
