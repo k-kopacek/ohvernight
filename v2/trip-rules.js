@@ -15,6 +15,9 @@
     const days=tripDays(trip.arrive,trip.depart);
     let result={...place,status:'review',label:'Needs trip review',tripNote:'Access, overnight permission and availability need confirmation.'};
     if (!days) return {...result,label:'Enter valid trip dates',tripNote:'Choose a stay of 1–366 nights.'};
+    const stayLimit=Number(place.stay_limit_days ?? place.max_stay_days);
+    if (Number.isFinite(stayLimit) && stayLimit > 0 && days.length-1 > stayLimit)
+      return {...result,status:'excluded',label:'Stay exceeds published limit',tripNote:`This area lists a maximum stay of ${stayLimit} days. Shorten the trip or choose a different overnight option.`};
     const checked=parseDate(place.checked_on), current=parseDate(today);
     if (!checked || !current || current<checked || current-checked>30*86400000)
       return {...result,label:'Source review is stale',tripNote:'Recheck the linked sources before relying on previous setup or access notes.'};

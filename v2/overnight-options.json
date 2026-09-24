@@ -155,6 +155,7 @@
       "kind": "dispersed",
       "checked_on": "2026-09-24",
       "requires_high_clearance": true,
+      "stay_limit_days": 5,
       "note": "Forest Service lists 22 first-come car-camping sites with no fee, water or toilets; five-day maximum. High clearance required; 4\u00d74 recommended. This pin locates the area, not an individual campsite. Winter access is unverified.",
       "source": "https://www.fs.usda.gov/r02/whiteriver/recreation/lincoln-creek-dispersed-camping",
       "mapSource": "https://www.fs.usda.gov/r02/whiteriver/recreation/lincoln-creek-dispersed-camping",

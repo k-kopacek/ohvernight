@@ -2,7 +2,8 @@
 'use strict';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mobile=()=>matchMedia('(max-width:760px)').matches;
-let map,markers,baseLayer,data,inventory,places=[],kind='all',selected=null;
+let map,markers,baseLayer,data,inventory,bundle=null,places=[],kind='all',selected=null;
+let pipelineLayers=[];
 let trip={resort:'aspen',arrive:'2027-01-15',depart:'2027-01-17',vehicle:'passenger_car'},plan={a:null,b:null};
 const storageKey='ohvernight-trip-v1';
 function controlsReady(ready){document.querySelectorAll('button').forEach(b=>{if(b.id!=='sheet-toggle')b.disabled=!ready;});}
@@ -58,6 +59,26 @@ function renderMarkers(){
  for(const r of data.resorts){const marker=L.marker(ll(r),{icon:L.divIcon({className:'pin resort',html:'<span class="pin-badge">'+esc(r.symbol)+'</span>',iconSize:[44,44],iconAnchor:[18,18]}),title:r.name,keyboard:true}).addTo(markers);marker.bindTooltip(esc(r.name),{permanent:r.id===trip.resort,direction:'right',offset:[14,0],className:'map-label'});marker.on('click',()=>{trip.resort=r.id;persist();render();});}
  for(const p of visible()){const marker=L.marker(ll(p),{icon:L.divIcon({className:'pin '+(p.status==='excluded'?'conflict ':'')+(p.id===selected?'active':''),html:'<span class="pin-badge">'+(p.kind==='lodging'?'R':p.number)+'</span>',iconSize:[44,44],iconAnchor:[18,18]}),title:p.name+': '+p.label,keyboard:true,zIndexOffset:p.id===selected?1000:0}).addTo(markers);marker.bindTooltip(esc(p.name),{direction:'top',offset:[0,-20],className:'map-label'});marker.on('click',()=>choose(p.id));}
 }
+function pipelineStyle(feature){
+ const p=feature.properties||{};
+ if(p.access_status==='designated_open')return {color:'#b9e66b',weight:4,opacity:.9};
+ if(p.access_status==='restricted')return {color:'#d8d4bf',weight:2,opacity:.55,dashArray:'5 6'};
+ return {color:'#9ba79a',weight:2,opacity:.55};
+}
+function renderPipelineLayers(){
+ if(!map||!bundle?.layers)return;
+ pipelineLayers.forEach(layer=>map.removeLayer(layer)); pipelineLayers=[];
+ const roads=bundle.layers.mvum_roads;
+ if(roads?.features?.length){const layer=L.geoJSON(roads,{style:pipelineStyle,onEachFeature:(f,l)=>l.bindTooltip((f.properties?.name||'MVUM road')+' · '+(f.properties?.access_status||'access unknown'),{sticky:true,className:'map-label'})}).addTo(map);pipelineLayers.push(layer);}
+ const candidates=bundle.layers.dispersed_corridors;
+ if(candidates?.features?.length){const layer=L.geoJSON(candidates,{style:{color:'#d5f780',weight:2,fillColor:'#d5f780',fillOpacity:.16,dashArray:'7 5'},onEachFeature:(f,l)=>l.bindTooltip('Screened candidate area · verify before staying',{sticky:true,className:'map-label'})}).addTo(map);pipelineLayers.push(layer);}
+ const restrictions=[];
+ for(const name of ['wildlife_sensitivity','fire_restriction_stage'])if(bundle.layers[name]?.features)restrictions.push(...bundle.layers[name].features.filter(f=>f.geometry));
+ if(restrictions.length){const layer=L.geoJSON({type:'FeatureCollection',features:restrictions},{style:{color:'#d6604d',weight:3,fillColor:'#d6604d',fillOpacity:.24},onEachFeature:(f,l)=>l.bindTooltip('Mapped restriction / closure · review source',{sticky:true,className:'map-label'})}).addTo(map);pipelineLayers.push(layer);}
+ const status=Object.entries(bundle.source_status||{}).filter(([,v])=>v.status!=='available');
+ const candidateCount=candidates?.features?.length||0;
+ if(candidateCount||status.length){$('map-status').textContent='Pipeline context loaded: '+candidateCount+' screened candidate areas.'+(status.length?' Some sources are unavailable or skipped; candidate areas are not approvals.':'');$('map-status').hidden=false;}
+}
 function fit(){if(!map||!data)return;expand(false);map.invalidateSize();map.fitBounds(data.resorts.concat(inventory.places).map(ll),{paddingTopLeft:mobile()?[38,135]:[440,110],paddingBottomRight:mobile()?[40,Math.max(innerHeight*.30,205)+80]:[70,80],maxZoom:13,animate:false});}
 function switchMap(mode){
  if(!map)return;if(baseLayer)map.removeLayer(baseLayer);
@@ -70,7 +91,8 @@ function switchMap(mode){
 }
 try{
  const load=async path=>{const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw Error('Location data unavailable');return r.json();};
- [data,inventory]=await Promise.all([load('./destinations.json'),load('./overnight-options.json')]);
+ const optional=async path=>{try{return await load(path);}catch{return null;}};
+ [data,inventory,bundle]=await Promise.all([load('./destinations.json'),load('./overnight-options.json'),optional('./map-data-v2.json')]);
  if(inventory.schema_version!==1||!Array.isArray(inventory.places)||!Array.isArray(data.resorts))throw Error('Invalid location data');
  const ids=new Set();for(const p of inventory.places){if(!/^[a-z0-9_-]+$/.test(p.id)||ids.has(p.id)||!Array.isArray(p.coordinates)||p.coordinates.length!==2||!p.coordinates.every(Number.isFinite)||Math.abs(p.coordinates[0])>180||Math.abs(p.coordinates[1])>90)throw Error('Invalid location');ids.add(p.id);for(const url of [p.source,p.mapSource,p.access?.evidence?.source_url].filter(Boolean))if(!['https:','http:'].includes(new URL(url).protocol))throw Error('Invalid source');}
  if(!data.resorts.some(r=>r.id===trip.resort))trip.resort='aspen';
@@ -81,6 +103,6 @@ try{
  map=L.map('map',{zoomControl:false,minZoom:5,maxZoom:19,preferCanvas:true}).setView([39.18,-106.83],12);markers=L.layerGroup().addTo(map);L.control.scale({position:'bottomleft',imperial:true,metric:false}).addTo(map);switchMap('satellite');
  }else{$('map-status').textContent='Map library unavailable. You can still compare places below.';$('map-status').hidden=false;}
  $('satellite').onclick=()=>switchMap('satellite');$('terrain').onclick=()=>switchMap('terrain');$('fit').onclick=fit;$('zoom-in').onclick=()=>map?.zoomIn();$('zoom-out').onclick=()=>map?.zoomOut();
- render();fit();fillTrip();controlsReady(true);if(!map)for(const id of ['satellite','terrain','fit','zoom-in','zoom-out'])$(id).disabled=true;window.addEventListener('resize',()=>{map?.invalidateSize();});
+ render();renderPipelineLayers();fit();fillTrip();controlsReady(true);if(!map)for(const id of ['satellite','terrain','fit','zoom-in','zoom-out'])$(id).disabled=true;window.addEventListener('resize',()=>{map?.invalidateSize();});
 }catch(error){controlsReady(false);$('results-summary').textContent='Location data could not load.';$('list').innerHTML='<p class="empty">Refresh to retry. No places can be evaluated until the location data loads.</p>';$('map-status').textContent='Location data unavailable. Refresh to retry.';$('map-status').hidden=false;}
 })();
