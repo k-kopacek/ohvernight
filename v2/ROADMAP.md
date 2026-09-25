@@ -2,6 +2,10 @@
 
 The scheduled kickoff was deleted; work started directly in the existing task.
 
+## Discovery increment — local working files, not packaged
+
+Implemented name/number and activity trail search, selection on the map, and nearby camping detail links. Activity filtering uses managed/accepted evidence with original restrictions visible, does not evaluate trip dates, and never hides layers. Proximity is approximate point-to-polyline distance within five miles, limited to three campground/dispersed listings; no trailhead, travel connection or permission inference. Unit tests cover unknown/restricted activities, distance to segment interiors, multi-line geometry and inventory limits. Mobile testing verified the Difficult Creek → Difficult Campground flow. Packaging deferred at the user's request.
+
 ## Trail pilot delivered locally — September 25
 
 Added 123 Aspen-area USFS trail segments as an independent default-on map layer, published-use popups, nine activity keys and an atomic standalone refresh command. COTREX integration is deferred: app reuse terms need permission and public GIS mirrors describe 2019 trail content. See `pipeline/TRAIL-PILOT.md`. Automated tests and mobile tap-through passed. Next: activity discovery and nearby camping associations with explicit evidence; statewide coverage and route navigation remain pending.

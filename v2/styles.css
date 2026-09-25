@@ -58,6 +58,13 @@ body[data-view=map] .landing{display:none}
 }
 
 /* Explore keeps its legend on demand, leaving the map clear. */
+.trails-button{position:absolute;right:190px;top:90px;z-index:501;min-height:44px}
+body[data-view=planner] .trails-button{display:none}
+#trail-browser{overflow:auto;overscroll-behavior:contain}
+#trail-results-count{font-size:12px;margin-top:16px}
+.trail-result,.nearby-camp{display:block;text-align:left;width:100%;padding:12px;margin:8px 0;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);min-height:44px;overflow-wrap:anywhere}
+.trail-result small,.nearby-camp small{display:block;font-size:12px;line-height:1.45;margin-top:5px;color:var(--muted)}
+@media(max-width:760px){.trails-button{top:70px;left:14px;right:auto}#trail-browser{max-height:85dvh}}
 .layers-button{position:absolute;right:24px;top:90px;z-index:501;min-height:44px}
 body[data-view=planner] .layers-button{display:none}
 dialog.map-legend{position:fixed;inset:0;margin:auto;width:min(420px,calc(100vw - 24px));height:fit-content;max-height:85dvh;padding:18px;border:0}

@@ -80,7 +80,7 @@ function layerPopup(feature,definition){
  const p=feature.properties||{}, evidence=p.evidence||{};
  let extra='';
  if(definition.id==='trails'){
-   const labels={hiking:'Hiking',horseback_riding:'Horseback riding',mountain_biking:'Mountain biking',motorcycling:'Motorcycling',atv:'ATV',four_wheel_drive:'4WD',snowshoeing:'Snowshoeing',cross_country_skiing:'Cross-country skiing',snowmobiling:'Snowmobiling'};
+   const labels=TrailDiscovery.activities;
    extra='<p>Trail '+esc(p.trail_number||'number unavailable')+' · '+esc(p.surface||'Surface unknown')+'</p><p>Only the portion inside our research boundary is shown. Check current agency notices before travel.</p><details><summary>Published activity dates</summary><p>These are source records, not a check for your trip dates. Blank records mean unknown.</p>';
    for(const [key,label] of Object.entries(labels)){
      const rules=p.activities?.[key]||{};
@@ -88,6 +88,9 @@ function layerPopup(feature,definition){
      extra+='<p><strong>'+label+'</strong><br>'+esc(parts.join(' · ')||'Unknown — no published use record')+'</p>';
    }
    extra+='</details>';
+   const nearby=TrailDiscovery.nearby(feature,inventory.places);
+   extra+='<h3>Camping nearby</h3><p>Within about 5 miles of this mapped segment, in a straight line. These are not trailhead distances or connecting routes. Access and camping permission need checking.</p>';
+   extra+=nearby.length?nearby.map(({place,miles})=>'<button type="button" class="nearby-camp" data-nearby-camp="'+esc(place.id)+'">'+esc(place.name)+'<small>About '+miles.toFixed(1)+' mi direct · View camping details</small></button>').join(''):'<p>No camping listings in our current inventory within this distance.</p>';
  }
  if(definition.id==='roads'){
    extra='<p>Current road conditions and vehicle suitability are unconfirmed.</p>';
@@ -96,7 +99,26 @@ function layerPopup(feature,definition){
  }
  if(definition.id==='candidates')extra='<p>No campsite or camping permission has been confirmed. Screening snapshot: '+esc(bundle?.trip?.arrive)+'–'+esc(bundle?.trip?.depart)+' ('+esc(bundle?.trip?.vehicle?.replaceAll('_',' '))+'). This is not an assessment of your selected trip.</p>';
  let source='';try{const u=new URL(evidence.source_url);if(['https:','http:'].includes(u.protocol))source='<a href="'+esc(u.href)+'" target="_blank" rel="noopener noreferrer">Open source ↗</a>';}catch{}
- return '<div class="layer-popup"><strong>'+esc(p.name||p.manager||definition.title)+'</strong><p>'+esc(definition.description)+'</p>'+extra+(evidence.retrieved_at?'<p>Source fetched '+esc(evidence.retrieved_at.slice(0,10))+'.</p>':'')+source+'</div>';
+ return '<div class="layer-popup"><strong>'+esc(p.name||p.manager||definition.title)+'</strong>'+source+'<p>'+esc(definition.description)+'</p>'+extra+(evidence.retrieved_at?'<p>Source fetched '+esc(evidence.retrieved_at.slice(0,10))+'.</p>':'')+'</div>';
+}
+function renderTrailSearch(){
+ const activity=$('trail-activity').value,query=$('trail-query').value;
+ const rows=(trails?.features||[]).filter(f=>TrailDiscovery.matches(f,query,activity))
+   .sort((a,b)=>(a.properties.name||'').localeCompare(b.properties.name||''));
+ $('trail-results-count').textContent=trails?rows.length+' matching trail segments':'Trail data is not loaded.';
+ $('trail-results').innerHTML=rows.length?rows.map(f=>{
+   const p=f.properties,r=p.activities?.[activity]||{};
+   const note=activity?[r.managed?'Managed: '+r.managed:'',r.accpt?'Accepted: '+r.accpt:'',r.restricted?'Restrictions: '+r.restricted:'',r.disc?'Discouraged: '+r.disc:''].filter(Boolean).join(' · '):'View published uses and camping nearby';
+   return '<button type="button" class="trail-result" data-trail-id="'+esc(p.id)+'"><strong>'+esc(p.name||'Unnamed trail')+'</strong><small>Trail '+esc(p.trail_number||'number unknown')+' · mapped segment</small><small>'+esc(note)+'</small></button>';
+ }).join(''):'<p class="muted">No matches in this pilot. Try another name or All activities. Missing records do not mean an activity is prohibited.</p>';
+}
+function showTrail(id){
+ let found;
+ pipelineLayers.get('trails')?.eachLayer(layer=>{if(layer.feature.properties.id===id)found=layer;});
+ if(!found)return;
+ $('trail-browser').close();enabledLayers.add('trails');$('layer-trails').checked=true;renderPipelineLayers();expand(false);
+ map.fitBounds(found.getBounds(),{paddingTopLeft:mobile()?[30,145]:[425,95],paddingBottomRight:mobile()?[30,185]:[40,80],maxZoom:15});
+ found.openPopup();
 }
 function renderPipelineLayers(){
  if(!layerRecords){
@@ -152,6 +174,12 @@ try{
  }else{$('map-status').textContent='Map library unavailable. You can still compare places below.';$('map-status').hidden=false;}
  $('satellite').onclick=()=>switchMap('satellite');$('terrain').onclick=()=>switchMap('terrain');$('fit').onclick=fit;$('zoom-in').onclick=()=>map?.zoomIn();$('zoom-out').onclick=()=>map?.zoomOut();
  $('open-layers').onclick=()=>$('map-legend').showModal();
+ $('open-trails').onclick=()=>{renderTrailSearch();$('trail-browser').showModal();};
+ $('close-trails').onclick=()=>$('trail-browser').close();
+ $('trail-activity').insertAdjacentHTML('beforeend',Object.entries(TrailDiscovery.activities).map(([id,label])=>'<option value="'+id+'">'+label+'</option>').join(''));
+ $('trail-query').oninput=renderTrailSearch;$('trail-activity').onchange=renderTrailSearch;
+ $('trail-results').onclick=event=>{const button=event.target.closest('[data-trail-id]');if(button)showTrail(button.dataset.trailId);};
+ $('map').addEventListener('click',event=>{const button=event.target.closest('[data-nearby-camp]');if(button){map.closePopup();choose(button.dataset.nearbyCamp);}});
  $('legend-close').onclick=()=>$('map-legend').close();
  matchMedia('(max-width:760px)').addEventListener('change',()=>expand($('sheet').classList.contains('expanded')));
  render();fit();fillTrip();fillLandingTrip();controlsReady(true);document.querySelectorAll('[data-fit-layer]').forEach(b=>b.disabled=!map||!layerRecords.find(d=>d.id===b.dataset.fitLayer)?.count);if(!map)for(const id of ['satellite','terrain','fit','zoom-in','zoom-out'])$(id).disabled=true;window.addEventListener('resize',()=>{map?.invalidateSize();});

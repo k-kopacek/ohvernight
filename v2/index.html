@@ -4,7 +4,7 @@
 <meta name="description" content="Find an overnight plan near Aspen Snowmass. Compare vehicle access, seasonal restrictions and room backups on a satellite map.">
 <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#20241e">
 <title>ohvernight v2 — Stay close. Know before you go.</title><link rel="icon" type="image/png" sizes="32x32" href="./favicon.png"><link rel="icon" type="image/svg+xml" sizes="any" href="./favicon.svg">
-<link rel="stylesheet" href="./vendor/leaflet.css"><link rel="stylesheet" href="./styles.css?v=explore-20260925">
+<link rel="stylesheet" href="./vendor/leaflet.css"><link rel="stylesheet" href="./styles.css?v=discovery-20260925">
 </head><body>
 <main id="app">
 <section id="landing" class="landing" aria-labelledby="landing-title">
@@ -28,6 +28,15 @@
 <div class="map-tools" aria-label="Map controls"><div class="basemaps"><button id="satellite" aria-pressed="true">Satellite</button><button id="terrain" aria-pressed="false">Topo</button></div><button id="fit" aria-label="Fit all locations on map">Fit area</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button></div>
 <p id="map-status" class="map-status" role="status" hidden></p>
 <button id="open-layers" class="back-button layers-button" type="button" aria-haspopup="dialog">Layers & legend</button>
+<button id="open-trails" class="back-button trails-button" type="button" aria-haspopup="dialog">Find trails</button>
+<dialog id="trail-browser" aria-labelledby="trail-browser-title">
+<header><h1 id="trail-browser-title">Find a trail</h1><button id="close-trails" class="close" type="button" aria-label="Close trail search">×</button></header>
+<p class="muted">Aspen-area Forest Service trails. Search here without hiding any map layers.</p>
+<label>Trail name or number<input id="trail-query" type="search" placeholder="Try Snowmass" autocomplete="off"></label>
+<label>Activity<select id="trail-activity"><option value="">All activities</option></select></label>
+<p class="muted">Activity matches have a published managed or accepted use record. Dates, restrictions and current access still need checking.</p>
+<p id="trail-results-count" role="status"></p><div id="trail-results"></div>
+</dialog>
 <dialog id="map-legend" class="map-legend" aria-labelledby="legend-title">
 <div class="legend-heading"><div><span class="eyebrow">OPEN MAP</span><h2 id="legend-title">Layers & legend</h2></div><button id="legend-close" type="button" aria-label="Close layers">×</button></div>
 <div id="legend-content">
@@ -52,4 +61,4 @@
 </div></section>
 <dialog id="trip-dialog" aria-labelledby="trip-title"><form id="trip-form"><header><div><span class="eyebrow">MAKE IT YOUR TRIP</span><h1 id="trip-title">Where are you headed?</h1></div><button id="close-trip" type="button" class="close" aria-label="Close trip settings">×</button></header><label>Mountain<select id="resort"><option value="aspen">Aspen Mountain</option><option value="highlands">Aspen Highlands</option><option value="buttermilk">Buttermilk</option><option value="snowmass">Snowmass</option></select></label><div class="date-fields"><label>Arrive<input id="arrive" type="date" value="2027-01-15" required></label><label>Depart<input id="depart" type="date" value="2027-01-17" required></label></div><label>Your vehicle<select id="vehicle"><option value="passenger_car">Passenger car / SUV</option><option value="high_clearance">High-clearance vehicle</option><option value="motorhome">Motorhome / RV</option></select></label><p class="muted">We check mapped vehicle seasons and published setup requirements. Current snow, availability and overnight permission still need confirmation.</p><p id="trip-error" class="error" role="alert" hidden></p><button class="primary" type="submit">Update my trip →</button></form></dialog>
 <noscript><p class="map-status">JavaScript is required to load places and evaluate your trip.</p></noscript>
-</main><script src="./vendor/leaflet.js"></script><script src="./trip-rules.js"></script><script src="./trust.js"></script><script src="./map-layers.js?v=trails-20260925"></script><script src="./app.js?v=trails-20260925"></script></body></html>
+</main><script src="./vendor/leaflet.js"></script><script src="./trip-rules.js"></script><script src="./trust.js"></script><script src="./map-layers.js?v=trails-20260925"></script><script src="./trail-discovery.js"></script><script src="./app.js?v=discovery-20260925"></script></body></html>

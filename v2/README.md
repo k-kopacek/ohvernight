@@ -4,6 +4,10 @@ Satellite website with the alpine-night logo, source freshness warnings, indepen
 
 ## Publish alongside the original
 
+**Find trails** searches trail names/numbers and published activities in a separate drawer. Selecting a result locates that segment and opens its details. Activity matches require a managed or accepted source record; displayed restrictions and dates still need review. Search never hides map geometry.
+
+Trail popups link to up to three campground/dispersed listings within approximately five straight-line miles of the clipped trail segment. Distance is to the nearest line segment, not a trailhead or a travel route; it does not establish legal access. Empty results describe the current inventory, not the absence of camping in that area.
+
 **Forest trails** adds 123 official USFS trail segments in the Aspen study area. Pink lines open trail details and published activity dates on tap. These are partial trail segments, not navigable routes; missing activity records remain unknown. The refresh script and source decision are documented in `pipeline/TRAIL-PILOT.md`. No COTREX data or API key is used for this layer.
 
 Explore opens with the legend closed. Use **Layers & legend** for switches and explanations; all layers still start enabled. On phones, **Explore stays** opens the results panel, which otherwise occupies about 13% of the screen.
