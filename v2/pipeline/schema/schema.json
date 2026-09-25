@@ -1,0 +1,296 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Aspen research bundle v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "generated_at",
+    "trip",
+    "source_status",
+    "layers",
+    "coverage_gaps",
+    "site_feed"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "trip": {
+      "$ref": "#/$defs/trip"
+    },
+    "source_status": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "available",
+              "unavailable",
+              "skipped"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "layers": {
+      "type": "object",
+      "required": [
+        "land_ownership",
+        "wilderness",
+        "mvum_roads",
+        "hydrology",
+        "lodging_developed",
+        "wildlife_sensitivity",
+        "fire_restriction_stage",
+        "dispersed_corridors",
+        "dispersed_corridor_points",
+        "leads",
+        "reviewed_sites"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/collection"
+      }
+    },
+    "coverage_gaps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "site_feed": {
+      "type": "object",
+      "required": [
+        "evaluated_trip",
+        "places",
+        "integration_note"
+      ],
+      "properties": {
+        "evaluated_trip": {
+          "$ref": "#/$defs/trip"
+        },
+        "places": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "coordinates",
+              "name",
+              "status",
+              "evidence"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "coordinates": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "status": {
+                "enum": [
+                  "review",
+                  "reviewed"
+                ]
+              },
+              "evidence": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          }
+        },
+        "integration_note": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "trip": {
+      "type": "object",
+      "required": [
+        "arrive",
+        "depart",
+        "vehicle"
+      ],
+      "properties": {
+        "arrive": {
+          "type": "string",
+          "format": "date"
+        },
+        "depart": {
+          "type": "string",
+          "format": "date"
+        },
+        "vehicle": {
+          "enum": [
+            "passenger_car",
+            "high_clearance",
+            "motorhome"
+          ]
+        }
+      }
+    },
+    "collection": {
+      "type": "object",
+      "required": [
+        "type",
+        "features"
+      ],
+      "properties": {
+        "type": {
+          "const": "FeatureCollection"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/feature"
+          }
+        }
+      }
+    },
+    "feature": {
+      "type": "object",
+      "required": [
+        "type",
+        "geometry",
+        "properties"
+      ],
+      "properties": {
+        "type": {
+          "const": "Feature"
+        },
+        "geometry": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "coordinates"
+              ],
+              "properties": {
+                "type": {
+                  "enum": [
+                    "Point",
+                    "MultiPoint",
+                    "LineString",
+                    "MultiLineString",
+                    "Polygon",
+                    "MultiPolygon"
+                  ]
+                },
+                "coordinates": {
+                  "type": "array"
+                }
+              }
+            }
+          ]
+        },
+        "properties": {
+          "type": "object",
+          "required": [
+            "id",
+            "evidence"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "evidence": {
+              "$ref": "#/$defs/evidence"
+            }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "source_url",
+        "agency",
+        "retrieved_at",
+        "last_verified",
+        "confidence",
+        "verification_method"
+      ],
+      "properties": {
+        "source_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://"
+        },
+        "agency": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retrieved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_verified": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low",
+            "unverified"
+          ]
+        },
+        "verification_method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        }
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@
   "places": [
     {
       "id": "difficult",
+      "ridb_facility_id": "231880",
       "number": 1,
       "name": "Difficult Campground",
       "coordinates": [
@@ -52,6 +53,7 @@
     },
     {
       "id": "silverbar",
+      "ridb_facility_id": "231881",
       "number": 2,
       "name": "Silver Bar Campground",
       "coordinates": [
@@ -100,6 +102,7 @@
     },
     {
       "id": "silverbell",
+      "ridb_facility_id": "231882",
       "name": "Silver Bell Campground",
       "coordinates": [
         -106.8955613625,
@@ -147,6 +150,7 @@
     },
     {
       "id": "lincolncreek",
+      "ridb_facility_id": "259461",
       "name": "Lincoln Creek dispersed camping area",
       "coordinates": [
         -106.691097,

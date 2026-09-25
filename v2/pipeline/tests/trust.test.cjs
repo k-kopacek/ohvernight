@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict');
+const Trust=require('../../trust.js');
+const TripRules=require('../../trip-rules.js');
+const now=Date.parse('2026-09-26T00:00:00Z');
+assert.equal(Trust.freshness({last_confirmed_at:'2026-09-25T12:00:00Z',max_age_hours:24},now),'current');
+assert.equal(Trust.freshness({last_checked_at:'2026-09-26T00:00:00Z',last_confirmed_at:'2026-09-20T00:00:00Z',max_age_hours:24},now),'stale');
+assert.equal(Trust.freshness({last_checked_at:'2026-09-26T00:00:00Z',max_age_hours:24},now),'unavailable');
+assert.equal(Trust.freshness({last_confirmed_at:'2027-01-01T00:00:00Z',max_age_hours:24},now),'unavailable');
+assert.equal(Trust.sourceSummary(null,null,now).fireState,'unavailable');
+const trip={arrive:'2026-09-25',depart:'2026-09-26',vehicle:'high_clearance'};
+assert(Trust.sameTrip(trip,{...trip}));
+assert(!Trust.sameTrip(trip,{...trip,vehicle:'passenger_car'}));
+const place={id:'lincolncreek',kind:'dispersed',checked_on:'2026-09-24',stay_limit_days:5};
+assert.equal(TripRules.evaluate(place,{...trip,depart:'2026-10-01'},'2026-09-25').status,'excluded');
+assert.notEqual(TripRules.evaluate(place,trip,'2026-09-25').status,'excluded');
+console.log('Freshness, missing confirmation, trip matching and stay-limit checks passed.');

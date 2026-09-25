@@ -1,0 +1,47 @@
+name: Build Aspen map bundle
+on:
+  workflow_dispatch:
+    inputs:
+      arrive:
+        description: Arrival (YYYY-MM-DD)
+        required: true
+        type: string
+      depart:
+        description: Departure (YYYY-MM-DD)
+        required: true
+        type: string
+      vehicle:
+        description: Vehicle
+        type: choice
+        options: [passenger_car, high_clearance, motorhome]
+        default: high_clearance
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: aspen-map-build
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r v2/pipeline/requirements.txt
+      - run: python -m unittest discover -s v2/pipeline/tests
+      - name: Fetch and validate trip snapshot
+        env:
+          RIDB_API_KEY: ${{ secrets.RIDB_API_KEY }}
+          TRIP_ARRIVE: ${{ inputs.arrive }}
+          TRIP_DEPART: ${{ inputs.depart }}
+          TRIP_VEHICLE: ${{ inputs.vehicle }}
+        run: python v2/pipeline/scripts/run_pipeline.py --arrive "$TRIP_ARRIVE" --depart "$TRIP_DEPART" --vehicle "$TRIP_VEHICLE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: map-data-v2
+          path: v2/pipeline/data/processed/map-data-v2.json
+          if-no-files-found: error
+          retention-days: 7

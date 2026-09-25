@@ -6,3 +6,11 @@
 
 /* V2 uses the alpine night mark; the original site remains unchanged. */
 .brand-mark{background:none;box-shadow:none;display:block;object-fit:contain}
+.source-health,.layer-options{border:1px solid #cbd1c1;border-radius:9px;padding:10px 12px;margin:10px 0;font-size:12px;overflow-wrap:anywhere}
+.source-health summary,.layer-options summary{cursor:pointer;font-weight:650}
+.source-health p,.layer-options p{margin:8px 0;line-height:1.45}
+.source-health a{color:inherit;text-underline-offset:3px}
+.trust-warning{color:#79421c;font-weight:600}
+.confidence-badge{display:block;width:fit-content;background:#e8eadf;border-radius:5px;padding:4px 7px;margin-top:9px;font-size:10px;line-height:1.4;white-space:normal}
+.layer-options label{display:flex;align-items:center;gap:8px;min-height:40px}
+.layer-options input{width:17px;height:17px;flex-shrink:0;accent-color:#4c652e}

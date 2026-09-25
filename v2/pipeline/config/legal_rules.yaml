@@ -1,0 +1,24 @@
+version: 2
+# Screening distances identify research areas, not a legal grant to camp.
+# No blanket vehicle-sleeping permission or permit exemption is inferred.
+screening:
+  road_buffer_ft: 300
+  water_setback_ft: 100
+  all_generated_areas_require_review: true
+  required_checks:
+    - current_camping_orders_and_boundaries
+    - land_ownership_at_actual_site
+    - existing_impacted_site_and_legal_approach
+    - permission_to_sleep_in_selected_vehicle
+    - trip_dates_and_current_road_conditions
+    - permits_and_stay_limits
+rules_to_review:
+  - id: whiteriver_camping_guidance
+    source_url: https://www.fs.usda.gov/r02/whiteriver/recreation/camping-cabins
+    status: needs_review
+  - id: aspen_sopris_occupancy_order
+    source_url: https://www.fs.usda.gov/r02/whiteriver/alerts/aspen-rd-occupancy-and-use-prohibitions
+    status: boundary_and_effective_dates_need_review
+  - id: lincoln_creek
+    source_url: https://www.fs.usda.gov/r02/whiteriver/recreation/lincoln-creek-dispersed-camping
+    status: site_rules_and_season_need_review
