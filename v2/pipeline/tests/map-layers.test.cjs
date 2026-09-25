@@ -5,6 +5,13 @@ const {describe,displayWater}=require('../../map-layers.js');
 const root=path.resolve(__dirname,'../..');
 const bundle=JSON.parse(fs.readFileSync(path.join(root,'map-data-v2.json')));
 const coverage=JSON.parse(fs.readFileSync(path.join(root,'pipeline/config/aoi.geojson')));
+test('trail pilot is independently loaded and missing trail data is explicit',()=>{
+  const trails=JSON.parse(fs.readFileSync(path.join(root,'trails.geojson')));
+  const result=describe(null,null,0,0,trails).find(d=>d.id==='trails');
+  assert.equal(result.count,trails.features.length);
+  assert.ok(result.count>0);
+  assert.equal(describe(null,null,0,0).find(d=>d.id==='trails').status,'Data not loaded');
+});
 test('real map data is represented independently of the trip, including wilderness and research areas',()=>{
   const records=describe(bundle,coverage,5,4);
   for(const [id,key] of [['roads','mvum_roads'],['candidates','dispersed_corridors'],['wilderness','wilderness']]){

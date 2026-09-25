@@ -1,5 +1,9 @@
 # Map data
 
+## USFS trail pilot
+
+`trails.geojson` contains clipped USDA Forest Service National Forest System Trails. Source: https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_TrailNFSPublishWithDataStatus_01/MapServer/0 . Metadata and usage constraints: https://data.fs.usda.gov/geodata/edw/edw_resources/meta/S_USA.TrailNFS_Publish.xml . The Forest Service disclaims accuracy, completeness, adequacy, warranties and endorsement. Retrieval is not field verification. Source attribution and retrieval time accompany each feature. No COTREX content is included in this pilot.
+
 © OpenStreetMap contributors. The OpenStreetMap-derived map in `map-data.json` and location coordinates identified as OpenStreetMap in `overnight-options.json` are made available under the Open Database License 1.0:
 https://opendatacommons.org/licenses/odbl/1-0/
 

@@ -4,6 +4,8 @@ Satellite website with the alpine-night logo, source freshness warnings, indepen
 
 ## Publish alongside the original
 
+**Forest trails** adds 123 official USFS trail segments in the Aspen study area. Pink lines open trail details and published activity dates on tap. These are partial trail segments, not navigable routes; missing activity records remain unknown. The refresh script and source decision are documented in `pipeline/TRAIL-PILOT.md`. No COTREX data or API key is used for this layer.
+
 Explore opens with the legend closed. Use **Layers & legend** for switches and explanations; all layers still start enabled. On phones, **Explore stays** opens the results panel, which otherwise occupies about 13% of the screen.
 
 The water display includes 1,555 named waterbody/flowline features from the current dataset. All 6,926 hydrology features remain in the pipeline bundle for screening. Named water is not a verified recreation-access or perennial-water dataset; unnamed lakes are also hidden by this initial cleanup.

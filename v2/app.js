@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mobile=()=>matchMedia('(max-width:760px)').matches;
 let map,markers,baseLayer,data,inventory,bundle=null,ridb=null,registry=null,coverage=null,places=[],kind='all',selected=null;
-let pipelineLayers=new Map(),layerRecords=null,view='planner';
+let pipelineLayers=new Map(),layerRecords=null,view='planner',trails=null;
 const enabledLayers=new Set(MapLayers.definitions.map(d=>d.id));
 let trip={resort:'aspen',arrive:'2027-01-15',depart:'2027-01-17',vehicle:'passenger_car'},plan={a:null,b:null};
 const storageKey='ohvernight-trip-v1';
@@ -79,6 +79,16 @@ function renderMarkers(){
 function layerPopup(feature,definition){
  const p=feature.properties||{}, evidence=p.evidence||{};
  let extra='';
+ if(definition.id==='trails'){
+   const labels={hiking:'Hiking',horseback_riding:'Horseback riding',mountain_biking:'Mountain biking',motorcycling:'Motorcycling',atv:'ATV',four_wheel_drive:'4WD',snowshoeing:'Snowshoeing',cross_country_skiing:'Cross-country skiing',snowmobiling:'Snowmobiling'};
+   extra='<p>Trail '+esc(p.trail_number||'number unavailable')+' · '+esc(p.surface||'Surface unknown')+'</p><p>Only the portion inside our research boundary is shown. Check current agency notices before travel.</p><details><summary>Published activity dates</summary><p>These are source records, not a check for your trip dates. Blank records mean unknown.</p>';
+   for(const [key,label] of Object.entries(labels)){
+     const rules=p.activities?.[key]||{};
+     const parts=Object.entries({managed:'Managed use',accpt:'Accepted use',disc:'Discouraged',restricted:'Restricted'}).filter(([field])=>rules[field]).map(([field,title])=>title+': '+rules[field]);
+     extra+='<p><strong>'+label+'</strong><br>'+esc(parts.join(' · ')||'Unknown — no published use record')+'</p>';
+   }
+   extra+='</details>';
+ }
  if(definition.id==='roads'){
    extra='<p>Current road conditions and vehicle suitability are unconfirmed.</p>';
    if(p.operational_maintenance_level)extra+='<p>Agency maintenance classification: '+esc(p.operational_maintenance_level)+'</p>';
@@ -90,7 +100,7 @@ function layerPopup(feature,definition){
 }
 function renderPipelineLayers(){
  if(!layerRecords){
-   layerRecords=MapLayers.describe(bundle,coverage,inventory.places.length,data.resorts.length);
+   layerRecords=MapLayers.describe(bundle,coverage,inventory.places.length,data.resorts.length,trails);
    $('legend-layers').innerHTML=layerRecords.map(d=>'<div class="legend-toggle"><input type="checkbox" id="layer-'+d.id+'" checked><span aria-hidden="true" class="swatch '+(d.kind||'area')+'" style="--swatch:'+d.color+'"></span><label for="layer-'+d.id+'"><strong>'+d.title+'</strong><small>'+d.description+'</small><small class="layer-count">'+esc(d.status)+'</small>'+(d.fetched?'<small>Fetched '+esc(d.fetched.slice(0,10))+'</small>':'')+'</label><button type="button" data-fit-layer="'+d.id+'" aria-label="Show '+d.title+' on map" '+(!d.count||!map?'disabled':'')+'>View</button></div>').join('');
    for(const d of layerRecords){
      $('layer-'+d.id).onchange=()=>{if($('layer-'+d.id).checked)enabledLayers.add(d.id);else enabledLayers.delete(d.id);renderMarkers();renderPipelineLayers();};
@@ -124,7 +134,8 @@ function switchMap(mode){
 try{
  const load=async path=>{const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw Error('Location data unavailable');return r.json();};
  const optional=async path=>{try{return await load(path);}catch{return null;}};
- [data,inventory,bundle,ridb,registry,coverage]=await Promise.all([load('./destinations.json'),load('./overnight-options.json'),optional('./map-data-v2.json'),optional('./ridb-options.json'),optional('./pipeline/config/rules-registry.json'),optional('./pipeline/config/aoi.geojson')]);
+ [data,inventory,bundle,ridb,registry,coverage,trails]=await Promise.all([load('./destinations.json'),load('./overnight-options.json'),optional('./map-data-v2.json'),optional('./ridb-options.json'),optional('./pipeline/config/rules-registry.json'),optional('./pipeline/config/aoi.geojson'),optional('./trails.geojson')]);
+ if(trails?.type!=='FeatureCollection'||!Array.isArray(trails.features))trails=null;
  if(inventory.schema_version!==1||!Array.isArray(inventory.places)||!Array.isArray(data.resorts))throw Error('Invalid location data');
  if(bundle?.schema_version!==2||!bundle.trip||!bundle.layers)bundle=null;
  if(ridb?.schema_version===1&&Array.isArray(ridb.places)){

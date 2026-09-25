@@ -2,6 +2,10 @@
 
 The scheduled kickoff was deleted; work started directly in the existing task.
 
+## Trail pilot delivered locally — September 25
+
+Added 123 Aspen-area USFS trail segments as an independent default-on map layer, published-use popups, nine activity keys and an atomic standalone refresh command. COTREX integration is deferred: app reuse terms need permission and public GIS mirrors describe 2019 trail content. See `pipeline/TRAIL-PILOT.md`. Automated tests and mobile tap-through passed. Next: activity discovery and nearby camping associations with explicit evidence; statewide coverage and route navigation remain pending.
+
 ## Completed local increment — September 25
 
 Mobile Explore now has a roughly 13% collapsed results panel and an on-demand, keyboard-accessible layer drawer. All layers remain enabled initially and independent of trip filters. The initial water cleanup displays named waterways/waterbodies only while preserving the complete screening geometry. It does not yet classify perennial flow or recreation access. Verified at 320, 390, 768, 1024 and 1440px widths; layer and trust tests pass.

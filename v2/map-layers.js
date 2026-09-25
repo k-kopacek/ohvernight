@@ -6,6 +6,7 @@
     {id:'land',key:'land_ownership',feed:'01_fetch_land_ownership',title:'Land management',description:'Broad agency boundaries; not precise public/private parcels.',color:'#88a075'},
     {id:'wilderness',key:'wilderness',feed:'01_fetch_land_ownership',title:'Wilderness',description:'Protected wilderness boundaries. Check agency rules before planning access.',color:'#b5a0de'},
     {id:'water',key:'hydrology',feed:'03_fetch_hydrology',title:'Named water',description:'Named waterbodies and waterways. Seasonal flow, recreation access and activity suitability are not verified.',color:'#73c5dc'},
+    {id:'trails',title:'Forest trails',description:'Aspen-area USFS trail segments. Tap for published uses; current conditions and closures are unconfirmed.',color:'#f6a9ed',kind:'line'},
     {id:'roads',key:'mvum_roads',feed:'02_fetch_mvum_roads',title:'Forest vehicle roads',description:'Mapped routes. A line does not mean the road is open or suitable for your vehicle.',color:'#ead294',kind:'line'},
     {id:'candidates',key:'dispersed_corridors',feed:'07_build_dispersed_corridors',title:'Areas to research',description:'Computer-screened areas near roads. Campsites and camping permission are unconfirmed.',color:'#e9a965',kind:'dashed'},
     {id:'restrictions',keys:['wildlife_sensitivity','fire_restriction_stage'],title:'Restrictions',description:'Mapped notices only. Missing shading does not mean there are no restrictions.',color:'#d6604d'},
@@ -20,13 +21,13 @@
       ((p.kind==='flowline'&&['LineString','MultiLineString'].includes(feature.geometry?.type))||
        (p.kind==='waterbody'&&['Polygon','MultiPolygon'].includes(feature.geometry?.type)));
   }
-  function describe(bundle,coverage,placeCount,resortCount){
+  function describe(bundle,coverage,placeCount,resortCount,trails=null){
     return definitions.map(d=>{
-      const sourceRecords=d.id==='coverage'?features(coverage):(d.keys||[d.key]).flatMap(k=>features(bundle?.layers?.[k]));
+      const sourceRecords=d.id==='trails'?features(trails):d.id==='coverage'?features(coverage):(d.keys||[d.key]).flatMap(k=>features(bundle?.layers?.[k]));
       const records=d.id==='water'?sourceRecords.filter(displayWater):sourceRecords;
       const count=d.id==='places'?placeCount:d.id==='resorts'?resortCount:records.length;
       const source=bundle?.source_status?.[d.feed];
-      const loaded=d.kind==='pins'||(d.id==='coverage'?!!coverage:!!bundle?.layers&&(d.keys||[d.key]).some(k=>bundle.layers[k]));
+      const loaded=d.kind==='pins'||(d.id==='trails'?!!trails:d.id==='coverage'?!!coverage:!!bundle?.layers&&(d.keys||[d.key]).some(k=>bundle.layers[k]));
       let status=count?count.toLocaleString()+(d.kind==='pins'?' locations loaded':' map features loaded'):'No features in this dataset';
       if(!loaded)status='Data not loaded';
       else if(d.id==='water')status=`${count.toLocaleString()} named features shown · ${sourceRecords.length.toLocaleString()} retained for screening`;
