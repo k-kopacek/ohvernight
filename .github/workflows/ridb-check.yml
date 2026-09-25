@@ -1,0 +1,36 @@
+name: Check RIDB and export Aspen camping
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ridb-inventory-export
+  cancel-in-progress: false
+jobs:
+  ridb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r v2/pipeline/requirements.txt
+      - name: Check key and export camping inventory
+        env:
+          RIDB_API_KEY: ${{ secrets.RIDB_API_KEY }}
+        run: python v2/pipeline/scripts/check_ridb.py --output v2/ridb-options.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ridb-options
+          path: v2/ridb-options.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Package website with imported inventory
+        run: zip -q -r ohvernight-with-ridb.zip v2 -x '*/__pycache__/*' '*.pyc' '*/.DS_Store' '*/.env' '*/.env.*'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ohvernight-with-ridb
+          path: ohvernight-with-ridb.zip
+          if-no-files-found: error
+          retention-days: 7
