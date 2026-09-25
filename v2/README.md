@@ -17,6 +17,10 @@ This is a separate static copy for comparison. All assets and data load using re
 
 Current data is a five-location research inventory, not verified winter camping availability. Map tiles require an internet connection. See DATA-LICENSE.md for source and library attribution.
 
+## How the v2 interface is organized
+
+The first screen is the trip planner. A user chooses a mountain, dates and vehicle, then opens the results map. “Explore the open map” skips the planner and lets a user research the area directly. The open map has a persistent legend with plain-language toggles for public land context, water features, designated roads, screened research areas and restrictions. Overlay colors are explanatory context; they do not approve a campsite. Clicking a location pin opens its sourced details in the results sheet.
+
 ## Connect RIDB once
 
 GitHub only discovers workflows at the repository root under `.github/workflows/`; a workflow inside v2 will not run. The ready-to-copy templates are included in `pipeline/github-workflows/` so this download stays self-contained.

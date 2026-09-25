@@ -7,16 +7,41 @@
 <link rel="stylesheet" href="./vendor/leaflet.css"><link rel="stylesheet" href="./styles.css">
 </head><body>
 <main id="app">
+<section id="landing" class="landing" aria-labelledby="landing-title">
+<div class="landing-card">
+<a class="landing-brand" href="./" aria-label="ohvernight home"><img src="./assets/logo-mark.svg" width="42" height="42" alt="">ohvernight</a>
+<span class="eyebrow">ASPEN / SNOWMASS FIELD TEST</span>
+<h1 id="landing-title">Find a place to sleep before you go.</h1>
+<p class="landing-lead">Set your destination, dates and vehicle. We’ll show the best available overnight leads, what still needs confirmation, and how close each option is to the mountain.</p>
+<form id="landing-trip-form" class="landing-form">
+<label>Mountain<select id="landing-resort"><option value="aspen">Aspen Mountain</option><option value="highlands">Aspen Highlands</option><option value="buttermilk">Buttermilk</option><option value="snowmass">Snowmass</option></select></label>
+<div class="date-fields"><label>Arrive<input id="landing-arrive" type="date" required></label><label>Depart<input id="landing-depart" type="date" required></label></div>
+<label>Your vehicle<select id="landing-vehicle"><option value="passenger_car">Passenger car / SUV</option><option value="high_clearance">High-clearance vehicle</option><option value="motorhome">Motorhome / RV</option></select></label>
+<p id="landing-error" class="error" role="alert" hidden></p><button class="primary" type="submit">Show overnight options →</button>
+</form>
+<button id="landing-explore" class="landing-secondary" type="button">Explore the open map</button>
+<p class="landing-note">The map helps you research. It does not replace the official source, current conditions, or local confirmation.</p>
+</div>
+</section>
 <div id="map" aria-label="Interactive map of overnight options near Aspen Snowmass"></div>
-<header class="topbar"><a class="brand" href="./" aria-label="ohvernight home"><img class="brand-mark" src="./assets/logo-mark.svg" width="32" height="32" alt="">ohvernight<span class="beta">FIELD TEST</span></a><button id="edit-trip" class="trip-button" aria-haspopup="dialog"><span id="trip-caption">Aspen Mountain · Jan 15–17</span><span class="edit-label">Edit trip ↗</span></button></header>
+<header class="topbar"><a class="brand" href="./" aria-label="ohvernight home"><img class="brand-mark" src="./assets/logo-mark.svg" width="32" height="32" alt="">ohvernight<span class="beta">FIELD TEST</span></a><div class="topbar-actions"><button id="back-planner" class="back-button" type="button">Plan a trip</button><button id="edit-trip" class="trip-button" aria-haspopup="dialog"><span id="trip-caption">Aspen Mountain · Jan 15–17</span><span class="edit-label">Edit trip ↗</span></button></div></header>
 <div class="map-tools" aria-label="Map controls"><div class="basemaps"><button id="satellite" aria-pressed="true">Satellite</button><button id="terrain" aria-pressed="false">Topo</button></div><button id="fit" aria-label="Fit all locations on map">Fit area</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button></div>
 <p id="map-status" class="map-status" role="status" hidden></p>
+<aside id="map-legend" class="map-legend" aria-labelledby="legend-title">
+<div class="legend-heading"><div><span class="eyebrow">OPEN MAP</span><h2 id="legend-title">Map legend</h2></div><button id="legend-close" type="button" aria-label="Close map legend">×</button></div>
+<p class="legend-intro">Turn layers on or off. Colors explain what the map can tell you; they do not prove a place is legal to camp.</p>
+<div class="legend-toggle"><input type="checkbox" id="layer-land" checked><span class="swatch public"></span><label for="layer-land"><strong>Public land context</strong><small>Generalized USFS / BLM management areas.</small></label></div>
+<div class="legend-toggle"><input type="checkbox" id="layer-water"><span class="swatch water"></span><label for="layer-water"><strong>Water features</strong><small>Streams, lakes and mapped water areas.</small></label></div>
+<div class="legend-toggle"><input type="checkbox" id="layer-roads" checked><span class="swatch road"></span><label for="layer-roads"><strong>Designated roads</strong><small>MVUM vehicle designations for this trip.</small></label></div>
+<div class="legend-toggle"><input type="checkbox" id="layer-candidates"><span class="swatch candidate"></span><label for="layer-candidates"><strong>Screened research areas</strong><small>Places the pipeline found for review; not campsites.</small></label></div>
+<div class="legend-toggle"><input type="checkbox" id="layer-restrictions" checked><span class="swatch restriction"></span><label for="layer-restrictions"><strong>Restrictions</strong><small>Mapped closures or notices needing source review.</small></label></div>
+<p id="layer-trip-status" class="legend-status"></p>
+</aside>
 <section id="sheet" class="sheet" aria-label="Overnight trip planner">
 <div class="sheet-header"><button id="sheet-toggle" class="sheet-toggle" aria-expanded="false"><span class="handle" aria-hidden="true"></span><span class="eyebrow">ASPEN / SNOWMASS</span><span class="sheet-title">Find your overnight.<span id="sheet-action">Expand ↑</span></span></button><p id="results-summary" role="status">Loading sourced places…</p></div>
 <div class="sheet-body">
 <div id="trip-insight" class="insight"></div>
 <details id="source-health" class="source-health" open><summary>What has been checked?</summary><div id="source-health-content"></div></details>
-<details class="layer-options"><summary>Map layers & confidence</summary><label><input type="checkbox" id="layer-land" checked> Land management context</label><label><input type="checkbox" id="layer-roads" checked> MVUM vehicle designations</label><label><input type="checkbox" id="layer-candidates"> Research areas · need confirmation</label><label><input type="checkbox" id="layer-restrictions" checked> Mapped restrictions</label><p>Land management shading does not establish camping permission. Unshaded land has unknown coverage. Research areas are not individual campsites.</p><p id="layer-trip-status"></p></details>
 <nav class="filters" aria-label="Stay type"><button data-kind="all" aria-pressed="true">All</button><button data-kind="campground" aria-pressed="false">Campgrounds</button><button data-kind="dispersed" aria-pressed="false">Dispersed</button><button data-kind="lodging" aria-pressed="false">Rooms</button></nav>
 <label class="check"><input id="show-conflicts" type="checkbox" checked> Include date / vehicle / stay-limit conflicts</label>
 <section id="saved-plan" class="saved-plan" aria-label="Your saved plan"></section>
