@@ -10,6 +10,21 @@ from fetch_trails import URL as TRAIL_URL, normalize as trail
 COUNTY_URL = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1'
 ROAD_URL = 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_02/MapServer'
 
+def merge_snapshot(previous, layers):
+    if previous and previous.get('region') != 'douglas-co':
+        raise ValueError('Refusing to merge another region')
+    result = dict(previous)
+    result.update(schema_version=1, region='douglas-co', generated_at=now(), status='research_only')
+    result['layers'] = {**previous.get('layers', {}), **layers}
+    result['source_status'] = dict(previous.get('source_status', {}))
+    for key, fc in layers.items():
+        result['source_status'][key] = {'status':'available','retrieved_at':now(),'count':len(fc['features'])}
+    result['missing_layers'] = ['live_restrictions','precise_parcels','verified_dispersed_candidates']
+    result['notes'] = ['USFS trails only; county and state trails not included.',
+                       'County-clipped geometry is not a complete itinerary.',
+                       'Source inventory is not current access or camping approval.']
+    return result
+
 def county_boundary(client):
     fc = get_json(client, COUNTY_URL + '/query', {
         'f': 'geojson', 'where': "STATE='08' AND NAME='Douglas County'",
@@ -49,13 +64,9 @@ def main():
             raise ValueError(f'Empty {key}; previous county snapshot preserved')
         layers[key] = {'type':'FeatureCollection','features':features}
         print(f'{key}: {len(features)} county-clipped features',flush=True)
-    payload = {'schema_version':1,'region':'douglas-co','generated_at':now(),
-               'status':'research_only','layers':layers,
-               'missing_layers':['camping_inventory','land_ownership','water','restrictions'],
-               'notes':['USFS trails only; county and state trails not included.',
-                        'County boundary clips cross-county routes; these are not full itineraries.',
-                        'No camping recommendations generated.']}
     target = Path(__file__).resolve().parents[2]/'regions/douglas-co/research.json'
+    previous = json.loads(target.read_text()) if target.exists() else {}
+    payload = merge_snapshot(previous, layers)
     target.parent.mkdir(parents=True,exist_ok=True)
     temp = target.with_suffix('.tmp')
     temp.write_text(json.dumps(payload,allow_nan=False))
