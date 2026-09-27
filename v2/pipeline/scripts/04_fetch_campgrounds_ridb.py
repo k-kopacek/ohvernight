@@ -1,6 +1,7 @@
 """RIDB inventory needs a key; inventory never implies winter availability."""
 import os
 import math
+import re
 from shapely.geometry import Point
 from lib.arcgis_client import new_session
 from lib.common import source, aoi, write_fc
@@ -8,6 +9,11 @@ from lib.evidence import make_evidence
 
 class MissingCredentials(RuntimeError):
     pass
+
+def is_campground_candidate(name):
+    """Conservative inventory gate, not evidence of sleeping permission."""
+    return bool(re.search(r'\bcampgrounds?\b', name or '', re.I)) and not bool(
+        re.search(r'\b(picnic|amphitheat(?:re|er)|day[ -]?use)\b', name or '', re.I))
 
 def fetch_facilities(client=None):
     key = os.environ.get("RIDB_API_KEY")
@@ -51,14 +57,16 @@ def normalize(facilities):
     features = []
     bounds = aoi()
     for fac in facilities:
+        if not is_campground_candidate(fac.get('FacilityName')):
+            continue
         try:
             lat, lon = float(fac["FacilityLatitude"]), float(fac["FacilityLongitude"])
         except (KeyError, TypeError, ValueError):
             continue
         if not all(map(math.isfinite, (lat, lon))) or not bounds.covers(Point(lon, lat)):
             continue
-        # RIDB activity filtering supplies camping inventory; FacilityTypeDescription
-        # is often generic and is not a reliable cabin/campground classifier.
+        # Activity=9 also returns day-use facilities. Require a campground name
+        # for this pilot; other accommodation types need separate review.
         ident = str(fac["FacilityID"])
         url = f"https://ridb.recreation.gov/api/v1/facilities/{ident}"
         features.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": [lon, lat]},

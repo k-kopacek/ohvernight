@@ -58,6 +58,8 @@ body[data-view=map] .landing{display:none}
 }
 
 /* Explore keeps its legend on demand, leaving the map clear. */
+#adventure-dialog{overflow:auto;overscroll-behavior:contain;width:min(600px,calc(100vw - 24px))}
+#adventure-summary{font-size:13px}.adventure-card{border-top:1px solid var(--line);padding:18px 0;margin-top:18px}.adventure-card h2{font-size:21px}.adventure-card p,.adventure-card li{font-size:13px;margin-top:10px}.adventure-card ul{padding-left:18px}.adventure-card small{display:block;color:var(--muted);line-height:1.5;margin-top:4px}
 .trails-button{position:absolute;right:190px;top:90px;z-index:501;min-height:44px}
 body[data-view=planner] .trails-button{display:none}
 #trail-browser{overflow:auto;overscroll-behavior:contain}

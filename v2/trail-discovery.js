@@ -24,7 +24,20 @@
      .map(place=>({place,miles:distanceMiles(place.coordinates,feature.geometry)}))
      .filter(p=>p.miles<=5).sort((a,b)=>a.miles-b.miles).slice(0,3);
  }
- const api={activities,matches,distanceMiles,nearby};
+ function nearbyTrails(place,features){
+   const seen=new Set();
+   return features.map(feature=>({feature,miles:distanceMiles(place.coordinates,feature.geometry)}))
+     .filter(x=>x.miles<=5).sort((a,b)=>a.miles-b.miles)
+     .filter(({feature})=>{const p=feature.properties,key=(p.trail_number||p.id)+'|'+(p.name||'');if(seen.has(key))return false;seen.add(key);return true;}).slice(0,3);
+ }
+ function adventureOptions(places,features,activity){
+   if(!Object.hasOwn(activities,activity))return [];
+   const candidates=features.filter(f=>matches(f,'',activity));
+   return places.filter(p=>['campground','dispersed'].includes(p.kind))
+     .map(place=>({place,trails:nearbyTrails(place,candidates)})).filter(x=>x.trails.length)
+     .sort((a,b)=>(a.place.status==='excluded')-(b.place.status==='excluded')||a.trails[0].miles-b.trails[0].miles);
+ }
+ const api={activities,matches,distanceMiles,nearby,nearbyTrails,adventureOptions};
  if(typeof module!=='undefined')module.exports=api;
  scope.TrailDiscovery=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

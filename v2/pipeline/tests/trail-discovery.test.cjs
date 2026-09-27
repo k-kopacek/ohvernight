@@ -20,3 +20,17 @@ test('nearby camping excludes distant records and rooms; retains conflicts for r
  {id:'far',kind:'dispersed',coordinates:[-106.5,40]}];
  assert.deepEqual(D.nearby(feature,places).map(x=>x.place.id),['camp']);
 });
+test('camp-to-trail results deduplicate segments and exclude distant trails',()=>{
+ const far={...feature,properties:{...feature.properties,id:'far',trail_number:'99'},geometry:{type:'LineString',coordinates:[[0,0],[1,1]]}};
+ const result=D.nearbyTrails({coordinates:[-106.5,39]},[feature,feature,far]);
+ assert.equal(result.length,1);assert.equal(result[0].miles,0);
+});
+test('adventure ranking keeps conflicts visible but below other candidates',()=>{
+ const places=[{id:'conflict',kind:'campground',coordinates:[-106.5,39],status:'excluded'},
+ {id:'review',kind:'dispersed',coordinates:[-106.5,39.01],status:'unknown'},
+ {id:'room',kind:'lodging',coordinates:[-106.5,39]}];
+ assert.deepEqual(D.adventureOptions(places,[feature],'hiking').map(x=>x.place.id),['review','conflict']);
+ assert.deepEqual(D.adventureOptions(places,[feature],'mountain_biking'),[]);
+ assert.deepEqual(D.adventureOptions(places,[],'hiking'),[]);
+ assert.deepEqual(D.adventureOptions(places,[feature],'unrecognized'),[]);
+});

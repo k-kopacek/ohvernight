@@ -4,26 +4,30 @@
 <meta name="description" content="Find an overnight plan near Aspen Snowmass. Compare vehicle access, seasonal restrictions and room backups on a satellite map.">
 <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#20241e">
 <title>ohvernight v2 — Stay close. Know before you go.</title><link rel="icon" type="image/png" sizes="32x32" href="./favicon.png"><link rel="icon" type="image/svg+xml" sizes="any" href="./favicon.svg">
-<link rel="stylesheet" href="./vendor/leaflet.css"><link rel="stylesheet" href="./styles.css?v=discovery-20260925">
+<link rel="stylesheet" href="./vendor/leaflet.css"><link rel="stylesheet" href="./styles.css?v=adventure-20260926">
 </head><body>
 <main id="app">
 <section id="landing" class="landing" aria-labelledby="landing-title">
 <div class="landing-card">
 <a class="landing-brand" href="./" aria-label="ohvernight home"><img src="./assets/logo-mark.svg" width="42" height="42" alt="">ohvernight</a>
 <span class="eyebrow">ASPEN / SNOWMASS FIELD TEST</span>
-<h1 id="landing-title">Find a place to sleep before you go.</h1>
-<p class="landing-lead">Set your destination, dates and vehicle. We’ll show the best available overnight leads, what still needs confirmation, and how close each option is to the mountain.</p>
+<h1 id="landing-title">Choose your adventure.</h1>
+<p class="landing-lead">Find camping near the trails you want to explore. Start with your dates, vehicle and activity, or explore the map freely.</p>
+<p class="landing-note">Colorado · Aspen / Snowmass pilot. Statewide coverage is still being built.</p>
 <form id="landing-trip-form" class="landing-form">
 <label>Mountain<select id="landing-resort"><option value="aspen">Aspen Mountain</option><option value="highlands">Aspen Highlands</option><option value="buttermilk">Buttermilk</option><option value="snowmass">Snowmass</option></select></label>
 <div class="date-fields"><label>Arrive<input id="landing-arrive" type="date" required></label><label>Depart<input id="landing-depart" type="date" required></label></div>
 <label>Your vehicle<select id="landing-vehicle"><option value="passenger_car">Passenger car / SUV</option><option value="high_clearance">High-clearance vehicle</option><option value="motorhome">Motorhome / RV</option></select></label>
-<p id="landing-error" class="error" role="alert" hidden></p><button class="primary" type="submit">Show overnight options →</button>
+<label>What would you like to do?<select id="landing-activity"><option value="">Just find an overnight stay</option></select></label>
+<p id="landing-error" class="error" role="alert" hidden></p><button class="primary" type="submit">Find my adventure →</button>
 </form>
 <button id="landing-explore" class="landing-secondary" type="button">Explore the open map</button>
+<p class="landing-note"><a href="./regions/douglas-co/">Preview Douglas County trails & roads →</a> · research coverage only</p>
 <p class="landing-note">The map helps you research. It does not replace the official source, current conditions, or local confirmation.</p>
 </div>
 </section>
 <div id="map" aria-label="Interactive map of overnight options near Aspen Snowmass"></div>
+<dialog id="adventure-dialog" aria-labelledby="adventure-title"><header><h1 id="adventure-title">Camping near your activity</h1><button id="close-adventure" class="close" type="button" aria-label="Close adventure results">×</button></header><p id="adventure-summary" role="status"></p><p class="muted">Research suggestions, not verified itineraries. Camping date and vehicle conflicts are shown. Trail use dates, closures and connecting access still need review. Distances are straight-line to mapped segments, not trailheads.</p><div id="adventure-results"></div><button id="change-adventure" class="primary" type="button">Change my adventure</button></dialog>
 <header class="topbar"><a class="brand" href="./" aria-label="ohvernight home"><img class="brand-mark" src="./assets/logo-mark.svg" width="32" height="32" alt="">ohvernight<span class="beta">FIELD TEST</span></a><div class="topbar-actions"><button id="back-planner" class="back-button" type="button">Plan a trip</button><button id="edit-trip" class="trip-button" aria-haspopup="dialog"><span id="trip-caption">Aspen Mountain · Jan 15–17</span><span class="edit-label">Edit trip ↗</span></button></div></header>
 <div class="map-tools" aria-label="Map controls"><div class="basemaps"><button id="satellite" aria-pressed="true">Satellite</button><button id="terrain" aria-pressed="false">Topo</button></div><button id="fit" aria-label="Fit all locations on map">Fit area</button><button id="zoom-in" aria-label="Zoom in">+</button><button id="zoom-out" aria-label="Zoom out">−</button></div>
 <p id="map-status" class="map-status" role="status" hidden></p>
@@ -61,4 +65,4 @@
 </div></section>
 <dialog id="trip-dialog" aria-labelledby="trip-title"><form id="trip-form"><header><div><span class="eyebrow">MAKE IT YOUR TRIP</span><h1 id="trip-title">Where are you headed?</h1></div><button id="close-trip" type="button" class="close" aria-label="Close trip settings">×</button></header><label>Mountain<select id="resort"><option value="aspen">Aspen Mountain</option><option value="highlands">Aspen Highlands</option><option value="buttermilk">Buttermilk</option><option value="snowmass">Snowmass</option></select></label><div class="date-fields"><label>Arrive<input id="arrive" type="date" value="2027-01-15" required></label><label>Depart<input id="depart" type="date" value="2027-01-17" required></label></div><label>Your vehicle<select id="vehicle"><option value="passenger_car">Passenger car / SUV</option><option value="high_clearance">High-clearance vehicle</option><option value="motorhome">Motorhome / RV</option></select></label><p class="muted">We check mapped vehicle seasons and published setup requirements. Current snow, availability and overnight permission still need confirmation.</p><p id="trip-error" class="error" role="alert" hidden></p><button class="primary" type="submit">Update my trip →</button></form></dialog>
 <noscript><p class="map-status">JavaScript is required to load places and evaluate your trip.</p></noscript>
-</main><script src="./vendor/leaflet.js"></script><script src="./trip-rules.js"></script><script src="./trust.js"></script><script src="./map-layers.js?v=trails-20260925"></script><script src="./trail-discovery.js"></script><script src="./app.js?v=discovery-20260925"></script></body></html>
+</main><script src="./vendor/leaflet.js"></script><script src="./trip-rules.js"></script><script src="./trust.js?v=ridb-20260925"></script><script src="./map-layers.js?v=trails-20260925"></script><script src="./trail-discovery.js?v=adventure-20260926"></script><script src="./app.js?v=adventure-20260926"></script></body></html>

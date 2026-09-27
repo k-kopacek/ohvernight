@@ -86,7 +86,7 @@ class KickoffTests(unittest.TestCase):
             self.assertEqual(out.read_text(),'{"previous":true}')
 
     def test_export_has_no_permission_or_live_availability_claim(self):
-        facilities=[{"FacilityID":101,"FacilityName":"Test Camp","FacilityLatitude":39.15,"FacilityLongitude":-106.8,"FacilityReservationURL":"javascript:bad","Reservable":True}]
+        facilities=[{"FacilityID":101,"FacilityName":"Test Campground","FacilityLatitude":39.15,"FacilityLongitude":-106.8,"FacilityReservationURL":"javascript:bad","Reservable":True}]
         with tempfile.TemporaryDirectory() as directory:
             out=Path(directory)/"ridb-options.json"
             with patch.object(check_ridb.ridb,"fetch_facilities",return_value=facilities):

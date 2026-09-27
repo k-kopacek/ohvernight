@@ -4,6 +4,8 @@ Satellite website with the alpine-night logo, source freshness warnings, indepen
 
 ## Publish alongside the original
 
+**Choose Your Adventure** combines one selected trail activity with nearby campground/dispersed listings. Dates and vehicle affect camping conflict labels, while original trail activity dates remain visible for review. Suggestions are sorted by camping conflicts then approximate trail proximity; they are not verified itineraries or connecting routes. Choose no activity for the original overnight search, or use Explore for unrestricted map browsing. Coverage remains the Aspen-area pilot.
+
 **Find trails** searches trail names/numbers and published activities in a separate drawer. Selecting a result locates that segment and opens its details. Activity matches require a managed or accepted source record; displayed restrictions and dates still need review. Search never hides map geometry.
 
 Trail popups link to up to three campground/dispersed listings within approximately five straight-line miles of the clipped trail segment. Distance is to the nearest line segment, not a trailhead or a travel route; it does not establish legal access. Empty results describe the current inventory, not the absence of camping in that area.
@@ -14,7 +16,7 @@ Explore opens with the legend closed. Use **Layers & legend** for switches and e
 
 The water display includes 1,555 named waterbody/flowline features from the current dataset. All 6,926 hydrology features remain in the pipeline bundle for screening. Named water is not a verified recreation-access or perennial-water dataset; unnamed lakes are also hidden by this initial cleanup.
 
-When uploading, preserve any newer `ridb-options.json` already in your repository. This package does not replace or refresh the RIDB import.
+The working folder includes `ridb-options.json` recovered from the successful September 25 GitHub import. Four campground records are retained; three overlap researched listings, so the combined inventory has six locations including Silver Queen Campground. Two day-use/ambiguous records are excluded, with the original import retained under `pipeline/data/raw/` for audit. Preserve a newer reviewed import if one exists when publishing.
 
 1. Unzip the latest ohvernight v2 delivery ZIP.
 2. Open https://github.com/k-kopacek/ohvernight → Add file → Upload files.

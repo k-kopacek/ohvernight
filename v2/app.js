@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mobile=()=>matchMedia('(max-width:760px)').matches;
 let map,markers,baseLayer,data,inventory,bundle=null,ridb=null,registry=null,coverage=null,places=[],kind='all',selected=null;
-let pipelineLayers=new Map(),layerRecords=null,view='planner',trails=null;
+let pipelineLayers=new Map(),layerRecords=null,view='planner',trails=null,ridbLoadMessage='';
 const enabledLayers=new Set(MapLayers.definitions.map(d=>d.id));
 let trip={resort:'aspen',arrive:'2027-01-15',depart:'2027-01-17',vehicle:'passenger_car'},plan={a:null,b:null};
 const storageKey='ohvernight-trip-v1';
@@ -24,7 +24,7 @@ function expand(value){$('sheet').classList.toggle('expanded',value);document.bo
 $('sheet-toggle').addEventListener('click',()=>expand(!$('sheet').classList.contains('expanded')));
 fillLandingTrip();
 document.body.dataset.view=view;
-$('landing-trip-form').onsubmit=event=>{event.preventDefault();const next=Object.fromEntries(['resort','arrive','depart','vehicle'].map(k=>[k,$('landing-'+k).value]));applyTrip(next);};
+$('landing-trip-form').onsubmit=event=>{event.preventDefault();const next=Object.fromEntries(['resort','arrive','depart','vehicle'].map(k=>[k,$('landing-'+k).value]));if(applyTrip(next)&&$('landing-activity').value)showAdventure();};
 $('landing-explore').onclick=()=>{setView('map');render();fit();};
 $('back-planner').onclick=()=>{fillLandingTrip();setView('planner');};
 function fillTrip(){for(const key of ['resort','arrive','depart','vehicle'])$(key).value=trip[key];}
@@ -32,6 +32,15 @@ $('edit-trip').onclick=()=>{fillTrip();$('trip-error').hidden=true;$('trip-dialo
 $('close-trip').onclick=()=>$('trip-dialog').close();
 $('trip-form').onsubmit=event=>{event.preventDefault();const next=Object.fromEntries(['resort','arrive','depart','vehicle'].map(k=>[k,$(k).value]));if(applyTrip(next,'trip-error'))$('trip-dialog').close();};
 function setKind(value){kind=value;document.querySelectorAll('[data-kind]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.kind===value)));render();}
+function showAdventure(){
+ const activity=$('landing-activity').value,options=TrailDiscovery.adventureOptions(places,trails?.features||[],activity);
+ $('adventure-summary').textContent=TrailDiscovery.activities[activity]+' + camping · '+trip.arrive+' to '+trip.depart+' · '+options.length+' options in this pilot';
+ $('adventure-results').innerHTML=options.length?options.map(({place,trails:nearby})=>'<article class="adventure-card"><h2>'+esc(place.name)+'</h2><p class="status '+(place.status==='excluded'?'conflict':'')+'">'+esc(place.label)+'</p><p>'+esc(place.tripNote)+'</p><p class="muted">Ordered by camping conflicts, then distance to the nearest matching trail.</p><ul>'+nearby.map(({feature,miles})=>{
+   const p=feature.properties,r=p.activities[activity];
+   return '<li>'+esc(p.name||'Unnamed trail')+' · about '+miles.toFixed(1)+' mi direct<small>'+esc([r.managed?'Managed: '+r.managed:'',r.accpt?'Accepted: '+r.accpt:'',r.restricted?'Restricted: '+r.restricted:'',r.disc?'Discouraged: '+r.disc:''].filter(Boolean).join(' · '))+'</small></li>';
+ }).join('')+'</ul><button type="button" class="primary" data-adventure-place="'+esc(place.id)+'">View camping & nearby trails</button></article>').join(''):'<p class="muted">'+(trails?'No camping-and-trail matches in this small pilot. Try a different activity or explore the map. This does not mean the activity is unavailable in the area.':'Trail data could not load. You can still explore the camping listings on the map.')+'</p>';
+ $('adventure-dialog').showModal();
+}
 document.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>setKind(b.dataset.kind));
 $('show-conflicts').onchange=()=>render();
 function selectedDetails(){
@@ -41,6 +50,9 @@ function selectedDetails(){
  const listingLabel=p.kind==='lodging'?'Official site & booking ↗':p.source_is_search?'Find official listing on Recreation.gov ↗':'Official listing & camping details ↗';
  $('detail').innerHTML='<span class="eyebrow">'+esc(type(p))+'</span><h2>'+esc(p.name)+'</h2><a class="official-link" href="'+esc(p.source)+'" target="_blank" rel="noopener noreferrer">'+listingLabel+'</a><span class="status '+(p.status==='excluded'?'conflict':'')+'">'+esc(p.label)+'</span><p class="why">'+esc(p.tripNote)+'</p><p>'+esc(p.note)+'</p><h3>Before you commit</h3><ul>'+p.unknowns.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul><div class="actions"><button data-save="a" aria-pressed="'+(plan.a===p.id)+'">'+(plan.a===p.id?'Saved as Plan A':'Save as Plan A')+'</button><button data-save="b" aria-pressed="'+(plan.b===p.id)+'">'+(plan.b===p.id?'Saved as backup':'Save as backup')+'</button></div><p class="muted">Saving a place does not confirm it is suitable or available.</p><div class="links"><a href="'+directions+'" target="_blank" rel="noopener noreferrer">Open directions ↗</a><span>'+esc(distanceText(p))+' to '+esc(resort().name)+'</span></div><details><summary>Evidence, location accuracy & review date</summary><p>Listing reviewed '+esc(p.checked_on)+'. '+esc(p.locationBasis)+'.</p><p><a href="'+esc(p.mapSource)+'" target="_blank" rel="noopener noreferrer">Location source ↗</a></p>'+(p.access?'<p><a href="'+esc(p.access.evidence.source_url)+'" target="_blank" rel="noopener noreferrer">USFS vehicle designation ↗</a> · '+esc(p.access.id)+' · retrieved '+esc(p.access.evidence.retrieved_at.slice(0,10))+'</p>':'')+'<p>Distances are straight-line, not driving distances. Directions may not reflect closures or permission to use the approach.</p></details>';
  $('detail').querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>{const slot=b.dataset.save,other=slot==='a'?'b':'a';plan[slot]=plan[slot]===p.id?null:p.id;if(plan[other]===p.id)plan[other]=null;persist();renderPlan();selectedDetails();});
+ const nearby=TrailDiscovery.nearbyTrails(p,trails?.features||[]);
+ const section=document.createElement('section');section.innerHTML='<h3>Trails nearby</h3><p class="muted">Approximate straight-line distance to mapped trail segments, not trailheads or routes. Check published uses and access.</p>'+(nearby.length?nearby.map(({feature,miles})=>'<button type="button" class="trail-result" data-camp-trail="'+esc(feature.properties.id)+'"><strong>'+esc(feature.properties.name||'Unnamed trail')+'</strong><small>About '+miles.toFixed(1)+' mi direct · View trail</small></button>').join(''):'<p class="muted">'+(trails?'No mapped trails within five miles in this pilot.':'Trail data is not loaded.')+'</p>');
+ $('detail').appendChild(section);section.querySelectorAll('[data-camp-trail]').forEach(b=>b.onclick=()=>showTrail(b.dataset.campTrail));
 }
 function renderPlan(){
  const rows=['a','b'].map(slot=>{const p=places.find(p=>p.id===plan[slot]);return p?'<div class="plan-row"><span><strong>'+ (slot==='a'?'PLAN A':'BACKUP')+'</strong> · '+esc(p.name)+'<small>'+esc(p.label)+'</small></span><button data-open-plan="'+p.id+'" aria-label="View '+esc(p.name)+'">View</button><button data-clear="'+slot+'" aria-label="Remove '+(slot==='a'?'Plan A':'backup')+'">×</button></div>':'';}).join('');
@@ -63,7 +75,7 @@ function render(){
  renderPlan();selectedDetails();renderMarkers();renderSourceHealth();renderPipelineLayers();
 }
 function renderSourceHealth(){
- const summary=Trust.sourceSummary(bundle,ridb);
+ const summary=Trust.sourceSummary(bundle,ridb);if(!ridb&&ridbLoadMessage)summary.inventory=ridbLoadMessage;
  $('source-health-content').innerHTML='<p class="trust-warning">'+esc(summary.fire)+'</p><p>'+esc(summary.closures)+'</p><p>'+esc(summary.inventory)+'</p><a href="https://www.fs.usda.gov/r02/whiteriver/alerts" target="_blank" rel="noopener noreferrer">Forest Service alerts ↗</a> · <a href="https://pitkincounty.com/CivicAlerts.asp" target="_blank" rel="noopener noreferrer">Pitkin County notices ↗</a>';
  $('source-health').dataset.state=summary.fireState;
  document.querySelectorAll('.place-card').forEach(card=>{const badge=document.createElement('span');badge.className='confidence-badge';badge.textContent='Official listing · trip needs confirmation';card.appendChild(badge);});
@@ -141,7 +153,7 @@ function renderPipelineLayers(){
  if(map)for(const [id,layer] of pipelineLayers){if(enabledLayers.has(id)){if(!map.hasLayer(layer))layer.addTo(map);}else if(map.hasLayer(layer))map.removeLayer(layer);}
  if(map&&enabledLayers.has('roads'))pipelineLayers.get('roads')?.bringToFront();
  $('layer-trip-status').textContent=bundle?'Research snapshot: '+(bundle.generated_at||'Unknown date').slice(0,10)+'. Roads and research areas stay visible for every trip. Research areas were screened for '+bundle.trip.arrive+'–'+bundle.trip.depart+' ('+bundle.trip.vehicle.replaceAll('_',' ')+'); camping permission remains unknown.':'Research map data is not loaded. Overnight listings are still available.';
- $('inventory-status').textContent=ridb?'RIDB: '+ridb.places.length+' imported facility records. '+Trust.sourceSummary(bundle,ridb).inventory:'RIDB: no campground import loaded yet. Only the manually researched listings are shown.';
+ $('inventory-status').textContent=ridb?'RIDB: '+ridb.places.length+' campground records loaded; existing researched listings take priority over duplicates. '+Trust.sourceSummary(bundle,ridb).inventory:ridbLoadMessage||Trust.sourceSummary(bundle,null).inventory;
 }
 function fit(){if(!map||!data)return;expand(false);map.invalidateSize();map.fitBounds(data.resorts.concat(inventory.places).map(ll),{paddingTopLeft:mobile()?[38,155]:[440,110],paddingBottomRight:mobile()?[40,190]:[70,80],maxZoom:13,animate:false});}
 function switchMap(mode){
@@ -156,14 +168,15 @@ function switchMap(mode){
 try{
  const load=async path=>{const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw Error('Location data unavailable');return r.json();};
  const optional=async path=>{try{return await load(path);}catch{return null;}};
- [data,inventory,bundle,ridb,registry,coverage,trails]=await Promise.all([load('./destinations.json'),load('./overnight-options.json'),optional('./map-data-v2.json'),optional('./ridb-options.json'),optional('./pipeline/config/rules-registry.json'),optional('./pipeline/config/aoi.geojson'),optional('./trails.geojson')]);
+ const loadRidb=async()=>{try{const r=await fetch('./ridb-options.json',{cache:'no-store'});if(!r.ok){ridbLoadMessage=r.status===404?'The campground import file is missing from this website. The API key is checked separately during import.':'Campground data could not load. Try reloading the page.';return null;}return await r.json();}catch{ridbLoadMessage='Campground data could not be read. Try reloading the page.';return null;}};
+ [data,inventory,bundle,ridb,registry,coverage,trails]=await Promise.all([load('./destinations.json'),load('./overnight-options.json'),optional('./map-data-v2.json'),loadRidb(),optional('./pipeline/config/rules-registry.json'),optional('./pipeline/config/aoi.geojson'),optional('./trails.geojson')]);
  if(trails?.type!=='FeatureCollection'||!Array.isArray(trails.features))trails=null;
  if(inventory.schema_version!==1||!Array.isArray(inventory.places)||!Array.isArray(data.resorts))throw Error('Invalid location data');
  if(bundle?.schema_version!==2||!bundle.trip||!bundle.layers)bundle=null;
  if(ridb?.schema_version===1&&Array.isArray(ridb.places)){
    const existing=new Set(inventory.places.map(p=>p.ridb_facility_id).filter(Boolean));
    inventory.places.push(...ridb.places.filter(p=>!existing.has(p.ridb_facility_id)));
- }else ridb=null;
+ }else {if(ridb)ridbLoadMessage='The campground import format is unsupported. Researched listings are still available.';ridb=null;}
  const ids=new Set();for(const p of inventory.places){if(!/^[a-z0-9_-]+$/.test(p.id)||ids.has(p.id)||!Array.isArray(p.coordinates)||p.coordinates.length!==2||!p.coordinates.every(Number.isFinite)||Math.abs(p.coordinates[0])>180||Math.abs(p.coordinates[1])>90)throw Error('Invalid location');ids.add(p.id);for(const url of [p.source,p.mapSource,p.access?.evidence?.source_url].filter(Boolean))if(!['https:','http:'].includes(new URL(url).protocol))throw Error('Invalid source');}
  if(!data.resorts.some(r=>r.id===trip.resort))trip.resort='aspen';
  if(!TripRules.tripDays(trip.arrive,trip.depart)){trip.arrive='2027-01-15';trip.depart='2027-01-17';}
@@ -175,6 +188,10 @@ try{
  $('satellite').onclick=()=>switchMap('satellite');$('terrain').onclick=()=>switchMap('terrain');$('fit').onclick=fit;$('zoom-in').onclick=()=>map?.zoomIn();$('zoom-out').onclick=()=>map?.zoomOut();
  $('open-layers').onclick=()=>$('map-legend').showModal();
  $('open-trails').onclick=()=>{renderTrailSearch();$('trail-browser').showModal();};
+ $('landing-activity').insertAdjacentHTML('beforeend',Object.entries(TrailDiscovery.activities).map(([id,label])=>'<option value="'+id+'">'+label+'</option>').join(''));
+ $('close-adventure').onclick=()=>$('adventure-dialog').close();
+ $('change-adventure').onclick=()=>{$('adventure-dialog').close();fillLandingTrip();setView('planner');$('landing-activity').focus();};
+ $('adventure-results').onclick=event=>{const button=event.target.closest('[data-adventure-place]');if(button){$('adventure-dialog').close();choose(button.dataset.adventurePlace);}};
  $('close-trails').onclick=()=>$('trail-browser').close();
  $('trail-activity').insertAdjacentHTML('beforeend',Object.entries(TrailDiscovery.activities).map(([id,label])=>'<option value="'+id+'">'+label+'</option>').join(''));
  $('trail-query').oninput=renderTrailSearch;$('trail-activity').onchange=renderTrailSearch;

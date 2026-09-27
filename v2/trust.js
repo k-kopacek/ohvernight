@@ -26,7 +26,7 @@
         fireAge==='stale'?'Fire restriction information is outdated. Verify with the agency before travel.':
         'Current fire restrictions have not been confirmed. Check official notices.',
       closures:'Wildlife closures and special orders are not fully verified for this trip.',
-      inventory:!ridb?'RIDB inventory is not connected yet.':
+      inventory:!ridb?'Imported campground data is not loaded on this website. This does not indicate an API-key problem.':
         freshness(ridb.source_status,now)==='current'?'RIDB facility inventory fetched recently; availability is not checked.':
         'RIDB inventory may be outdated. Open the official listing to confirm.',
       fireState:interpreted?'current':fireAge==='stale'?'stale':'unavailable'

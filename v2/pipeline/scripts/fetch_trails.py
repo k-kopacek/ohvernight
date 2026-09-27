@@ -14,9 +14,9 @@ ACTIVITIES = {
     'snowmobiling': 'snowmobile',
 }
 
-def normalize(row, evidence):
+def normalize(row, evidence, boundary=None):
     p = properties(row)
-    geometry = clip_geometry(row['geometry'])
+    geometry = clip_geometry(row['geometry'], boundary)
     if not geometry or geometry['type'] not in {'LineString', 'MultiLineString'}:
         return None
     # Keep published date/rule strings verbatim. Missing is unknown, never allowed.

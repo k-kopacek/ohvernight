@@ -24,7 +24,7 @@ def safe_url(value):
 def export(destination, client=None):
     features = ridb.normalize(ridb.fetch_facilities(client))
     if not features:
-        raise ValueError("RIDB authenticated, but no facilities survived the Aspen coverage filter")
+        raise ValueError("RIDB authenticated, but no explicit campground candidates survived the Aspen coverage filter")
     checked = now()
     places = []
     for feature in features:

@@ -2,6 +2,20 @@
 
 The scheduled kickoff was deleted; work started directly in the existing task.
 
+## Douglas expansion started — September 27
+
+Added separate county-boundary/trail/road import and research preview linked from the landing page. Initial counts: 102 USFS trail segments and 73 MVUM road segments. No statewide or complete-county coverage claim. Main trip suggestions remain Aspen-only. Source audit and remaining regional integration gates are in `regions/douglas-co/README.md`. No ZIP or publication yet.
+
+## Choose Your Adventure pilot — September 26, local only
+
+Landing form now accepts one trail activity alongside dates and vehicle. Activity selection produces camping-plus-nearby-trail research suggestions; no activity opens the existing overnight map. Results retain camping conflicts, sort those last then by nearest matching segment, and show original trail use/restriction dates. Trail seasons are not evaluated against trip dates. Colorado/Aspen coverage is explicit; statewide discovery, multiple activities and confirmed itineraries remain pending. Verified hiking results through mobile camping detail navigation; ranking/empty-input tests pass. Packaging remains deferred.
+
+## RIDB recovery and reverse discovery — local, not published
+
+Confirmed GitHub run 36141416448 succeeded while the deployed v2/ridb-options.json returned 404. Recovered artifact 10870043849 and verified its SHA-256. The workflow exports artifacts but does not publish them. Added the reviewed import to local v2: six raw records, four campground candidates, one net-new listing after deduplication (Silver Queen). Picnic site and amphitheatre excluded; original artifact data and review exclusions preserved. Future imports conservatively require explicit campground naming, excluding day-use names; other lodging types need review rather than automatic classification.
+
+Explore now distinguishes missing/unreadable/unsupported imports from API-key status. Camp details show up to three nearby distinct trails, deduplicated by trail number/name and ranked by approximate proximity. Verified Silver Queen → Lower Maroon Creek on mobile; 32 Python tests and discovery/trust tests pass. No deployment or ZIP rebuild performed.
+
 ## Discovery increment — local working files, not packaged
 
 Implemented name/number and activity trail search, selection on the map, and nearby camping detail links. Activity filtering uses managed/accepted evidence with original restrictions visible, does not evaluate trip dates, and never hides layers. Proximity is approximate point-to-polyline distance within five miles, limited to three campground/dispersed listings; no trailhead, travel connection or permission inference. Unit tests cover unknown/restricted activities, distance to segment interiors, multi-line geometry and inventory limits. Mobile testing verified the Difficult Creek → Difficult Campground flow. Packaging deferred at the user's request.
