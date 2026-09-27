@@ -1,5 +1,10 @@
 # ohvernight v2 — pipeline kickoff
 
+## Douglas County field testing
+
+The September 27 field-test release adds a dedicated dirt-bike/camping explorer at `regions/douglas-co/`. See [DOUGLAS-TESTING.md](DOUGLAS-TESTING.md) for inventory, upload steps, testing and coverage limits. All county layers start enabled; trail-season badges are source comparisons, not live access verdicts.
+
+
 Satellite website with the alpine-night logo, source freshness warnings, independently controlled map layers, manual rule registry and an independent RIDB import. The header uses assets/logo-mark.svg; browser icons use favicon.svg and favicon.png. All current work and pipeline source are inside this v2 folder.
 
 ## Publish alongside the original

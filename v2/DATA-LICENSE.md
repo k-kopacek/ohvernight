@@ -17,3 +17,8 @@ Both JSON files contain the complete data used by this site. Road way IDs, geogr
 USGS The National Map imagery and topo tiles are requested directly in the browser from `basemap.nationalmap.gov`. Source services: https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer and https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer. USGS attribution stays visible on the map. Imagery includes aerial photography and is not a current-condition feed.
 
 Leaflet 1.9.4 is bundled under the BSD 2-Clause license; see vendor/leaflet-LICENSE.txt. OpenStreetMap-derived destination and inventory coordinates retain their linked provenance and ODbL attribution. The previous D3 map renderer is no longer used.
+
+
+## Douglas County snapshot (2026-09-27)
+
+The independent county snapshot includes US Census TIGERweb boundary geometry, USFS trails/MVUM road geometry/recreation-site inventory, BLM limited-scale surface-management context and named USGS NHD water features. Per-feature evidence retains the service URL and fetch date. Broad management geometry is not cadastral/parcel surveying. Recreation.gov Rampart is linked as an area reference; no campsite geometry or commercial third-party trail inventory was copied. Basemap attribution remains visible (Esri imagery and OpenStreetMap streets).

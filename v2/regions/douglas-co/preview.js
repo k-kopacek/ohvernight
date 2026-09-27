@@ -1,21 +1,71 @@
-(async()=>{
- const status=document.getElementById('status');
- try{
-  const response=await fetch('./research.json',{cache:'no-store'});if(!response.ok)throw Error('Missing research data');
-  const data=await response.json();if(data.region!=='douglas-co'||data.schema_version!==1)throw Error('Unsupported research data');
-  const map=L.map('map',{preferCanvas:true});
-  L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:16,maxZoom:19,attribution:'Imagery: USGS The National Map'}).addTo(map);
-  const boundary=L.geoJSON(data.layers.coverage,{style:{color:'white',weight:2,fill:false},interactive:false}).addTo(map);map.fitBounds(boundary.getBounds(),{padding:[20,20]});
-  for(const [id,color] of [['roads','#ead294'],['trails','#f6a9ed']]){
-   const layer=L.geoJSON(data.layers[id],{style:{color,weight:3},onEachFeature:(f,l)=>{
-    const p=f.properties,box=document.createElement('div'),title=document.createElement('strong');title.textContent=p.name||'Unnamed '+(id==='roads'?'road':'trail');box.append(title);
-    const note=document.createElement('p');note.textContent='Mapped segment only. Current access, conditions and camping permission are unconfirmed.';box.append(note);
-    const link=document.createElement('a');link.textContent='Official source ↗';link.target='_blank';link.rel='noopener noreferrer';
-    try{const url=new URL(p.evidence.source_url);if(url.protocol==='https:'){link.href=url.href;box.append(link);}}catch{}
-    l.bindPopup(box);
-   }}).addTo(map);
-   document.getElementById(id).onchange=event=>event.target.checked?layer.addTo(map):map.removeLayer(layer);
-  }
-  status.textContent=`${data.layers.trails.features.length} trail segments · ${data.layers.roads.features.length} road segments · fetched ${data.generated_at.slice(0,10)}`;
- }catch{status.textContent='Douglas research data could not load. Reload the page; Aspen remains available.';for(const id of ['roads','trails'])document.getElementById(id).disabled=true;}
+/* County research UI. Search never changes map-layer visibility. */
+(async function(){
+ 'use strict';
+ const $=id=>document.getElementById(id), D=DouglasDiscovery, T=TrailDiscovery;
+ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
+ const button=(text,fn)=>{const n=el('button',text);n.onclick=fn;return n;};
+ const link=(text,url)=>{const n=el('a',text,'source');try{const u=new URL(url);if(!['https:','http:'].includes(u.protocol))return el('p','Official link unavailable');n.href=u.href;}catch{return el('p','Official link unavailable');}n.target='_blank';n.rel='noopener noreferrer';return n;};
+ const show=id=>{document.querySelectorAll('dialog[open]').forEach(d=>d.close());$(id).showModal();};
+ document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
+ const key='ohvernight-douglas-plan-v1';let saved=[];
+ try{const a=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(a))saved=a.filter(x=>typeof x==='string').slice(0,40);$('feedback').value=localStorage.getItem(key+'-notes')||'';}catch{}
+ const persist=()=>{try{localStorage.setItem(key,JSON.stringify(saved));localStorage.setItem(key+'-notes',$('feedback').value);}catch{$('status').textContent='Browser storage unavailable; download your plan to keep it.';}};
+ $('feedback').oninput=persist;
+ const today=new Date(),tomorrow=new Date();tomorrow.setDate(today.getDate()+1);
+ const date=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+ $('start').value=date(today);$('end').value=date(tomorrow);
+ for(const [value,label] of Object.entries(D.activities)){const o=el('option',label);o.value=value;$('activity').append(o);}
+ const all=el('option','All activities');all.value='';$('activity').append(all);
+ try{const trip=JSON.parse(localStorage.getItem(key+'-trip')||'{}');if(D.days(trip.start,trip.end)){$('start').value=trip.start;$('end').value=trip.end;}if(Object.hasOwn(D.activities,trip.activity)||trip.activity==='')$('activity').value=trip.activity;if([...$('vehicle').options].some(o=>o.value===trip.vehicle))$('vehicle').value=trip.vehicle;}catch{}
+ $('browse').onclick=()=>show('browser');$('layers').onclick=()=>show('legend');$('notices').onclick=()=>show('coverage');
+ const map=L.map('map',{preferCanvas:true}).setView([39.28,-105.05],10);
+ const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery © Esri and contributors'}).addTo(map);
+ const topo=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
+ // This is a street basemap, not a topographic contour layer.
+ $('basemap').textContent='Street';
+ $('basemap').onclick=()=>{const sat=map.hasLayer(satellite);map.removeLayer(sat?satellite:topo);map.addLayer(sat?topo:satellite);$('basemap').textContent=sat?'Satellite':'Street';};
+ [satellite,topo].forEach(t=>t.on('tileerror',()=>{$('status').textContent='Some background tiles failed. Check your connection; downloaded research layers may still work.';}));
+ let data;
+ try{const r=await fetch('research.json');if(!r.ok)throw Error('HTTP '+r.status);data=await r.json();if(data.region!=='douglas-co'||!data.layers?.trails)throw Error('Wrong county dataset');}
+ catch(e){$('status').textContent='County data could not load. Serve this folder over HTTP and reload. '+e.message;return;}
+ const features=k=>data.layers[k]?.features||[], trails=features('trails'),camps=D.camping(features('recreation')),heads=features('recreation').filter(f=>f.properties.site_type==='TRAILHEAD');
+ const area={type:'Feature',geometry:null,properties:{id:'rampart-designated-area',name:'Rampart Range designated dispersed camping',site_type:'DISPERSED_AREA',rec1stop_url:'https://www.recreation.gov/camping/campgrounds/10132201',restrictions:'Numbered designated sites only; fee required. The official listing describes a December 1–April 1 camping closure, with weather-dependent reopening. Check the listing for current rules and availability.',evidence:{retrieved_at:'2026-09-27',source_url:'https://www.recreation.gov/camping/campgrounds/10132201'}}};
+ const records=new Map([...trails,...camps,...heads,area].map(f=>[f.properties.id,f]));
+ saved=saved.filter(id=>records.has(id));
+ const name=f=>f.properties.name||'Unnamed feature',source=f=>f.properties.rec1stop_url||f.properties.usda_portal_url||f.properties.evidence?.source_url;
+ const kind=f=>f.properties.activities?'Trail segment':f.properties.site_type==='TRAILHEAD'?'Trailhead':f===area?'Dispersed camping area':'Campground';
+ const freshness=f=>{const raw=f.properties.evidence?.retrieved_at;const t=Date.parse(raw);return !Number.isFinite(t)?'Source date unknown':`Fetched ${raw.slice(0,10)}${Date.now()-t>7*86400000?' · older than 7 days; refresh needed':''}. Fetch date does not confirm current access.`;};
+ function download(filename,body,type){const u=URL.createObjectURL(new Blob([body],{type})),a=el('a');a.href=u;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),10000);}
+ function plan(){const box=$('plan-items');box.replaceChildren();if(!saved.length)box.append(el('p','Save a trail or campground from its details to begin.'));for(const id of saved){const f=records.get(id),row=el('div',null,'actions');row.append(button(name(f),()=>{focus(f);details(f);}),button('Remove',()=>{saved=saved.filter(x=>x!==id);persist();plan();}));box.append(row);}}
+ $('saved').onclick=()=>{plan();show('plan');};
+ $('export-plan').onclick=()=>download('ohvernight-douglas-plan.json',JSON.stringify({exported_at:new Date().toISOString(),trip:{start:$('start').value,end:$('end').value,activity:$('activity').value,vehicle:$('vehicle').value},saved:saved.map(id=>{const f=records.get(id);return {id,name:name(f),type:kind(f),source:source(f),source_fetched:f.properties.evidence?.retrieved_at};}),notes:$('feedback').value,limitations:'Research only. Closures, road connections, camping permission, vehicle suitability and availability are unconfirmed.'},null,2),'application/json');
+ let highlight;
+ function focus(f){if(highlight)map.removeLayer(highlight);if(!f.geometry)return;highlight=L.geoJSON(f,{interactive:false,style:{color:'#fff',weight:7,fillOpacity:0},pointToLayer:(_,ll)=>L.circleMarker(ll,{radius:16,color:'#fff',fillOpacity:0})}).addTo(map);map.fitBounds(highlight.getBounds(),{maxZoom:14,padding:[45,145]});}
+ function result(f,extra){const b=button('',()=>{focus(f);details(f);});b.className='result';b.append(el('strong',name(f)+(f.properties.trail_number?' · #'+f.properties.trail_number:'')),el('small',extra||kind(f)));if(f.properties.activities&&$('activity').value)b.append(el('span',D.season(f,$('activity').value,$('start').value,$('end').value),'badge'));return b;}
+ function details(f){const p=f.properties,box=$('detail-body');$('detail-title').textContent=name(f);box.replaceChildren(link('Official listing / source ↗',source(f)),el('p',freshness(f),'note'),el('span','Published source · current access unconfirmed','badge'));
+  const actions=el('div',null,'actions');const save=button(saved.includes(p.id)?'Remove from saved':'Save to plan',()=>{if(saved.includes(p.id))saved=saved.filter(x=>x!==p.id);else if(saved.length<40)saved.push(p.id);persist();details(f);});actions.append(save);
+  if(p.activities){actions.append(button('Download segment GPX',()=>download((p.trail_number||p.id)+'.gpx',D.gpx(f),'application/gpx+xml')));box.append(el('p','This is a county-clipped segment, not a complete route. GPX does not provide turn-by-turn guidance or confirm rideable connections.'));}
+  if(f.geometry?.type==='Point'){const [lon,lat]=f.geometry.coordinates;actions.append(link('Directions to facility ↗',`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`));box.append(el('p','Check approach roads and trailer parking before travel. Directions are for this facility, not a verified riding route.'));}
+  box.append(actions);
+  if(p.activities){const activity=$('activity').value;box.append(el('h2',activity?D.activities[activity]:'Published activities'));if(activity)box.append(el('p',D.season(f,activity,$('start').value,$('end').value),'badge'));
+   for(const [a,r] of Object.entries(p.activities)){if(activity&&a!==activity)continue;const rules=Object.entries(r).filter(([,v])=>v).map(([k,v])=>`${({managed:'Managed use',accpt:'Accepted use',disc:'Discouraged',restricted:'Restricted'})[k]}: ${v}`);if(rules.length)box.append(el('p',D.activities[a]+': '+rules.join('; ')));}
+   box.append(el('p','These source dates can be incomplete or surprising. Verify the current motor-vehicle map and agency alerts. No difficulty, width, direction or bike-registration eligibility has been verified.'));
+   for(const [label,list] of [['Campgrounds nearby',camps],['Trailheads nearby',heads]]){box.append(el('h2',label));const nearby=list.map(x=>({f:x,d:T.distanceMiles(x.geometry.coordinates,f.geometry)})).filter(x=>x.d<=5).sort((a,b)=>a.d-b.d).slice(0,3);if(!nearby.length)box.append(el('p','None in this imported inventory within five straight-line miles.'));nearby.forEach(x=>box.append(result(x.f,`${x.d.toFixed(1)} straight-line miles · connection unverified`)));}
+  }else{for(const [key,label] of [['restrictions','Published restrictions'],['important_info','Important information'],['activity_type_list','Listed activities'],['fee_description','Fees (verify current price)'],['open_season','Published season (may be historical)'],['water_availability','Water'],['restroom_availability','Restrooms'],['directions','Agency directions']])if(p[key]&&p[key]!=='No Data')box.append(el('h2',label),el('p',p[key]));
+   box.append(el('p','Stay limits, live availability and vehicle suitability are not verified. A nearby motorcycle trail does not permit riding an unlicensed bike through this campground.'));
+   if(f===area)box.append(el('p','Area listing only: individual campsites and access points have not been mapped.'));
+   if(f.geometry?.type==='Point'){box.append(el('h2','Nearby trails for selected activity'));const near=trails.filter(x=>T.matches(x,'',$('activity').value)).map(x=>({f:x,d:T.distanceMiles(f.geometry.coordinates,x.geometry)})).filter(x=>x.d<=5).sort((a,b)=>a.d-b.d).slice(0,5);near.forEach(x=>box.append(result(x.f,`${x.d.toFixed(1)} straight-line miles · connection unverified`)));if(!near.length)box.append(el('p','No matching imported segments within five straight-line miles.'));}}
+  box.append(button('Check alerts & coverage',()=>show('coverage')));show('details');
+ }
+ function render(){try{localStorage.setItem(key+'-trip',JSON.stringify({start:$('start').value,end:$('end').value,activity:$('activity').value,vehicle:$('vehicle').value}));}catch{}const q=$('query').value.toLowerCase().trim(),mode=$('mode').value;let rows=mode==='trails'?trails.filter(f=>T.matches(f,q,$('activity').value)):(mode==='camping'?[area,...camps]:heads).filter(f=>name(f).toLowerCase().includes(q));$('count').textContent=`${rows.length} ${mode==='trails'?'source segments':mode==='camping'?'camping listings (one area without a pin)':'trailhead records'} · map layers unchanged`;$('results').replaceChildren(...rows.map(f=>result(f)));if(!rows.length)$('results').append(el('p','No matches in this inventory. Try a name, trail number or another activity.'));}
+ ['query','activity','mode','start','end','vehicle'].forEach(id=>$(id).addEventListener('input',render));
+ const definitions=[['land','Land context','#83ae68',features('land')],['waterbodies','Named lakes & reservoirs','#51c7ed',features('waterbodies')],['waterways','Named streams','#51c7ed',features('waterways')],['wilderness','Wilderness','#bda3de',features('wilderness')],['roads','USFS road geometry','#ffc565',features('roads')],['trails','USFS trail segments','#ff82bf',trails],['camps','Campgrounds · C','#d4f787',camps],['heads','Trailheads · H','#ffffff',heads]];
+ const landColors={USFS:'#83ae68',OTHFE:'#bda3de',ST:'#e1bd60',LG:'#65bca5',PVT:'#91999e'};
+ for(const [key,label,color,rows] of definitions){const layer=L.geoJSON(rows,{style:f=>({color:key==='land'?(landColors[f.properties.manager]||'#aaa'):color,weight:key==='land'?1:key==='trails'?3:2,fillOpacity:key==='land'?.2:.18}),pointToLayer:(f,ll)=>L.marker(ll,{icon:L.divIcon({className:'',html:`<span class="location-pin ${key==='heads'?'head':''}">${key==='heads'?'H':'C'}</span>`,iconSize:[28,28]})}),onEachFeature:(f,l)=>l.on('click',()=>{if(records.has(f.properties.id)){focus(f);details(f);}else{const box=el('div');box.append(el('strong',name(f)),el('p',key==='roads'?'Source road geometry only. Current vehicle access and camping permission unconfirmed.':key==='land'?'Broad land-management context; not a surveyed boundary or access permission.':'Water or wilderness context only; access unconfirmed.'),link('Official source ↗',source(f)));l.bindPopup(box).openPopup();}})}).addTo(map);
+  const row=el('label'),check=document.createElement('input');check.type='checkbox';check.checked=true;check.setAttribute('aria-label',label);check.onchange=()=>check.checked?layer.addTo(map):map.removeLayer(layer);const swatch=el('i',null,'swatch');swatch.style.setProperty('--color',color);const caption=el('span',label);caption.append(el('small',rows.length+' features'+(!rows.length?' · none in fetched county coverage':'')));row.append(check,swatch,caption);$('layer-controls').append(row);
+ }
+ const boundary=L.geoJSON(data.layers.coverage,{interactive:false,style:{color:'#fff',weight:2,dashArray:'6 5',fill:false}}).addTo(map);$('fit').onclick=()=>map.fitBounds(boundary.getBounds(),{padding:[35,130]});$('fit').click();
+ for(const k of ['trails','roads','recreation','land','wilderness','waterbodies','waterways']){const s=data.source_status?.[k],f=features(k)[0],when=s?.retrieved_at||f?.properties.evidence?.retrieved_at;const stale=!when||Date.now()-Date.parse(when)>7*86400000;$('coverage-data').append(el('p',`${k}: ${features(k).length} features · fetched ${when?.slice(0,10)||'unknown'}${s?.status==='failed'?' · REFRESH FAILED; retained data may be outdated':stale?' · refresh needed':''}`));}
+ $('status').textContent=`${trails.length} trail segments · ${camps.length} campgrounds · ${heads.length} trailheads. Closures unconfirmed.`;
+ render();
 })();
