@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+_selftest_scratch/
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/map-data-v2.json
+data/raw/*
+!data/raw/.gitkeep
+# Reviewed records may contain submitted private details; add intentionally only.
+.env
+.env.*
+!.env.example

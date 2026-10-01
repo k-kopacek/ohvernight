@@ -1,0 +1,64 @@
+name: Validate and refresh Aspen research data
+on:
+  pull_request:
+  push:
+    paths: ["config/**", "scripts/**", "schema/**", "tests/**", "requirements.txt", ".github/workflows/**"]
+  workflow_dispatch:
+    inputs:
+      arrive:
+        description: Arrival date (YYYY-MM-DD)
+        required: true
+        type: string
+      depart:
+        description: Departure date (YYYY-MM-DD)
+        required: true
+        type: string
+      vehicle:
+        description: Vehicle access designation
+        type: choice
+        options: [passenger_car, high_clearance, motorhome]
+        default: passenger_car
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: aspen-data-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python scripts/00_selftest.py
+  refresh:
+    if: github.event_name == 'workflow_dispatch'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Fetch and validate one trip snapshot
+        env:
+          RIDB_API_KEY: ${{ secrets.RIDB_API_KEY }}
+          TRIP_ARRIVE: ${{ inputs.arrive }}
+          TRIP_DEPART: ${{ inputs.depart }}
+          TRIP_VEHICLE: ${{ inputs.vehicle }}
+        run: python scripts/run_pipeline.py --arrive "$TRIP_ARRIVE" --depart "$TRIP_DEPART" --vehicle "$TRIP_VEHICLE"
+      - name: Commit the validated bundle
+        run: |
+          git config user.name "aspen-overnight-data-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/processed/map-data-v2.json
+          if ! git diff --staged --quiet; then
+            git commit -m "Refresh validated Aspen research data"
+            git push
+          fi

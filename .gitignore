@@ -1,0 +1,51 @@
+# Operating-system and editor files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100/
+.Trashes/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+
+# Python environments, caches, and test output
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# JavaScript dependencies and build output
+node_modules/
+dist/
+build/
+coverage/
+
+# Pipeline inputs and generated staging output. The public map bundle is
+# intentionally kept because the static site serves it directly.
+v2/pipeline/_selftest_scratch/
+v2/pipeline/data/raw/*
+!v2/pipeline/data/raw/.gitkeep
+v2/pipeline/data/processed/*
+!v2/pipeline/data/processed/.gitkeep
+!v2/pipeline/data/processed/map-data-v2.json
+
+# Archives and local delivery artifacts
+*.zip
+*.tar
+*.tar.gz
+*.tgz
