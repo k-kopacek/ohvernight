@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r v2/pipeline/requirements.txt
-      - run: python -m unittest discover -s v2/pipeline/tests
+      - run: python v2/pipeline/scripts/00_selftest.py
       - name: Fetch and validate trip snapshot
         env:
           RIDB_API_KEY: ${{ secrets.RIDB_API_KEY }}

@@ -75,6 +75,6 @@ The root JSON schema describes the actual envelope and GeoJSON features. Additio
 
 ## GitHub workflow
 
-Pull requests and pushes run the offline regression suite. Live refresh is **manual** through Actions, with explicit dates and vehicle. A completed refresh commits only the public bundle; private/raw inputs are ignored. It does not automatically deploy the website. Keep automated scheduled refresh disabled until source coverage and the reviewed inventory are sufficient.
+Pull requests and pushes to `main` run the offline regression suite through `.github/workflows/ci.yml`. Live refresh is **manual** through Actions, with explicit dates and vehicle. A completed refresh uploads the bundle as a workflow artifact; it does not commit or deploy. Private/raw inputs are ignored. Keep automated scheduled refresh disabled until source coverage and the reviewed inventory are sufficient.
 
 The original pipeline was backed up in the Codex workspace before this revision. No real reviewed sites were invented to populate the map.
