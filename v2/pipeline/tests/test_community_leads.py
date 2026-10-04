@@ -41,6 +41,8 @@ class CommunityLeadTests(unittest.TestCase):
             self.assertEqual(inside[key], outside[key])
         for key in set(inside["evidence"]) - {"retrieved_at"}:
             self.assertEqual(inside["evidence"][key], outside["evidence"][key])
+        self.assertEqual(inside["evidence"]["confidence"], outside["evidence"]["confidence"])
+        self.assertEqual(inside["evidence"]["last_verified"], outside["evidence"]["last_verified"])
         self.assertNotEqual(inside["matched_candidate_ids"], outside["matched_candidate_ids"])
 
     def test_origin_is_preserved_without_new_evidence_field(self):
@@ -63,10 +65,12 @@ class CommunityLeadTests(unittest.TestCase):
         helper = RegionContractTests()
         manifest, docs = helper.base()
         manifest["layers"][0]["kind"] = "community_leads"
+        manifest["layers"][0]["fields"] = {"source": ["notes"], "derived": ["site_type", "matched_candidate_ids"]}
+        manifest["sources"]["agency"]["source_urls"] = ["https://example.org/report"]
         manifest["fact_coverage"]["recreation_permission"]["layer_ids"] = ["water"]
-        properties = docs["data.json"]["layers"]["water"]["features"][0]["properties"]
-        properties.update(needs_review=True, camping_permission="unknown")
-        properties["evidence"]["verification_method"] = None
+        feature = normalize([self.lead], [self.corridor])[0]
+        docs["data.json"]["layers"]["water"]["features"] = [feature]
+        properties = feature["properties"]
         validate_region_data(manifest, lambda path: docs[path])
         properties["evidence"]["verification_method"] = "community_report"
         with self.assertRaises(ContractError) as raised:

@@ -32,7 +32,7 @@ function assertGolden(rows, places, evaluate) {
         const result = evaluate(place, {...tripBase, vehicle}, golden.today, golden.now.slice(0, 10));
         const expected = rows[index++];
         assert.deepEqual({status: result.status, label: result.label, tripNote: result.tripNote,
-          sourceStale: result.sourceStale ?? false}, expected);
+          sourceStale: result.sourceStale}, expected);
       }
     }
   }
