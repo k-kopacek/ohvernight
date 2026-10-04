@@ -182,10 +182,20 @@ class RegionContractTests(unittest.TestCase):
 
     def test_R05_reviewed_partial_requires_reviewed_feature(self):
         manifest, docs = self.base()
-        manifest["fact_coverage"]["restrictions"].update(state="reviewed_partial", layer_ids=["water"])
+        reviewed = copy.deepcopy(manifest["layers"][0])
+        reviewed.update(id="reviewed_sites", kind="reviewed_sites", pointer="/layers/reviewed_sites")
+        manifest["layers"].append(reviewed)
+        docs["data.json"]["layers"]["reviewed_sites"] = {"type": "FeatureCollection", "features": []}
+        manifest["fact_coverage"]["restrictions"].update(state="reviewed_partial", layer_ids=["reviewed_sites"])
         with self.assertRaises(ContractError) as raised:
             self.valid(manifest, docs)
         self.assertEqual(raised.exception.rule, "R05")
+
+        feature = copy.deepcopy(docs["data.json"]["layers"]["water"]["features"][0])
+        feature["properties"]["id"] = "reviewed-1"
+        docs["data.json"]["layers"]["reviewed_sites"]["features"].append(feature)
+        manifest["fact_coverage"]["restrictions"]["layer_ids"] = ["water"]
+        self.valid(manifest, docs)
 
     def test_R10_coverage_geometry(self):
         self.assert_rule("R10", lambda m, d: d["coverage.json"].update(geometry=None))
@@ -275,10 +285,6 @@ class RegionContractTests(unittest.TestCase):
             props.update(needs_review=True, status="confirmed", stage="2", last_confirmed_at="2026-01-01T00:00:00Z", max_age_hours=24)
             props["evidence"]["verification_method"] = "html_change_monitor"
         self.assert_rule("R28", monitor)
-        def empty(m, d):
-            m["layers"][0]["must_be_empty"] = True
-            d["data.json"]["layers"]["water"]["features"] = []
-            d["data.json"]["status"]["count"] = 1
         # must_be_empty must fail with a feature, not after deleting it.
         self.assert_rule("R28", lambda m, d: m["layers"][0].update(must_be_empty=True))
         def lead(m, d):
