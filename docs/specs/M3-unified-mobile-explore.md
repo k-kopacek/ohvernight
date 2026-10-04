@@ -773,7 +773,7 @@ Criteria apply to the PR that delivers the work. **PR A:** 1, 2, 6, 7, 8, 9a–9
 
 ## 23. Owner decisions
 
-Decided by the owner on 2026-10-04 unless marked pending.
+Decided by the owner on 2026-10-04. All twelve are resolved.
 
 | # | Decision | Outcome |
 |---|---|---|
