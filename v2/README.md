@@ -44,13 +44,11 @@ Trip dates, vehicle choices and list filters never remove map features. Trip con
 
 ## Connect RIDB once
 
-GitHub only discovers workflows at the repository root under `.github/workflows/`; a workflow inside v2 will not run. The ready-to-copy templates are included in `pipeline/github-workflows/` so this download stays self-contained.
+Both workflows are installed under `.github/workflows/` and run from the repository's Actions tab. GitHub only discovers workflows at that repository-level path.
 
-1. Upload this v2 folder to the `ohvernight` repository.
-2. On GitHub choose Add file → Create new file. Name it `.github/workflows/ridb-check.yml` and paste the complete contents of `v2/pipeline/github-workflows/ridb-check.yml`. Commit it.
-3. Confirm the repository Actions secret is named `RIDB_API_KEY`. No need to paste the key into chat or source files.
-4. Open Actions → Check RIDB and export Aspen camping → Run workflow.
-5. A green run confirms authentication and produces the `ridb-options` artifact. Download and unzip it; upload `ridb-options.json` into v2. The app loads the imported facilities automatically, avoiding duplicates with the manually reviewed inventory. The `ohvernight-with-ridb` artifact also contains a complete website ZIP with the imported data. That ZIP uses the website files currently on GitHub; upload the latest local v2 first if you want the latest interface included.
+1. Confirm the repository Actions secret is named `RIDB_API_KEY`. No need to paste the key into chat or source files.
+2. Open Actions → Check RIDB and export Aspen camping → Run workflow.
+3. A green run confirms authentication and produces the `ridb-options` artifact. Download and unzip it; upload `ridb-options.json` into v2. The app loads the imported facilities automatically, avoiding duplicates with the manually reviewed inventory. The `ohvernight-with-ridb` artifact also contains a complete website ZIP with the imported data. That ZIP uses the website files currently on GitHub; upload the latest local v2 first if you want the latest interface included.
 
 Verified September 25: repository secret `RIDB_API_KEY` exists, but only the Pages workflow was installed at the time of inspection. Secret presence alone does not verify its value. Authentication and live inventory still require the import workflow to finish successfully. Never put the key in browser JavaScript, JSON or a downloadable artifact.
 
@@ -58,7 +56,7 @@ The workflow runs only on request, uses no AI calls, and does not publish or com
 
 ## Build the map bundle
 
-For future refreshes, create `.github/workflows/refresh-map.yml` using `pipeline/github-workflows/refresh-map.yml`. Run it with your dates and vehicle. Download its artifact and put `map-data-v2.json` in v2. Roads and research polygons remain visible for any trip, with the screening snapshot dates explained in the legend and feature details. The full source pipeline is in `pipeline/`; the legacy `.github` file inside that folder is for the former standalone layout, not this website repository.
+The map refresh workflow is installed under `.github/workflows/refresh-map.yml`; run it from the Actions tab with your dates and vehicle. Download its artifact and put `map-data-v2.json` in v2. Roads and research polygons remain visible for any trip, with the screening snapshot dates explained in the legend and feature details. The full source pipeline is in `pipeline/`.
 
 The browser always displays unconfirmed fire/closure coverage. A successful notice-page fetch is not a confirmed fire stage. The native BLM adapter clips and repairs geometry without simplifying coordinates. It remains generalized land management context, not a county parcel survey.
 

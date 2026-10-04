@@ -2,8 +2,14 @@
 import hashlib
 import json
 from lib.arcgis_client import new_session
-from lib.common import source, output_dir, write_fc
+from lib.common import ROOT, source, output_dir, write_fc
 from lib.evidence import make_evidence, now
+
+CANONICAL_BUNDLE_PATH = ROOT.parent / "map-data-v2.json"
+
+def baseline_bundle_path():
+    staging_path = output_dir().parent / "map-data-v2.json"
+    return staging_path if staging_path.exists() else CANONICAL_BUNDLE_PATH
 
 def main():
     src = source("fire")
@@ -12,7 +18,7 @@ def main():
     content = response.text
     digest = hashlib.sha256(content.encode()).hexdigest()
     # Only last published source hash is read. No raw news or secrets are published.
-    previous_path = output_dir().parent / "map-data-v2.json"
+    previous_path = baseline_bundle_path()
     previous = None
     if previous_path.exists():
         data = json.loads(previous_path.read_text())

@@ -23,7 +23,7 @@ To ingest developed camping inventory, provide `RIDB_API_KEY` in your environmen
 
 ## Outputs and publication
 
-One output is published locally: `data/processed/map-data-v2.json`. It contains:
+The pipeline produces an untracked staging output at `data/processed/map-data-v2.json`. After a validated run, copy/promote it to the canonical app-facing `v2/map-data-v2.json` to publish it. It contains:
 
 - `trip`: the dates and vehicle actually evaluated.
 - `source_status`: explicit per-step retrieval outcomes.
@@ -39,7 +39,7 @@ One output is published locally: `data/processed/map-data-v2.json`. It contains:
 - `site_feed.places`: an adapter for map cards, containing only actual curated sites and RIDB inventory.
 - `coverage_gaps`: known limits that a consumer must keep visible.
 
-Each run uses a clean staging directory. Failure of a required source or validation leaves the previous bundle untouched. Optional failure produces an explicit unavailable status and an empty layer, never an old layer relabeled as fresh. Only a validated complete envelope atomically replaces the public bundle. `generated_at` is a processing timestamp; source retrieval and manual verification have separate timestamps.
+Each run uses a clean staging directory. Failure of a required source or validation leaves the previous staging output untouched. Optional failure produces an explicit unavailable status and an empty layer, never an old layer relabeled as fresh. After validation, the staging output is promoted or copied to the canonical app-facing bundle. `generated_at` is a processing timestamp; source retrieval and manual verification have separate timestamps.
 
 The existing website still reads its embedded map data. This pipeline does not deploy or modify it. A future integration must load this bundle, preserve its source-status warnings, and reevaluate access if the traveler changes dates or vehicle. The `site_feed` adapter preserves the place-card fields but does not itself implement the site's loader or reviewed-state styling.
 
@@ -75,6 +75,6 @@ The root JSON schema describes the actual envelope and GeoJSON features. Additio
 
 ## GitHub workflow
 
-Pull requests and pushes run the offline regression suite. Live refresh is **manual** through Actions, with explicit dates and vehicle. A completed refresh commits only the public bundle; private/raw inputs are ignored. It does not automatically deploy the website. Keep automated scheduled refresh disabled until source coverage and the reviewed inventory are sufficient.
+Pull requests and pushes to `main` run the offline regression suite through `.github/workflows/ci.yml`. Live refresh is **manual** through Actions, with explicit dates and vehicle. A completed refresh uploads the bundle as a workflow artifact; it does not commit or deploy. Private/raw inputs are ignored. Keep automated scheduled refresh disabled until source coverage and the reviewed inventory are sufficient.
 
 The original pipeline was backed up in the Codex workspace before this revision. No real reviewed sites were invented to populate the map.

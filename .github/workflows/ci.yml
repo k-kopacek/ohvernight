@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: v2/pipeline/requirements.txt
+      - run: pip install -r v2/pipeline/requirements.txt
+      - run: python v2/pipeline/scripts/00_selftest.py
+
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: |
+          node --check v2/app.js
+          node --check v2/map-layers.js
+          node --check v2/trail-discovery.js
+          node --check v2/trip-rules.js
+          node --check v2/trust.js
+          node --check v2/regions/douglas-co/preview.js
+          node --check v2/regions/douglas-co/discovery.js
+          node --check app.js
+          node --check trip-rules.js
+      - run: node --test v2/pipeline/tests/*.test.cjs

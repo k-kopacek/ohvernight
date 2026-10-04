@@ -10,6 +10,6 @@ Initial freshness thresholds are product review policies, not agency guarantees:
 
 `config/rules-registry.json` stores independently reviewed site exceptions. Match exact place IDs or reviewed road names. Matching a corridor adds review context only, never a permission grant. Do not inherit an assumed forest-wide 14-day limit. An unresolved or stale rule remains visible as needing confirmation. Lincoln Creek's published day limit does not establish a precise check-in/check-out counting policy.
 
-Generated polygons remain `needs_review: true`, `camping_permission: unknown`, and never create point campsites. MVUM and candidate snapshots are tied to their evaluated trip. The browser hides trip-specific layers when dates or vehicle differ.
+Generated polygons remain `needs_review: true`, `camping_permission: unknown`, and never create point campsites. MVUM and candidate snapshots are tied to their evaluated trip. The browser keeps roads and research areas visible for every trip, styles roads neutrally, and labels research areas with the trip they were screened for.
 
 BLM native polygon conversion preserves ring holes and islands using even/odd filling and repairs invalid topology with Shapely. The source is generalized management context; county parcel precision and campsite legality cannot be inferred from that repair.

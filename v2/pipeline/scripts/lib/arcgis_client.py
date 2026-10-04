@@ -6,7 +6,7 @@ from shapely import make_valid
 from shapely.ops import unary_union
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-USER_AGENT = "aspen-overnight-data/0.2 (+https://k-kopacek.github.io/aspen-overnight/)"
+USER_AGENT = "ohvernight-data/0.2 (+https://github.com/k-kopacek/ohvernight)"
 
 class ArcGISQueryError(RuntimeError):
     pass

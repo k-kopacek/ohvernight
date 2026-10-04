@@ -13,7 +13,7 @@
 
 The successful September 25 artifact is now included in local v2. Expect four imported campground records and six combined listings after matching existing researched campgrounds. Silver Queen should appear; East Maroon Portal Picnic Site and Maroon Bells Amphitheatre should not appear as camping. The deployed website still needs this file uploaded. The workflow's downloadable artifacts alone do not update GitHub Pages.
 
-The GitHub repository has a secret named `RIDB_API_KEY` and the import workflow has been installed. The user reports that the key issue is resolved. This UI update does not rerun the import or verify publication of its output. The bundled workflow template is `pipeline/github-workflows/ridb-check.yml`; its active repository location is `.github/workflows/ridb-check.yml`.
+The GitHub repository has a secret named `RIDB_API_KEY` and the import workflow has been installed. The user reports that the key issue is resolved. This UI update does not rerun the import or verify publication of its output. The active workflow location is `.github/workflows/ridb-check.yml`.
 
 The import checks authentication, fetches and validates campground records, and exports `ridb-options.json`. Put that JSON in v2; the next page load imports it into the map and listing sheet. The key stays inside GitHub Actions. The workflow also provides a downloadable site ZIP containing the imported JSON. It does not publish the website automatically.
 

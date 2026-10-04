@@ -35,14 +35,16 @@ dist/
 build/
 coverage/
 
-# Pipeline inputs and generated staging output. The public map bundle is
-# intentionally kept because the static site serves it directly.
+# Pipeline inputs and generated staging output. v2/map-data-v2.json is the
+# tracked public copy; processed output stays ignored.
 v2/pipeline/_selftest_scratch/
+# Reviewed records may contain submitted private details; add intentionally only.
 v2/pipeline/data/raw/*
 !v2/pipeline/data/raw/.gitkeep
+# Reviewed import audit copies are kept deliberately.
+!v2/pipeline/data/raw/ridb-import-*.json
 v2/pipeline/data/processed/*
 !v2/pipeline/data/processed/.gitkeep
-!v2/pipeline/data/processed/map-data-v2.json
 
 # Archives and local delivery artifacts
 *.zip
