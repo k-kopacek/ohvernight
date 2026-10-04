@@ -2,7 +2,7 @@
 
 **For:** Codex (implementation). **Reviewer / coordinator:** Claude. **Base:** `main` at `3dc0fef`.
 **Branch:** `k-kopacek/m3-unified-mobile-explore`. Open a PR; do not push to `main`.
-**Status:** DRAFT. The owner decided Phase A and decisions D1–D11 on 2026-10-04 (section 23). **D12 is approved in concept; its exact wording (section 13.1) is pending.** The specification becomes APPROVED, and Phase B may start, only when D12's wording is approved.
+**Status:** APPROVED by the owner on 2026-10-04. Phase A and decisions D1–D12 are resolved (section 23). Ready for Phase B implementation.
 **Delivery:** two sequential implementation PRs, PR A then PR B (section 17.5).
 
 Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `docs/audits/architecture-audit.md`, `docs/specs/M2-regional-data-contract.md`, `v2/pipeline/docs/data-contract.md`.
@@ -10,7 +10,7 @@ Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.m
 M3 is one milestone with two phases:
 
 - **Phase A — architecture evaluation and decision.** Done in this document. No code. Decided by the owner on 2026-10-04: Option 1.
-- **Phase B — implementation of the approved architecture.** Sections 10–21, delivered as PR A (foundation) and PR B (unified Explore). Starts only after this specification is marked APPROVED.
+- **Phase B — implementation of the approved architecture.** Sections 10–21, delivered as PR A (foundation) and PR B (unified Explore). Not started. Implementation begins with PR A.
 
 ## 1. Problem
 
@@ -421,7 +421,7 @@ Style is derived from the manifest, not from the region. `land-style.js` maps `k
 | **A — authoritative classification** | reserved for a future parcel-grade `land_management` source (M5) | — | — |
 | **Unknown** | everything unshaded | none | none |
 
-### 13.1 Trust-bearing wording (D12 — exact text, pending owner approval)
+### 13.1 Trust-bearing wording (D12 — exact text, approved)
 
 These strings are trust-bearing. They are used exactly as written, in both regions, and are compared against literals in T4. `<…>` marks a value taken from data. Changing any of them needs owner approval.
 
@@ -434,10 +434,12 @@ These strings are trust-bearing. They are used exactly as written, in both regio
 | W5 | Legend entry, always last, always shown | `Unshaded land is unknown — not private, not public, not open` |
 | W6 | Legend entry and detail label for a code not listed in W8 | `<code> — unrecognised source code; unknown` |
 | W7 | Detail for any tier-G feature | `Limited-scale boundary. It cannot locate a property line or tell you whether a specific spot is inside this area.` |
-| W8 | Legend entries and detail labels for the other source codes present today | `USFS — Forest Service; generalized source class` · `BLM — Bureau of Land Management; generalized source class` · `OTHFE — other federal agency; generalized source class` · `ST — state; generalized source class` · `LG — local government; generalized source class` |
+| W8 | Legend entries and detail labels for the other source codes present today | `USFS — Forest Service; generalized source class` · `BLM — Bureau of Land Management; generalized source class` · `OTHFE — Other Federal; generalized source class` · `ST — State; generalized source class` · `LG — Local; generalized source class` |
 | W9 | Legend heading for a tier-P layer | `<layer title> — boundary as published by <agency>` |
 | W10 | Legend heading for tier-C research areas | `Computer-screened research areas — not campsites` |
 | W11 | Detail line naming the classification | `Source classification: <code>` |
+
+W8 uses the source-class meaning of each code and does not expand a code into a claim more specific than the source establishes.
 
 The four points D12 requires map to: generalized management is not parcel ownership — W1, W2, W7; `PVT` is the source's generalized classification — W4; unshaded land is unknown — W5; ownership or management does not establish public access — W3.
 
@@ -779,16 +781,16 @@ Decided by the owner on 2026-10-04 unless marked pending.
 | D2 | Delivery | **Approved with two implementation PRs.** One milestone; PR A (foundation) then PR B (unified Explore), PR B built from the merged result of PR A (17.5). |
 | D3 | Contract extension: optional display declarations and R60–R64 | **Approved**, on the conditions stated in 12.3: canonical data stays authoritative; display artifacts are derived, reproducible delivery products; drift is detected; evidence semantics are not weakened or flattened. |
 | D4 | Freshness from manifest policy | **Approved.** Aspen curated listings 720 hours; RIDB its existing 168 hours. A stale source never erases existence or weakens a known restriction; all M2 freshness invariants hold. |
-| D5 | Basemap | **Approved.** USGS for both regions. No new basemap-switching feature. |
+| D5 | Basemap | **Approved.** The existing USGS imagery and topographic pair, with its existing toggle, used consistently in the shared shell for both regions. No other basemap provider, no new basemap-selection system, and no Douglas-specific Esri or OpenStreetMap basemap. |
 | D6 | Rampart listing (N7) | **Approved.** Verbatim relocation only, because `preview.js` is removed. No semantic clean-up. N7 stays deferred to M7. |
 | D7 | Root legacy `trip-rules.js` | **Approved.** The equivalent motorhome ordering correction, narrowly. No other change to the legacy site. |
-| D8 | Delete `v2/map-data.json` and its link | **Approved conditionally.** Only after the reference audit in 17.6 shows no runtime, test, documentation or supported-download consumer requires it; with regression coverage (T14). If a consumer is found, stop and report. |
+| D8 | Delete `v2/map-data.json` and its link | **Approved as proposed, conditionally.** Codex repeats the audit in PR A. Only after the reference audit in 17.6 shows no runtime, test, documentation or supported-download consumer requires it; with regression coverage (T14). If a consumer is found, stop and report. |
 | D9 | Headless-Chrome CI | **Approved.** Deterministic, offline, local-fixture driven; job named `browser`. |
 | D10 | Default layer visibility | **Approved.** All available layers on by default, loaded progressively, never blocking initial map usability. |
 | D11 | Douglas legacy URL | **Approved.** Forwards directly into unified Explore, with the narrowest mechanism that keeps old bookmarks working (17.1). |
-| D12 | Land presentation wording | **Concept approved; exact text in 13.1 pending.** This specification stays DRAFT until that text is approved. |
+| D12 | Land presentation wording | **Approved.** W1–W7 and W9–W11 as written; W8 as corrected by the owner to the source-class meanings (`Other Federal`, `State`, `Local`). The text in 13.1 is final. |
 
-Interpretation recorded for D5: "one USGS basemap" is implemented as the existing USGS imagery and USGS topo pair with the existing toggle, now shared by both regions. If the owner meant imagery only, the toggle is removed; that is a one-line change to 10.4 and 8.1.
+Also approved by the owner: the reopening triggers R-1 to R-5 (8.2); the PR A / PR B boundary (17.5); the committed baseline artifacts in `docs/specs/M3-baseline/`; and same-session timing comparisons in place of machine-specific absolute timing thresholds (16.4).
 
 ## Handoff back to review
 
