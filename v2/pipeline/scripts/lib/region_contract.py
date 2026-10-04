@@ -384,16 +384,21 @@ def validate_region_data(manifest, resolve):
         if fact["state"] == "context" and not fact["layer_ids"]:
             _error("R05", manifest, None, "context fact requires layer IDs")
         if fact["state"] == "reviewed_partial" and manifest.get("rules") is None:
-            reviewed = [layer for layer in manifest["layers"] if layer["id"] in fact["layer_ids"] and layer["kind"] == "reviewed_sites"]
-            if not reviewed:
+            reviewed_layers = [layer for layer in manifest["layers"] if layer["kind"] == "reviewed_sites"]
+            if not reviewed_layers:
                 _error("R05", manifest, None, "reviewed_partial requires rules or reviewed sites")
-            try:
-                reviewed_doc = resolve(reviewed[0]["path"])
-                reviewed_value = _json_pointer(reviewed_doc, reviewed[0]["pointer"])
-                if not isinstance(reviewed_value, dict) or not reviewed_value.get("features"):
-                    _error("R05", manifest, None, "reviewed_partial requires a reviewed site feature")
-            except (KeyError, IndexError, TypeError, ValueError):
-                _error("R20", manifest, reviewed[0]["id"], "reviewed sites layer does not resolve")
+            has_reviewed_feature = False
+            for reviewed in reviewed_layers:
+                try:
+                    reviewed_doc = resolve(reviewed["path"])
+                    reviewed_value = _json_pointer(reviewed_doc, reviewed["pointer"])
+                except (KeyError, IndexError, TypeError, ValueError):
+                    _error("R20", manifest, reviewed["id"], "reviewed sites layer does not resolve")
+                if not isinstance(reviewed_value, dict) or not isinstance(reviewed_value.get("features"), list):
+                    _error("R20", manifest, reviewed["id"], "reviewed sites layer is not a FeatureCollection")
+                has_reviewed_feature = has_reviewed_feature or bool(reviewed_value["features"])
+            if not has_reviewed_feature:
+                _error("R05", manifest, None, "reviewed_partial requires a reviewed site feature")
         if not set(fact["layer_ids"]) <= set(layer_ids):
             _error("R05", manifest, None, "fact references undeclared layer")
     try:
