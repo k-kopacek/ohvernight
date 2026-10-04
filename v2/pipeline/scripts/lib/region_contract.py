@@ -26,9 +26,9 @@ FACT_DIMENSIONS = {
 }
 TRANSPORT_STATUSES = {"available", "unavailable", "skipped"}
 RESERVED_PROPERTIES = {
-    "id", "name", "evidence", "camping_permission", "access_status", "access_reason",
+    "id", "name", "site_type", "evidence", "camping_permission", "access_status", "access_reason",
     "road_conditions", "land_class", "needs_review", "actual_site_confirmed",
-    "evaluated_trip", "status", "stage", "last_confirmed_at", "max_age_hours",
+    "evaluated_trip", "status", "stage", "type", "last_checked_at", "last_confirmed_at", "max_age_hours",
     "tent_only", "requires_high_clearance", "stay_limit_days", "max_stay_days",
 }
 
@@ -189,6 +189,21 @@ def _check_claim(claim):
             and _parse_timestamp(claim.get("last_confirmed_at")) and isinstance(claim.get("max_age_hours"), (int, float)) and claim["max_age_hours"] > 0)
 
 
+def _check_rules(manifest, resolve, layer_ids):
+    rules_ref = manifest.get("rules")
+    if not rules_ref:
+        return
+    try:
+        registry = _json_pointer(resolve(rules_ref["path"]), rules_ref.get("pointer", ""))
+    except (KeyError, IndexError, TypeError, ValueError):
+        _error("R50", manifest, None, "rules registry does not resolve")
+    if not isinstance(registry, dict) or not isinstance(registry.get("rules"), list):
+        _error("R50", manifest, None, "rules registry is invalid")
+    for rule in registry["rules"]:
+        if not isinstance(rule, dict) or not isinstance(rule.get("id"), str) or not rule.get("scope") or urlparse(rule.get("source_url", "")).scheme not in {"http", "https"} or not _parse_timestamp(rule.get("last_confirmed_at")) or not isinstance(rule.get("max_age_hours"), (int, float)) or rule["max_age_hours"] <= 0 or rule.get("camping_permission") != "unknown":
+            _error("R50", manifest, None, "invalid rule record")
+
+
 def _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report):
     layer_id = layer["id"]
     try:
@@ -280,7 +295,7 @@ def _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report):
 
 def validate_region_data(manifest, resolve):
     region_id = manifest.get("region", {}).get("id", "?")
-    schema = json.loads((ROOT / "pipeline/schema/region-manifest.schema.json").read_text())
+    schema = json.loads((ROOT / "schema/region-manifest.schema.json").read_text())
     errors = sorted(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(manifest), key=lambda e: list(e.path))
     if errors:
         raise ContractError("R01", region_id, None, errors[0].message)
@@ -299,7 +314,7 @@ def validate_region_data(manifest, resolve):
             _error("R04", manifest, layer["id"], "undeclared source")
         used_sources.update(layer["source_ids"])
         if layer["format"] == "feature_collection":
-            if not layer.get("geometry_types") or "fields" not in layer or not layer.get("spatial_precision"):
+            if (not layer.get("geometry_types") and not layer.get("allow_null_geometry")) or "fields" not in layer or not layer.get("spatial_precision"):
                 _error("R01", manifest, layer["id"], "feature collection geometry and fields declaration incomplete")
             if layer["kind"] == "land_management" and layer.get("classification_source_field") not in layer["fields"].get("source", []):
                 _error("R01", manifest, layer["id"], "classification source field must be a source field")
@@ -334,6 +349,7 @@ def validate_region_data(manifest, resolve):
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         _error("R10", manifest, None, str(exc))
     report = {"region": region_id, "layers": {}, "unrecorded_status_layers": [], "legacy_transport": {}}
+    _check_rules(manifest, resolve, set(layer_ids))
     ids = set()
     for layer in manifest["layers"]:
         _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report)
