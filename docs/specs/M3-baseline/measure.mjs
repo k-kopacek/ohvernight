@@ -1,14 +1,16 @@
 // Baseline measurement of the current Ohvernight apps via headless Chrome (CDP).
 import { spawn } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const BASE = process.env.BASE || 'http://127.0.0.1:8765';
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+// Set CHROME to the browser binary if it is not at one of these paths.
+const CHROME = process.env.CHROME || ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/usr/bin/chromium'].find(p => existsSync(p));
+if (!CHROME) throw new Error('Chrome not found; set CHROME=/path/to/chrome');
 const PORT = 9333;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const dir = mkdtempSync(join(process.env.SCRATCH || tmpdir(), 'chrome-'));
+const dir = mkdtempSync(join(tmpdir(), 'ohvernight-chrome-'));
 const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${dir}`, '--no-first-run', '--disable-extensions', '--enable-precise-memory-info', 'about:blank'], { stdio: 'ignore' });
 
 async function connect() {
