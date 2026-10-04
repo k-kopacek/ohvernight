@@ -39,7 +39,7 @@ The pipeline produces an untracked staging output at `data/processed/map-data-v2
 - `site_feed.places`: an adapter for map cards, containing only actual curated sites and RIDB inventory.
 - `coverage_gaps`: known limits that a consumer must keep visible.
 
-Each run uses a clean staging directory. Failure of a required source or validation leaves the previous bundle untouched. Optional failure produces an explicit unavailable status and an empty layer, never an old layer relabeled as fresh. Only a validated complete envelope atomically replaces the public bundle. `generated_at` is a processing timestamp; source retrieval and manual verification have separate timestamps.
+Each run uses a clean staging directory. Failure of a required source or validation leaves the previous staging output untouched. Optional failure produces an explicit unavailable status and an empty layer, never an old layer relabeled as fresh. After validation, the staging output is promoted or copied to the canonical app-facing bundle. `generated_at` is a processing timestamp; source retrieval and manual verification have separate timestamps.
 
 The existing website still reads its embedded map data. This pipeline does not deploy or modify it. A future integration must load this bundle, preserve its source-status warnings, and reevaluate access if the traveler changes dates or vehicle. The `site_feed` adapter preserves the place-card fields but does not itself implement the site's loader or reviewed-state styling.
 

@@ -1,5 +1,6 @@
 import copy
 import datetime as dt
+import hashlib
 import importlib
 import json
 import os
@@ -191,19 +192,67 @@ class RegressionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"Synthetic"): validate_bundle(bad)
 
     def test_fire_monitor_uses_public_bundle_when_staging_baseline_is_missing(self):
-        class HtmlResponse:
-            text = "updated fire source"
-            def raise_for_status(self): pass
-
         with tempfile.TemporaryDirectory() as path:
             root = Path(path)
-            staging = root / "staging"
-            public_bundle = root / "map-data-v2.json"
-            public_bundle.write_text(json.dumps({"layers": {
+            processed = root / "processed"
+            staging = processed / "staging"
+            public_bundle = root / "public" / "map-data-v2.json"
+            public_bundle.parent.mkdir()
+
+            def bundle(source_hash):
+                return json.dumps({"layers": {
+                    "fire_restriction_stage": {"features": [{
+                        "properties": {"source_hash": source_hash}
+                    }]}
+                }})
+
+            def run_monitor(content):
+                class HtmlResponse:
+                    text = content
+                    def raise_for_status(self): pass
+
+                with patch.object(fire, "source", return_value={
+                    "url": "https://example.org/fire", "agency": "Test source"
+                }), patch.object(fire, "new_session", return_value=type(
+                    "Session", (), {"get": lambda self, *args, **kwargs: HtmlResponse()}
+                )()):
+                    fire.main()
+                output = json.loads((staging / "fire_restriction_stage.geojson").read_text())
+                return output["features"][0]["properties"]["source_changed"]
+
+            first_content = "updated fire source"
+            public_bundle.write_text(bundle("old-hash"))
+            with patch.dict(os.environ, {"ASPEN_OUTPUT_DIR": str(staging)}):
+                with patch.object(fire, "CANONICAL_BUNDLE_PATH", public_bundle):
+                    self.assertFalse((processed / "map-data-v2.json").exists())
+                    self.assertTrue(run_monitor(first_content))
+
+                    public_bundle.write_text(bundle(hashlib.sha256(first_content.encode()).hexdigest()))
+                    self.assertFalse(run_monitor(first_content))
+
+    def test_fire_monitor_prefers_staging_baseline_when_present(self):
+        with tempfile.TemporaryDirectory() as path:
+            root = Path(path)
+            processed = root / "processed"
+            staging = processed / "staging"
+            staging_baseline = processed / "map-data-v2.json"
+            public_bundle = root / "public" / "map-data-v2.json"
+            public_bundle.parent.mkdir()
+            content = "staging source"
+            digest = hashlib.sha256(content.encode()).hexdigest()
+            bundle = lambda source_hash: json.dumps({"layers": {
                 "fire_restriction_stage": {"features": [{
-                    "properties": {"source_hash": "old-hash"}
+                    "properties": {"source_hash": source_hash}
                 }]}
-            }}))
+            }})
+            staging_baseline.parent.mkdir(parents=True)
+            staging_baseline.write_text(bundle(digest))
+            public_bundle.write_text(bundle("different-public-hash"))
+
+            class HtmlResponse:
+                text = content
+                def raise_for_status(self): pass
+
             with patch.dict(os.environ, {"ASPEN_OUTPUT_DIR": str(staging)}):
                 with patch.object(fire, "CANONICAL_BUNDLE_PATH", public_bundle):
                     with patch.object(fire, "source", return_value={
@@ -214,7 +263,7 @@ class RegressionTests(unittest.TestCase):
                         fire.main()
 
             output = json.loads((staging / "fire_restriction_stage.geojson").read_text())
-            self.assertTrue(output["features"][0]["properties"]["source_changed"])
+            self.assertFalse(output["features"][0]["properties"]["source_changed"])
 
     def test_curated_site_expires_and_requires_all_claims(self):
         review_data={"checked_on":"2026-09-24","expires_on":"2026-10-01",
