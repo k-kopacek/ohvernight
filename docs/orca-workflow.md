@@ -1,0 +1,12 @@
+# Orca Development Workflow
+
+Ohvernight uses isolated Git worktrees for agent development.
+
+- Codex is the primary implementation agent.
+- Claude Code is the architecture and independent review agent.
+- Work begins from `origin/main`.
+- Production changes are made on feature branches/worktrees, never directly on `main`.
+- Tests required by AGENTS.md must pass before a PR is considered ready.
+- Land ownership, recreation access, camping permission, closures, and provenance must never be inferred when evidence is insufficient.
+- Unknown remains unknown.
+- Agents must not merge to `main` without human approval.
