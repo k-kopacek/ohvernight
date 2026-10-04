@@ -25,6 +25,8 @@ To ingest developed camping inventory, provide `RIDB_API_KEY` in your environmen
 
 The pipeline produces an untracked staging output at `data/processed/map-data-v2.json`. After a validated run, copy/promote it to the canonical app-facing `v2/map-data-v2.json` to publish it. It contains:
 
+Every new or changed layer, source, or feature property requires a corresponding hand-reviewed update to `v2/regions/<region_id>/region.json`. The offline contract validator runs in CI and rejects data whose declared surface and evidence semantics have drifted from its manifest.
+
 - `trip`: the dates and vehicle actually evaluated.
 - `source_status`: explicit per-step retrieval outcomes.
 - `layers.land_ownership`: limited-scale agency context, with camping permission unknown.

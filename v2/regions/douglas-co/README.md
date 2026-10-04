@@ -1,5 +1,7 @@
 # Douglas County expansion
 
+The region declaration is [region.json](region.json), validated against the [normative regional data contract](../../pipeline/docs/data-contract.md).
+
 Field-test edition. See ../../DOUGLAS-TESTING.md for publishing, testing, inventory and limitations. County data remains separate from Aspen. Refresh from v2 with `python3 pipeline/scripts/fetch_douglas.py`, then `python3 pipeline/scripts/enrich_douglas.py` using the pipeline dependencies. Base refresh preserves enrichment and original timestamps; failed enrichment retains old data with a failed status. Nearby camping is proximity only, never a verified riding connection or access approval.
 
 ## Source audit — September 27, 2026
