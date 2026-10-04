@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -15,6 +16,9 @@ from jsonschema import Draft202012Validator, FormatChecker
 from shapely.geometry import shape
 
 from lib.common import ROOT
+from fetch_trails import ACTIVITIES
+
+REGION_MANIFEST_SCHEMA = json.loads((ROOT / "schema/region-manifest.schema.json").read_text())
 
 APPROVED_VERIFICATION_METHODS = {
     "arcgis_rest_query", "source_fetch", "rest_api", "html_change_monitor",
@@ -26,10 +30,8 @@ FACT_DIMENSIONS = {
 }
 TRANSPORT_STATUSES = {"available", "unavailable", "skipped"}
 RESERVED_PROPERTIES = {
-    "id", "name", "site_type", "evidence", "camping_permission", "access_status", "access_reason",
-    "road_conditions", "land_class", "needs_review", "actual_site_confirmed",
-    "evaluated_trip", "status", "stage", "type", "last_checked_at", "last_confirmed_at", "max_age_hours",
-    "tent_only", "requires_high_clearance", "stay_limit_days", "max_stay_days",
+    "id", "name", "evidence", "camping_permission", "access_status", "access_reason",
+    "road_conditions", "land_class", "needs_review", "actual_site_confirmed", "evaluated_trip",
 }
 
 
@@ -91,11 +93,20 @@ def normalize_transport(record):
     return result, legacy
 
 
-def _parse_timestamp(value):
+def _parse_timestamp(value, allow_date=False):
     if not isinstance(value, str):
-        return False
-    return bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z", value)
-                or re.fullmatch(r"\d{4}-\d{2}-\d{2}", value))
+        return None
+    if allow_date and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z", value):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except ValueError:
+        return None
 
 
 def _source_ids(manifest, layer):
@@ -142,6 +153,21 @@ def _check_reserved(manifest, layer, feature):
         _error("R26", manifest, layer["id"], f"undeclared properties: {sorted(set(props) - RESERVED_PROPERTIES - declared)}")
     if not isinstance(props.get("id"), str) or not props["id"]:
         _error("R21", manifest, layer["id"], "feature id must be non-empty")
+    if "name" in props and props["name"] is not None and not isinstance(props["name"], str):
+        _error("R27", manifest, layer["id"], "name must be a string or null")
+    if "needs_review" in props and not isinstance(props["needs_review"], bool):
+        _error("R27", manifest, layer["id"], "needs_review must be boolean")
+    if "access_reason" in props and not isinstance(props["access_reason"], str):
+        _error("R27", manifest, layer["id"], "access_reason must be a string")
+    if "actual_site_confirmed" in props:
+        if not isinstance(props["actual_site_confirmed"], bool):
+            _error("R27", manifest, layer["id"], "actual_site_confirmed must be boolean")
+        if props["actual_site_confirmed"] is True and layer["kind"] != "reviewed_sites":
+            _error("R27", manifest, layer["id"], "actual_site_confirmed is reserved for reviewed sites")
+    if "evaluated_trip" in props:
+        trip = props["evaluated_trip"]
+        if not isinstance(trip, dict) or not {"arrive", "depart", "vehicle"} <= set(trip):
+            _error("R27", manifest, layer["id"], "evaluated_trip requires arrive, depart and vehicle")
     if "camping_permission" in props and props["camping_permission"] != "unknown":
         if not (layer["kind"] == "reviewed_sites" and props["camping_permission"] == "supported_for_trip" and props.get("needs_review") is False and props.get("evaluated_trip") and props.get("evidence", {}).get("verification_method") == "manual_claim_review"):
             _error("R27", manifest, layer["id"], "positive camping permission is not supported")
@@ -151,8 +177,6 @@ def _check_reserved(manifest, layer, feature):
         _error("R27", manifest, layer["id"], "positive access_status needs a trip, reason and unknown road_conditions")
     if props.get("road_conditions") not in {None, "unknown"} or props.get("land_class") not in {None, "unknown"}:
         _error("R27", manifest, layer["id"], "road_conditions and land_class must remain unknown")
-    if props.get("actual_site_confirmed") is True and layer["kind"] != "reviewed_sites":
-        _error("R27", manifest, layer["id"], "actual_site_confirmed is reserved for reviewed sites")
 
 
 def _check_kind(manifest, layer, feature):
@@ -189,7 +213,7 @@ def _check_claim(claim):
             and _parse_timestamp(claim.get("last_confirmed_at")) and isinstance(claim.get("max_age_hours"), (int, float)) and claim["max_age_hours"] > 0)
 
 
-def _check_rules(manifest, resolve, layer_ids):
+def _check_rules(manifest, resolve):
     rules_ref = manifest.get("rules")
     if not rules_ref:
         return
@@ -199,24 +223,49 @@ def _check_rules(manifest, resolve, layer_ids):
         _error("R50", manifest, None, "rules registry does not resolve")
     if not isinstance(registry, dict) or not isinstance(registry.get("rules"), list):
         _error("R50", manifest, None, "rules registry is invalid")
+    place_ids = set()
+    ridb_ids = set()
+    for layer in manifest["layers"]:
+        if layer["format"] != "place_list":
+            continue
+        try:
+            document = resolve(layer["path"])
+            places = _json_pointer(document, layer.get("pointer", "")).get(layer["list_key"], [])
+        except (KeyError, IndexError, TypeError, ValueError):
+            _error("R50", manifest, layer["id"], "place list does not resolve")
+        for place in places:
+            if isinstance(place, dict):
+                if isinstance(place.get("id"), str):
+                    place_ids.add(place["id"])
+                if place.get("ridb_facility_id") is not None:
+                    ridb_ids.add(str(place["ridb_facility_id"]))
     for rule in registry["rules"]:
-        if not isinstance(rule, dict) or not isinstance(rule.get("id"), str) or not rule.get("scope") or urlparse(rule.get("source_url", "")).scheme not in {"http", "https"} or not _parse_timestamp(rule.get("last_confirmed_at")) or not isinstance(rule.get("max_age_hours"), (int, float)) or rule["max_age_hours"] <= 0 or rule.get("camping_permission") != "unknown":
+        if not isinstance(rule, dict) or not isinstance(rule.get("id"), str) or not rule["id"] or not rule.get("scope") or urlparse(rule.get("source_url", "")).scheme not in {"http", "https"} or not _parse_timestamp(rule.get("last_confirmed_at")) or not isinstance(rule.get("max_age_hours"), (int, float)) or rule["max_age_hours"] <= 0 or rule.get("camping_permission") != "unknown":
             _error("R50", manifest, None, "invalid rule record")
+        for place_id in rule.get("place_ids", []):
+            if place_id not in place_ids and not (place_id.startswith("ridb-") and place_id[5:] in ridb_ids):
+                _error("R50", manifest, None, f"rule references unknown place {place_id}")
 
 
 def _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report):
     layer_id = layer["id"]
     try:
         document = resolve(layer["path"])
+    except (KeyError, IndexError, TypeError, ValueError, FileNotFoundError):
+        _error("R03", manifest, layer_id, "path does not resolve")
+    try:
         value = _json_pointer(document, layer["pointer"])
     except (KeyError, IndexError, TypeError, ValueError):
-        _error("R03", manifest, layer_id, "path or pointer does not resolve")
+        _error("R40" if layer["format"] == "place_list" else "R20", manifest, layer_id, "layer pointer does not resolve")
+    item_count = 0
     if layer["format"] == "place_list":
         places = value.get(layer["list_key"]) if isinstance(value, dict) else None
         if not isinstance(places, list):
             _error("R40", manifest, layer_id, "place list is missing")
         seen = set()
         for place in places:
+            if not isinstance(place, dict):
+                _error("R40", manifest, layer_id, "place must be an object")
             ident = place.get("id")
             if not isinstance(ident, str) or not re.fullmatch(r"[a-z0-9_-]+", ident) or ident in seen:
                 _error("R40", manifest, layer_id, "invalid or duplicate place id")
@@ -226,48 +275,46 @@ def _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report):
                 _error("R40", manifest, layer_id, "invalid coordinates")
             if place.get("camping_permission") not in {None, "unknown"}:
                 _error("R41", manifest, layer_id, "place-list camping permission must be unknown")
-            if any(not _check_claim(claim) for claim in (place.get("facts") or {}).values()):
+            facts = place.get("facts")
+            if facts is not None and (not isinstance(facts, dict) or any(not _check_claim(claim) for claim in facts.values())):
                 _error("R41", manifest, layer_id, "invalid place-list claim")
-        report["layers"][layer_id] = len(places)
-        return
-    if not isinstance(value, dict) or value.get("type") != "FeatureCollection" or not isinstance(value.get("features"), list):
-        _error("R20", manifest, layer_id, "not a FeatureCollection")
-    if layer.get("must_be_empty") and value["features"]:
-        _error("R28", manifest, layer_id, "must_be_empty layer contains features")
-    padding = layer.get("extent_padding_deg", 0) + 1e-6
-    west, south, east, north = coverage_bounds
-    for feature in value["features"]:
-        props = feature.get("properties", {})
-        ident = props.get("id")
-        if ident in ids:
-            _error("R21", manifest, layer_id, f"duplicate feature id {ident}")
-        ids.add(ident)
-        geometry = feature.get("geometry")
-        if geometry is None:
-            if not layer.get("allow_null_geometry"):
-                _error("R22", manifest, layer_id, "null geometry is not allowed")
-        else:
-            try:
-                parsed, bounds = _geometry_bounds(geometry)
-            except (TypeError, ValueError, KeyError) as exc:
-                _error("R22", manifest, layer_id, str(exc))
-            if layer.get("geometry_types") and geometry.get("type") not in layer["geometry_types"]:
-                _error("R22", manifest, layer_id, "undeclared geometry type")
-            if bounds[0] < west - padding or bounds[1] < south - padding or bounds[2] > east + padding or bounds[3] > north + padding:
-                _error("R22", manifest, layer_id, "geometry outside coverage")
-        _check_evidence(manifest, layer, feature)
-        _check_reserved(manifest, layer, feature)
-        _check_kind(manifest, layer, feature)
-        if layer_id == "trails":
-            activities = props.get("activities")
-            try:
-                from fetch_trails import ACTIVITIES
+        item_count = len(places)
+    else:
+        if not isinstance(value, dict) or value.get("type") != "FeatureCollection" or not isinstance(value.get("features"), list):
+            _error("R20", manifest, layer_id, "not a FeatureCollection")
+        if layer.get("must_be_empty") and value["features"]:
+            _error("R28", manifest, layer_id, "must_be_empty layer contains features")
+        item_count = len(value["features"])
+        padding = layer.get("extent_padding_deg", 0) + 1e-6
+        west, south, east, north = coverage_bounds
+        for feature in value["features"]:
+            props = feature.get("properties", {})
+            ident = props.get("id")
+            if ident in ids:
+                _error("R21", manifest, layer_id, f"duplicate feature id {ident}")
+            ids.add(ident)
+            geometry = feature.get("geometry")
+            if geometry is None:
+                if not layer.get("allow_null_geometry"):
+                    _error("R22", manifest, layer_id, "null geometry is not allowed")
+            else:
+                try:
+                    parsed, bounds = _geometry_bounds(geometry)
+                except (TypeError, ValueError, KeyError) as exc:
+                    _error("R22", manifest, layer_id, str(exc))
+                if not layer.get("geometry_types") or geometry.get("type") not in layer["geometry_types"]:
+                    _error("R22", manifest, layer_id, "undeclared geometry type")
+                if bounds[0] < west - padding or bounds[1] < south - padding or bounds[2] > east + padding or bounds[3] > north + padding:
+                    _error("R22", manifest, layer_id, "geometry outside coverage")
+            _check_evidence(manifest, layer, feature)
+            _check_reserved(manifest, layer, feature)
+            _check_kind(manifest, layer, feature)
+            if layer["kind"] == "trails":
+                activities = props.get("activities")
                 expected = set(ACTIVITIES)
-            except ImportError:
-                expected = {"hiking", "horseback_riding", "mountain_biking", "motorcycling", "atv", "four_wheel_drive", "snowshoeing", "cross_country_skiing", "snowmobiling"}
-            if set(activities or {}) != expected or any(set(record or {}) != {"managed", "accpt", "disc", "restricted"} or any(v is not None and not isinstance(v, str) for v in (record or {}).values()) for record in (activities or {}).values()):
-                _error("R29", manifest, layer_id, "trail activity records do not match producer")
-    report["layers"][layer_id] = len(value["features"])
+                if set(activities or {}) != expected or any(set(record or {}) != {"managed", "accpt", "disc", "restricted"} or any(v is not None and not isinstance(v, str) for v in (record or {}).values()) for record in (activities or {}).values()):
+                    _error("R29", manifest, layer_id, "trail activity records do not match producer")
+    report["layers"][layer_id] = item_count
     status_ref = layer.get("status_ref")
     if status_ref is None:
         if any(source["type"] != "curated" for source in _source_ids(manifest, layer)):
@@ -278,6 +325,8 @@ def _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report):
         status = _json_pointer(status_doc, status_ref.get("pointer", ""))
     except (KeyError, IndexError, TypeError, ValueError):
         _error("R30", manifest, layer_id, "status reference does not resolve")
+    if not isinstance(status, dict):
+        _error("R30", manifest, layer_id, "transport record must be an object")
     normalized, legacy = normalize_transport(status)
     if normalized.get("status") not in TRANSPORT_STATUSES:
         _error("R30", manifest, layer_id, "invalid transport status")
@@ -285,9 +334,9 @@ def _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report):
         _error("R30", manifest, layer_id, "available transport needs retrieval timestamp")
     if normalized["status"] in {"unavailable", "skipped"} and not normalized.get("reason"):
         _error("R30", manifest, layer_id, "unavailable transport needs reason")
-    if "count" in normalized and normalized["count"] != len(value["features"]):
+    if "count" in normalized and normalized["count"] != item_count:
         _error("R32", manifest, layer_id, "transport count does not match features")
-    if normalized["status"] != "available" and value["features"] and normalized.get("retained_previous") is not True:
+    if normalized["status"] != "available" and item_count and normalized.get("retained_previous") is not True:
         _error("R33", manifest, layer_id, "unavailable data must retain previous snapshot")
     if legacy:
         report["legacy_transport"][layer_id] = legacy
@@ -295,8 +344,7 @@ def _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report):
 
 def validate_region_data(manifest, resolve):
     region_id = manifest.get("region", {}).get("id", "?")
-    schema = json.loads((ROOT / "schema/region-manifest.schema.json").read_text())
-    errors = sorted(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(manifest), key=lambda e: list(e.path))
+    errors = sorted(Draft202012Validator(REGION_MANIFEST_SCHEMA, format_checker=FormatChecker()).iter_errors(manifest), key=lambda e: list(e.path))
     if errors:
         raise ContractError("R01", region_id, None, errors[0].message)
     if manifest["coverage"]["kind"] == "clipping_boundary" and not manifest["coverage"].get("source_id"):
@@ -323,8 +371,9 @@ def validate_region_data(manifest, resolve):
         else:
             if not layer.get("list_key") or any(name in layer for name in ("geometry_types", "allow_null_geometry", "extent_padding_deg", "fields")):
                 _error("R01", manifest, layer["id"], "place list shape is invalid")
-        if layer.get("status_ref") is None and any(manifest["sources"][sid]["type"] == "curated" for sid in layer["source_ids"]):
-            pass
+    for source_id, source in manifest["sources"].items():
+        if source["type"] in {"agency", "derived"} and not source["source_urls"]:
+            _error("R01", manifest, None, f"source {source_id} requires a source URL")
     if manifest["coverage"].get("source_id"):
         used_sources.add(manifest["coverage"]["source_id"])
     if set(manifest["sources"]) != used_sources:
@@ -334,8 +383,17 @@ def validate_region_data(manifest, resolve):
     for fact in manifest["fact_coverage"].values():
         if fact["state"] == "context" and not fact["layer_ids"]:
             _error("R05", manifest, None, "context fact requires layer IDs")
-        if fact["state"] == "reviewed_partial" and manifest.get("rules") is None and not any(layer["id"] in fact["layer_ids"] and layer["kind"] == "reviewed_sites" for layer in manifest["layers"]):
-            _error("R05", manifest, None, "reviewed_partial requires rules or reviewed sites")
+        if fact["state"] == "reviewed_partial" and manifest.get("rules") is None:
+            reviewed = [layer for layer in manifest["layers"] if layer["id"] in fact["layer_ids"] and layer["kind"] == "reviewed_sites"]
+            if not reviewed:
+                _error("R05", manifest, None, "reviewed_partial requires rules or reviewed sites")
+            try:
+                reviewed_doc = resolve(reviewed[0]["path"])
+                reviewed_value = _json_pointer(reviewed_doc, reviewed[0]["pointer"])
+                if not isinstance(reviewed_value, dict) or not reviewed_value.get("features"):
+                    _error("R05", manifest, None, "reviewed_partial requires a reviewed site feature")
+            except (KeyError, IndexError, TypeError, ValueError):
+                _error("R20", manifest, reviewed[0]["id"], "reviewed sites layer does not resolve")
         if not set(fact["layer_ids"]) <= set(layer_ids):
             _error("R05", manifest, None, "fact references undeclared layer")
     try:
@@ -349,10 +407,11 @@ def validate_region_data(manifest, resolve):
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         _error("R10", manifest, None, str(exc))
     report = {"region": region_id, "layers": {}, "unrecorded_status_layers": [], "legacy_transport": {}}
-    _check_rules(manifest, resolve, set(layer_ids))
+    _check_rules(manifest, resolve)
     ids = set()
     for layer in manifest["layers"]:
         _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report)
+    report["unrecorded_status_layers"].sort()
     return report
 
 
@@ -371,6 +430,13 @@ def validate_region(manifest_path, v2_root=None):
         target = (v2_root / path).resolve()
         if v2_root.resolve() not in target.parents and target != v2_root.resolve() or not target.is_file():
             raise ContractError("R03", manifest.get("region", {}).get("id", "?"), None, f"missing path {path}")
+    status_paths = [layer["status_ref"]["path"] for layer in manifest.get("layers", []) if layer.get("status_ref")]
+    for path in status_paths:
+        if not isinstance(path, str) or path.startswith("/") or ".." in Path(path).parts:
+            raise ContractError("R03", manifest.get("region", {}).get("id", "?"), None, f"invalid status path {path}")
+        target = (v2_root / path).resolve()
+        if v2_root.resolve() not in target.parents and target != v2_root.resolve() or not target.is_file():
+            raise ContractError("R03", manifest.get("region", {}).get("id", "?"), None, f"missing status path {path}")
     cache = {}
     def resolve(path):
         if path not in cache:
