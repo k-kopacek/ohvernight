@@ -11,8 +11,13 @@
     const matches=(registry?.rules||[]).filter(r=>r.place_ids?.includes(place.id));
     if(matches.length!==1)return {...place,ruleReview:matches.length?'Conflicting rule records need review':null};
     const rule=matches[0], current=freshness(rule,now)==='current';
+    const limits=[place.stay_limit_days ?? place.max_stay_days,rule.stay_limit_days]
+      .filter(value=>Number.isFinite(value)&&value>0);
+    const mergedLimit=limits.length?{stay_limit_days:Math.min(...limits)}:{};
+    const mergedClearance=place.requires_high_clearance===true||rule.requires_high_clearance===true;
     return {...place,
-      ...(current?{stay_limit_days:rule.stay_limit_days,requires_high_clearance:rule.requires_high_clearance}:{}),
+      ...mergedLimit,
+      ...(mergedClearance?{requires_high_clearance:true}:{}),
       ruleReview:current?null:'The published site rule needs a fresh source review.',
       ruleSource:rule.source_url};
   }
