@@ -5,6 +5,7 @@ import importlib.util
 from pathlib import Path
 from shapely.geometry import mapping, Polygon
 from lib.validation import validate_bundle
+from lib.region_contract import ContractError, validate_region_data
 
 V2 = Path(__file__).resolve().parents[2]
 SCRIPTS = V2 / "pipeline" / "scripts"
@@ -56,6 +57,21 @@ class CommunityLeadTests(unittest.TestCase):
         bundle["layers"]["leads"]["features"].append(feature)
         validate_bundle(bundle)
         self.assertNotIn(feature["properties"]["id"], {place["id"] for place in bundle["site_feed"]["places"]})
+
+    def test_contract_accepts_null_and_rejects_community_report(self):
+        from test_region_contract import RegionContractTests
+        helper = RegionContractTests()
+        manifest, docs = helper.base()
+        manifest["layers"][0]["kind"] = "community_leads"
+        manifest["fact_coverage"]["recreation_permission"]["layer_ids"] = ["water"]
+        properties = docs["data.json"]["layers"]["water"]["features"][0]["properties"]
+        properties.update(needs_review=True, camping_permission="unknown")
+        properties["evidence"]["verification_method"] = None
+        validate_region_data(manifest, lambda path: docs[path])
+        properties["evidence"]["verification_method"] = "community_report"
+        with self.assertRaises(ContractError) as raised:
+            validate_region_data(manifest, lambda path: docs[path])
+        self.assertEqual(raised.exception.rule, "R23")
 
     def test_literal_community_report_is_gone(self):
         self.assertNotIn("community_report", (SCRIPTS / "08_ingest_leads.py").read_text())

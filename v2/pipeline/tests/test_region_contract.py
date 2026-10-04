@@ -1,5 +1,6 @@
 import copy
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -55,6 +56,16 @@ class RegionContractTests(unittest.TestCase):
         self.assertEqual({alias for aliases in douglas["legacy_transport"].values() for alias in aliases}, {"retrieved_at"})
         ridb = self.load("ridb-options.json")["source_status"]
         self.assertEqual(set(normalize_transport(ridb)[1]), {"inferred_retrieval", "last_confirmed_at"})
+
+    def test_confidence_is_not_consumed_by_browser_code(self):
+        pattern = re.compile(r"\.confidence(?![-\w])|\[['\"]confidence['\"]\]")
+        for path in list((V2).glob("*.js")) + list((V2 / "regions").glob("*/*.js")):
+            self.assertIsNone(pattern.search(path.read_text()), str(path))
+
+    def test_validator_is_clock_independent(self):
+        source = (V2 / "pipeline" / "scripts" / "lib" / "region_contract.py").read_text()
+        for forbidden in ("datetime.now", "utcnow", "date.today", "import time"):
+            self.assertNotIn(forbidden, source)
 
     def base(self):
         feature = {"type": "Feature", "geometry": {"type": "Point", "coordinates": [0, 0]}, "properties": {"id": "water-1", "evidence": {"source_url": "https://agency.example/source", "agency": "Agency", "retrieved_at": "2026-01-01T00:00:00Z", "last_verified": None, "confidence": "unverified", "verification_method": "source_fetch"}}}
