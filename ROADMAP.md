@@ -1,9 +1,9 @@
 # Ohvernight roadmap
 
 This is the canonical Ohvernight milestone roadmap. It is authoritative unless
-changed by an approved repository update: a pull request to this file, merged
-by the human owner. Chat transcripts, agent memory and Orca session state are
-not authoritative; see
+changed by an approved repository update: a pull request to this file,
+approved by the human owner. Chat transcripts, agent memory and Orca session
+state are not authoritative; see
 [ADR-001](docs/architecture/decisions/ADR-001-repository-is-source-of-truth.md).
 
 Each milestone is implemented from an approved specification in `docs/specs/`.
@@ -119,7 +119,7 @@ Merged in pull request #3.
   [regional data contract](v2/pipeline/docs/data-contract.md).
 - [Product principles](docs/product/product-principles.md).
 - [Agent stack and workflow](docs/architecture/agent-stack.md), including
-  human-only merge authority.
+  human-approved merge authority.
 
 ## Relationship to `v2/ROADMAP.md`
 

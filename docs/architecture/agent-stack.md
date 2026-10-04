@@ -9,11 +9,11 @@ in [decisions/](decisions/). Repository working rules are in
 
 | Participant | Role | Responsibilities | Explicitly not |
 |---|---|---|---|
-| **Human owner** | Product owner | Product intent; approval of major architecture; approval of specifications; final merge authority | — |
+| **Human owner** | Product owner | Product intent; approval of major architecture; approval of specifications; merge authority (approves each merge) | — |
 | **GitHub** | Institutional memory | Durable source of truth for code, data, specifications, roadmap, principles and decisions | — |
 | **Orca** | Execution plane | Worktrees, agent sessions, orchestration, messaging, decision gates | Not a record of decisions; its run state is operational, not authoritative |
-| **Claude** | Technical lead | Architect; milestone coordinator; specification owner; independent reviewer | Does not modify the implementation during review; does not merge |
-| **Codex** | Primary implementation engineer | Coding; tests; debugging; scoped refactoring; PR preparation | Does not change approved scope; does not merge |
+| **Claude** | Technical lead | Architect; milestone coordinator; specification owner; independent reviewer | Does not modify the implementation during review; never merges autonomously |
+| **Codex** | Primary implementation engineer | Coding; tests; debugging; scoped refactoring; PR preparation | Does not change approved scope; never merges autonomously |
 | **Hermes** (from M4) | Research / operations | External research; source and API monitoring; licensing and terms monitoring; freshness and source-health monitoring; recurring operational reporting | Not the primary coder; not an architecture authority; not a merge authority |
 | **CI** | Quality gate | Objective, automated check of tests and contract invariants on every pull request | Not a substitute for review |
 | **ChatGPT** | Advisor | Product, strategy and research advice | Not a required hop in the build loop |
@@ -32,7 +32,8 @@ Product direction
   → Claude review
   → Codex fixes, if required
   → CI
-  → human merge
+  → human approval
+  → agent or human merge
 ```
 
 1. **Product direction.** The human owner states intent. The
@@ -52,7 +53,10 @@ Product direction
 7. **Fix loop.** Findings go back to Codex with exact detail. Review repeats
    until approved.
 8. **CI.** The pull request must be green.
-9. **Human merge.** Claude reports the verdict; the owner decides and merges.
+9. **Human approval.** Claude reports the verdict and the reviewed head SHA;
+   the owner decides.
+10. **Agent or human merge.** The owner merges, or an agent merges after the
+    owner's explicit approval of that pull request at that head SHA.
 
 ## Blockers and escalation
 
@@ -80,12 +84,21 @@ corrections are not escalated.
 
 ## Merge authority
 
-**No agent may merge to `main`.** Agents may commit to feature branches, push
-them and open pull requests. They do not merge, enable auto-merge, push to
-`main`, force-push or rewrite shared history. Merging to `main` is a
-production deploy (GitHub Pages publishes the repository from `main`) and is
-the owner's decision alone. See
-[ADR-002](decisions/ADR-002-human-only-merge-authority.md).
+**Agents may merge to `main` only after explicit human approval for that
+specific pull request and reviewed head SHA.** Merging to `main` is a
+production deploy (GitHub Pages publishes the repository from `main`), and
+the decision is the owner's alone.
+
+- Agents must never merge autonomously.
+- Human approval must be explicit and specific to one pull request.
+- Approval applies to the reviewed head SHA. If the pull request's head
+  changes after approval, human approval is required again.
+- Agents may not enable auto-merge unless explicitly authorized.
+- Agents may not push directly to `main`.
+- Agents may not force-push or rewrite shared history.
+
+Agents may commit to feature branches, push them and open pull requests. See
+[ADR-002](decisions/ADR-002-human-approved-merge-authority.md).
 
 ## Memory and authority
 

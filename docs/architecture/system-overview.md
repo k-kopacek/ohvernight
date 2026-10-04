@@ -87,7 +87,7 @@ dispatch only. They upload artifacts and do not commit or deploy. Nothing is
 scheduled.
 
 At the time of writing, `main` has no GitHub branch protection: CI reports but
-does not technically block a merge, and the human merge gate is held by
+does not technically block a merge, and the human approval gate is held by
 convention. Enabling protection is an owner follow-up recorded in the M1
 specification.
 

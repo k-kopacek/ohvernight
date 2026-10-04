@@ -26,13 +26,18 @@ planning milestone work:
 - `docs/specs/` — approved milestone specifications.
 - `docs/product/trust-principles.md` and `docs/product/product-principles.md`.
 - `docs/architecture/agent-stack.md` — roles, workflow, escalation and merge
-  authority. No agent may merge to `main`.
+  authority.
 - `docs/architecture/system-overview.md` and `docs/architecture/decisions/`.
 - `docs/audits/architecture-audit.md` — findings behind M1, M2 and later
   milestones.
 
 ## Working rules
 
+- Never merge to `main` autonomously. An agent may merge only after explicit
+  human approval for that specific pull request and reviewed head SHA. If the
+  pull request's head changes after approval, approval is required again. Do
+  not enable auto-merge unless explicitly authorized, and never push directly
+  to `main`.
 - Treat `origin/main` as the shared history. Never force-push, rewrite history,
   or delete files to resolve a conflict without explicit user approval.
 - Use a short-lived feature branch or isolated worktree for changes. Inspect

@@ -28,5 +28,5 @@ Orca session state are conveniences, not authority.
 - Agents read `AGENTS.md`, `ROADMAP.md`, the relevant specification and the
   documents under `docs/` before planning work, and do not rely on recall.
 - Changing the roadmap, a principle or a decision means changing a file, with
-  review and a human merge.
+  review and human approval.
 - Documentation has to be maintained; a stale document is a defect.

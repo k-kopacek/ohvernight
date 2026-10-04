@@ -27,4 +27,5 @@ findings go back to Codex to fix.
   listed in [agent-stack.md](../agent-stack.md) go to the owner.
 - Fixes cost a round trip through the coordinator instead of a direct edit.
   That cost is accepted to keep review independent.
-- Neither agent merges ([ADR-002](ADR-002-human-only-merge-authority.md)).
+- Neither agent merges autonomously
+  ([ADR-002](ADR-002-human-approved-merge-authority.md)).
