@@ -31,5 +31,5 @@
     "trail_access": {"state": "context", "layer_ids": ["trails"], "official_urls": [], "statement": "USFS published trail-use strings, kept verbatim. Segments are clipped at the county boundary and are not complete routes. Not evaluated against closures or current conditions."},
     "recreation_permission": {"state": "none", "layer_ids": ["waterbodies", "waterways"], "official_urls": [], "statement": "No recreational-use permission is loaded. A mapped or named water feature does not establish public access, fishing, paddling or swimming permission, or that the water is usable for recreation. Distances to campgrounds, trailheads and trails are straight-line and are not connections."}
   },
-  "known_gaps": ["Snapshot notes are retained from the source research.", "No live restrictions feed.", "No precise parcel data.", "No verified dispersed-camping candidates."]
+  "known_gaps": ["USFS trails only; county and state trails not included.", "County boundary clips cross-county routes; these are not full itineraries.", "No camping recommendations generated.", "No live restrictions feed.", "No precise parcel data.", "No verified dispersed-camping candidates."]
 }

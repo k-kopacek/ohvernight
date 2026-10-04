@@ -44,5 +44,5 @@
     "trail_access": {"state": "context", "layer_ids": ["trails"], "official_urls": [], "statement": "USFS published trail-use strings, kept verbatim. Not evaluated against dates, closures or current conditions."},
     "recreation_permission": {"state": "none", "layer_ids": ["hydrology"], "official_urls": [], "statement": "No recreational-use permission is loaded. A mapped or named water feature does not establish public access, fishing, paddling or swimming permission, or that the water is usable for recreation. Distances to trails, roads and water are straight-line and are not connections."}
   },
-  "known_gaps": ["The current snapshot covers only a bounded Aspen / Snowmass pilot extent.", "Some source layers are unavailable or represented only as generalized context.", "No current closure, access or recreational-use permission is confirmed by this research snapshot."]
+  "known_gaps": ["Site-specific orders are not exhaustively mapped", "Current road/snow conditions and availability are not automatically verified", "Limited-scale ownership does not establish a site's legal boundary"]
 }
