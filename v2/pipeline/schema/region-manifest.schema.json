@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ohvernight regional data contract manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "region", "coverage", "sources", "layers", "rules", "fact_coverage", "known_gaps"],
+  "properties": {
+    "contract_version": {"const": 1},
+    "region": {"$ref": "#/$defs/region"},
+    "coverage": {"$ref": "#/$defs/coverage"},
+    "sources": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/source"}},
+    "layers": {"type": "array", "items": {"$ref": "#/$defs/layer"}},
+    "rules": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/path_ref"}]},
+    "fact_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownership", "public_access", "camping_permission", "closures", "restrictions", "road_access", "trail_access", "recreation_permission"],
+      "properties": {
+        "ownership": {"$ref": "#/$defs/fact"},
+        "public_access": {"$ref": "#/$defs/fact"},
+        "camping_permission": {"$ref": "#/$defs/fact"},
+        "closures": {"$ref": "#/$defs/fact"},
+        "restrictions": {"$ref": "#/$defs/fact"},
+        "road_access": {"$ref": "#/$defs/fact"},
+        "trail_access": {"$ref": "#/$defs/fact"},
+        "recreation_permission": {"$ref": "#/$defs/fact"}
+      }
+    },
+    "known_gaps": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  },
+  "$defs": {
+    "path_ref": {
+      "type": "object", "additionalProperties": false, "required": ["path"],
+      "properties": {"path": {"$ref": "#/$defs/path"}, "pointer": {"type": "string"}}
+    },
+    "path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+    "region": {
+      "type": "object", "additionalProperties": false, "required": ["id", "name", "state", "status"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+        "name": {"type": "string", "minLength": 1},
+        "state": {"type": "string", "minLength": 2},
+        "status": {"const": "research_only"}
+      }
+    },
+    "coverage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "pointer", "kind", "source_id", "statement"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"}, "pointer": {"type": "string"},
+        "kind": {"enum": ["clipping_boundary", "project_defined_extent"]},
+        "source_id": {"type": ["string", "null"]},
+        "statement": {"type": "string", "minLength": 1}
+      }
+    },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "agency", "source_urls", "scope"],
+      "properties": {
+        "type": {"enum": ["agency", "derived", "curated", "community"]},
+        "agency": {"type": "string", "minLength": 1},
+        "source_urls": {"type": "array", "items": {"type": "string", "pattern": "^https?://"}},
+        "scope": {"type": "string", "minLength": 1}
+      }
+    },
+    "fields": {
+      "type": "object", "additionalProperties": false, "required": ["source", "derived"],
+      "properties": {
+        "source": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "derived": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "status_ref": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/path_ref"}]},
+    "layer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "format", "path", "pointer", "source_ids", "status_ref", "max_age_hours", "must_be_empty", "limitations"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9_-]+$"},
+        "kind": {"enum": ["land_management", "wilderness", "roads", "trails", "water", "recreation_sites", "overnight_inventory", "destinations", "research_areas", "restriction_monitor", "wildlife_context", "community_leads", "reviewed_sites"]},
+        "format": {"enum": ["feature_collection", "place_list"]},
+        "path": {"$ref": "#/$defs/path"}, "pointer": {"type": "string"},
+        "source_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "status_ref": {"$ref": "#/$defs/status_ref"},
+        "max_age_hours": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "geometry_types": {"type": "array", "items": {"enum": ["Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon"]}},
+        "allow_null_geometry": {"type": "boolean"},
+        "must_be_empty": {"type": "boolean"},
+        "extent_padding_deg": {"type": "number", "minimum": 0},
+        "spatial_precision": {"enum": ["generalized", "source_published", "computed"]},
+        "classification_source_field": {"type": "string", "minLength": 1},
+        "list_key": {"type": "string", "minLength": 1},
+        "fields": {"$ref": "#/$defs/fields"},
+        "limitations": {"type": "string", "minLength": 1}
+      }
+    },
+    "fact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "layer_ids", "official_urls", "statement"],
+      "properties": {
+        "state": {"enum": ["none", "context", "reviewed_partial"]},
+        "layer_ids": {"type": "array", "items": {"type": "string"}},
+        "official_urls": {"type": "array", "items": {"type": "string", "pattern": "^https?://"}},
+        "statement": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

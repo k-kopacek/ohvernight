@@ -1,0 +1,853 @@
+{
+  "today": "2026-09-26",
+  "now": "2026-09-26T00:00:00Z",
+  "trips": [
+    {
+      "arrive": "2026-07-10",
+      "depart": "2026-07-12"
+    },
+    {
+      "arrive": "2027-01-15",
+      "depart": "2027-01-17"
+    },
+    {
+      "arrive": "2026-07-10",
+      "depart": "2026-07-18"
+    }
+  ],
+  "vehicles": [
+    "passenger_car",
+    "high_clearance",
+    "motorhome"
+  ],
+  "v2": [
+    {
+      "id": "difficult",
+      "results": [
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "silverbar",
+      "results": [
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "silverbell",
+      "results": [
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "lincolncreek",
+      "results": [
+        {
+          "status": "excluded",
+          "label": "High clearance required",
+          "tripNote": "The agency specifies high clearance. Passenger-car access does not meet that requirement.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "High clearance required",
+          "tripNote": "The agency specifies high clearance. Passenger-car access does not meet that requirement.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Stay exceeds published limit",
+          "tripNote": "This area lists a maximum stay of 5 days. Shorten the trip or choose a different overnight option.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Dispersed area · access unverified",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Dispersed area · access unverified",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Stay exceeds published limit",
+          "tripNote": "This area lists a maximum stay of 5 days. Shorten the trip or choose a different overnight option.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Motorhome suitability unverified",
+          "tripNote": "High clearance is required; motorhome dimensions and suitability have not been checked.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Motorhome suitability unverified",
+          "tripNote": "High clearance is required; motorhome dimensions and suitability have not been checked.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Stay exceeds published limit",
+          "tripNote": "This area lists a maximum stay of 5 days. Shorten the trip or choose a different overnight option.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "stmoritz",
+      "results": [
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "ridb-231882",
+      "results": [
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "ridb-231881",
+      "results": [
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "ridb-231880",
+      "results": [
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "ridb-231883",
+      "results": [
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        }
+      ]
+    }
+  ],
+  "root": [
+    {
+      "id": "difficult",
+      "results": [
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "silverbar",
+      "results": [
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Tent-only · vehicle-sleeping mismatch",
+          "tripNote": "The published sites are walk-in and tent-only.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "silverbell",
+      "results": [
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "Outside mapped vehicle-access season",
+          "tripNote": "At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Needs trip review",
+          "tripNote": "Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "lincolncreek",
+      "results": [
+        {
+          "status": "excluded",
+          "label": "High clearance required",
+          "tripNote": "The agency specifies high clearance. Passenger-car access does not meet that requirement.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "High clearance required",
+          "tripNote": "The agency specifies high clearance. Passenger-car access does not meet that requirement.",
+          "sourceStale": false
+        },
+        {
+          "status": "excluded",
+          "label": "High clearance required",
+          "tripNote": "The agency specifies high clearance. Passenger-car access does not meet that requirement.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Dispersed area · access unverified",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Dispersed area · access unverified",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Dispersed area · access unverified",
+          "tripNote": "Access, overnight permission and availability need confirmation.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Motorhome suitability unverified",
+          "tripNote": "High clearance is required; motorhome dimensions and suitability have not been checked.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Motorhome suitability unverified",
+          "tripNote": "High clearance is required; motorhome dimensions and suitability have not been checked.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Motorhome suitability unverified",
+          "tripNote": "High clearance is required; motorhome dimensions and suitability have not been checked.",
+          "sourceStale": false
+        }
+      ]
+    },
+    {
+      "id": "stmoritz",
+      "results": [
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        },
+        {
+          "status": "review",
+          "label": "Room backup · check availability",
+          "tripNote": "Book a room with the operator. This is not permission to sleep in the parking lot.",
+          "sourceStale": false
+        }
+      ]
+    }
+  ]
+}

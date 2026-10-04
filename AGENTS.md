@@ -9,6 +9,8 @@
   `v2/map-data-v2.json`. It does not deploy or modify the website automatically.
 - `v2/regions/` contains region-specific field-test experiences. Keep a
   region's app, styles, research data, and README together.
+- Each region has `v2/regions/<id>/region.json`, validated against
+  `v2/pipeline/docs/data-contract.md`.
 - The repository root retains the original site for comparison. Do not
   silently replace it while working on v2.
 - GitHub Pages publishes the whole repository from `main`; merging to `main` is

@@ -23,7 +23,7 @@ def normalize(leads, corridors):
                 "name": lead.get("name"), "notes": lead.get("notes"),
                 "matched_candidate_ids": matches, "needs_review": True, "camping_permission": "unknown",
                 "evidence": make_evidence(lead.get("source_url") or "https://github.com/k-kopacek/ohvernight",
-                    lead.get("reported_by") or "Community", "unverified", "community_report",
+                    lead.get("reported_by") or "Community", "unverified", None,
                     reported_at=lead.get("reported_at"), notes="Spatial match is not corroboration of legal access.")}})
     return out
 

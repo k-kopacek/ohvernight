@@ -281,7 +281,10 @@
           ]
         },
         "verification_method": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1
         },
         "inputs": {

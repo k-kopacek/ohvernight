@@ -1,0 +1,17 @@
+[
+  {"name":"current","now":"2026-09-26T12:00:00Z","record":{"last_confirmed_at":"2026-09-26T00:00:00Z","max_age_hours":24},"expected":"current"},
+  {"name":"stale","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"2026-09-24T00:00:00Z","max_age_hours":24},"expected":"stale"},
+  {"name":"threshold equality is current","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"2026-09-25T00:00:00Z","max_age_hours":24},"expected":"current"},
+  {"name":"one second over is stale","now":"2026-09-26T00:00:01Z","record":{"last_confirmed_at":"2026-09-25T00:00:00Z","max_age_hours":24},"expected":"stale"},
+  {"name":"checked timestamp is not confirmation","now":"2026-09-26T00:00:00Z","record":{"last_checked_at":"2026-09-25T00:00:00Z","max_age_hours":24},"expected":"unavailable"},
+  {"name":"null confirmation","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":null,"max_age_hours":24},"expected":"unavailable"},
+  {"name":"future confirmation","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"2026-09-27T00:00:00Z","max_age_hours":24},"expected":"unavailable"},
+  {"name":"zero threshold","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"2026-09-25T00:00:00Z","max_age_hours":0},"expected":"unavailable"},
+  {"name":"negative threshold","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"2026-09-25T00:00:00Z","max_age_hours":-1},"expected":"unavailable"},
+  {"name":"null threshold","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"2026-09-25T00:00:00Z","max_age_hours":null},"expected":"unavailable"},
+  {"name":"missing threshold","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"2026-09-25T00:00:00Z"},"expected":"unavailable"},
+  {"name":"string threshold","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"2026-09-25T00:00:00Z","max_age_hours":"24"},"expected":"unavailable"},
+  {"name":"unparseable timestamp","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"not-a-date","max_age_hours":24},"expected":"unavailable"},
+  {"name":"date-only timestamp","now":"2026-09-26T12:00:00Z","record":{"last_confirmed_at":"2026-09-26","max_age_hours":24},"expected":"current"},
+  {"name":"null record","now":"2026-09-26T00:00:00Z","record":null,"expected":"unavailable"}
+]
