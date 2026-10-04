@@ -1,0 +1,700 @@
+# Milestone 3 specification — Unified mobile-first Explore architecture
+
+**For:** Codex (implementation). **Reviewer / coordinator:** Claude. **Base:** `main` at `3dc0fef`.
+**Branch:** `k-kopacek/m3-unified-mobile-explore`. Open a PR; do not push to `main`.
+**Status:** DRAFT — **not approved.** Phase A (sections 7–9) needs an owner decision before any Phase B work starts. Section 23 lists every decision the owner must make.
+
+Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `docs/audits/architecture-audit.md`, `docs/specs/M2-regional-data-contract.md`, `v2/pipeline/docs/data-contract.md`.
+
+M3 is one milestone with two phases:
+
+- **Phase A — architecture evaluation and decision.** Done in this document. No code.
+- **Phase B — implementation of the approved architecture.** Sections 10–21. Starts only after the owner approves section 9.
+
+## 1. Problem
+
+Ohvernight has two browser apps that share almost nothing. Each loads its whole region up front, each has its own layout, layer list, evidence wording, freshness rule and basemap. A third region would need a third app. On a phone, loading is slow because of how the data is packaged, and several known trust defects live in the app code:
+
+- land polygons are drawn with more certainty than the data has (register item N17);
+- two rule orderings can hide a restriction (N16);
+- freshness thresholds are hard-coded in two places instead of coming from the region manifest (N9).
+
+M2 gave every region a manifest and a contract. Nothing in the browser reads them yet.
+
+## 2. Current verified architecture
+
+Verified against `main` at `3dc0fef` on 2026-10-04. Measurements are in section 16.
+
+| # | Fact | Where |
+|---|---|---|
+| F1 | Three static surfaces: the root legacy site, the v2 Aspen app (`v2/`), and the Douglas County page (`v2/regions/douglas-co/`). No build step, bundler or `package.json`. Leaflet 1.9.4 is vendored (147,552 bytes; 42,445 gzipped). | repository |
+| F2 | The v2 app fetches seven files in one `Promise.all` before any control is enabled, including the whole 10,086,079-byte bundle, whether or not the user opens the map. | `v2/app.js` |
+| F3 | Every v2 data fetch uses `cache: 'no-store'`, so nothing is reused between visits. Pages serves `cache-control: max-age=600` with an ETag. | `v2/app.js`; response headers |
+| F4 | 6,926 hydrology features are downloaded and 1,555 are drawn. The other 5,371 (5.6 MB raw, 1.4 MB gzipped) exist for pipeline setback screening and are never used by the browser. | `v2/map-layers.js::displayWater`; measured |
+| F5 | Coordinates are published with about 14 decimal places. Six decimals is about 0.1 m. | all GeoJSON |
+| F6 | The Aspen bundle holds 113 distinct `evidence` objects across 7,038 features; Douglas holds 7 across 2,609. Repeated evidence is 1.8 MB of the Aspen bundle (N14). | measured |
+| F7 | Both apps build every layer and attach every popup at startup. The Aspen app builds popup HTML for each feature eagerly, including a nearby-camping computation per trail. | `v2/app.js::renderPipelineLayers`; `preview.js` |
+| F8 | Both apps use Leaflet's canvas renderer (`preferCanvas: true`). | both apps |
+| F9 | The Douglas page fetches one 6,173,713-byte file with default caching. | `preview.js` |
+| F10 | Basemaps differ: Aspen uses USGS The National Map imagery and topo; Douglas uses Esri World Imagery and the OpenStreetMap tile server. Only USGS and OpenStreetMap data attribution appear in `DATA-LICENSE.md`. | both apps |
+| F11 | Layer lists are hard-coded twice: 12 definitions in `v2/map-layers.js`, 8 in `preview.js`. Neither reads `region.json`. | named files |
+| F12 | Douglas colours land by manager code — USFS green, other federal purple, state gold, local teal, `PVT` grey — with a 1 px solid outline (N17). Aspen draws land in one colour with a 2 px solid outline. | `preview.js`; `v2/app.js` |
+| F13 | Freshness is hard-coded: 30 days on `checked_on` in `v2/trip-rules.js`; 7 days on `retrieved_at` in `preview.js` (N9). | named files |
+| F14 | In `TripRules.evaluate`, the motorhome clearance caution returns before the vehicle-access-season exclusion. In `Trust.applyRules`, two or more matching rules apply no values (N16). The root `trip-rules.js` has the same motorhome ordering. | named files |
+| F15 | The registry has one rule today, so the multi-rule branch is not reached by shipped data. No shipped place has both `requires_high_clearance` and `access`, so the motorhome ordering changes no shipped result today. | `rules-registry.json`; evaluated |
+| F16 | The Douglas page hard-codes one camping listing, the Rampart designated-dispersed area, with a paraphrased seasonal closure (N7). | `preview.js` |
+| F17 | `v2/map-data.json` is read by no v2 code. It is only a download link in `v2/index.html` (N13). The root site has its own copy. | grep |
+| F18 | Region-specific behaviour: Aspen has a trip planner, Plan A / backup, the Choose Your Adventure pilot and trail search. Douglas has a browse dialog (trails, camping, trailheads), a published-season check against trip dates, GPX export, a saved list and field-test notes. | both apps |
+| F19 | Local storage keys: `ohvernight-trip-v1` (Aspen); `ohvernight-douglas-plan-v1`, `-notes`, `-trip` (Douglas). | both apps |
+| F20 | The layer drawer in both apps is a modal `<dialog>` with a blurred backdrop. On phones it covers 74–78% of the viewport and the map cannot be seen or used while it is open. | measured |
+| F21 | CI runs offline Python and Node tests and `node --check` on a fixed list of files. There is no browser test. | `.github/workflows/ci.yml` |
+| F22 | GitHub Pages answers range requests (`206`, `accept-ranges: bytes`). | measured |
+
+## 3. User-visible goals
+
+1. One Explore experience for every region, at one URL, chosen by a region parameter.
+2. Mobile-first: the map is the page. Results sit in a small collapsed sheet; layers sit in a drawer opened on demand; nothing stays on top of the map permanently.
+3. Explore is useful with no trip entered. Trip dates and vehicle never hide map features.
+4. A region loads only its own data, and loads it progressively.
+5. Land is drawn as what it is: generalized management context, not parcels.
+6. Uncertainty stays visible. No styling, label or ordering implies access or permission.
+7. Adding a water, trail, camping or land layer in M4–M7 is a data and configuration change, not an app redesign.
+
+Choose Your Adventure stays a separate experience. The existing Aspen pilot keeps working (section 17) and is not extended.
+
+## 4. In scope
+
+1. Shared app shell, region loader, layer registry, map controls, mobile layout, source/provenance panel and evidence rendering (section 10).
+2. Region-scoped, per-layer display artifacts generated offline from the published data, with a drift test (section 12).
+3. A narrow, additive extension of the region manifest and contract to declare those artifacts (section 12.3). **Owner decision D3.**
+4. Land evidence presentation (section 13). Retires N17.
+5. Rule-ordering corrections (section 14). Retires N16.
+6. Freshness thresholds read from the manifest (section 12.5). Retires N9 in `v2/`.
+7. Migration of the Aspen app and the Douglas page onto the shared architecture, with URL and storage compatibility (section 17).
+8. Tests, a browser check and a committed performance baseline (section 19).
+9. Documentation: the data contract, the register, `system-overview.md`, READMEs and an ADR recording the rendering decision.
+
+## 5. Out of scope (do not do these)
+
+- M4: classifying water, changing which water features are selected for display, or adding recreation semantics. The display selection rule stays exactly `MapLayers.displayWater`.
+- M5: new land sources or classifications.
+- M6: COTREX or any new trail source.
+- M7: camping discovery, new camping inventory, or cleaning up the Rampart listing (N7) beyond the verbatim relocation in 17.4.
+- M8: ranking, new Choose Your Adventure behaviour, or new inputs.
+- Any new access, permission, openness or support claim.
+- Any weakening of an M2 rule, any widening of an allowed value set, or any change to the trust-bearing statements in the manifests' `fact_coverage`.
+- A backend, database, API, service worker, account or analytics.
+- Any change to the content of a published canonical data file, except the deletion in D8 if approved.
+- Running a live fetch.
+- `package.json`, a bundler, a transpiler, a framework, or any runtime dependency other than vendored Leaflet.
+- The root legacy site, except the one function named in D7 if approved.
+- MapLibre, vector tiles or PMTiles, unless the owner chooses Option 2 in section 9, in which case this specification is revised before Phase B.
+
+## 6. Current Aspen / Douglas divergence
+
+| Concern | Aspen (`v2/`) | Douglas (`v2/regions/douglas-co/`) | Shared today |
+|---|---|---|---|
+| Entry | Landing form, then map | Map immediately | — |
+| Data | 7 files, 3 envelopes | 1 file | — |
+| Caching | `no-store` | browser default | — |
+| Layer list | 12 hard-coded, with status text and "View" | 8 hard-coded, with counts | — |
+| Layer drawer | modal dialog | modal dialog | concept only |
+| Results | bottom sheet (phone) / 380 px panel | "peek" card plus dialogs | — |
+| Feature detail | Leaflet popup, built eagerly | modal dialog for trails and sites; popup for context layers | — |
+| Land styling | one colour, solid 2 px outline | colour per manager code incl. `PVT`, solid 1 px | — |
+| Water | named subset of hydrology | two pre-filtered named layers | — |
+| Basemap | USGS imagery / topo | Esri imagery / OSM street | — |
+| Trip inputs | mountain, dates, 3 vehicles | dates, activity, 4 vehicle labels (not evaluated) | — |
+| Trip evaluation | `TripRules` + `Trust.applyRules` | none for places; `DouglasDiscovery.season` for trails | — |
+| Freshness | 30 days hard-coded; fire and RIDB via `Trust.freshness` | 7 days hard-coded | `Trust.freshness` exists, Douglas does not use it |
+| Trail activity vocabulary | `TrailDiscovery.activities` | `DouglasDiscovery.activities` (same keys, different labels) | keys pinned equal by test |
+| Proximity | `TrailDiscovery` | `TrailDiscovery` | **yes** |
+| Saved items | Plan A / backup | list of up to 40, notes, JSON export | — |
+| Extras | Adventure pilot, trail search | GPX export, coverage notes, hard-coded Rampart listing | — |
+| Evidence wording | per-layer descriptions in code | per-layer strings in code | — |
+| Manifest use | none | none | — |
+
+Shared code today is one file, `trail-discovery.js`, plus Leaflet.
+
+## 7. Phase A — architecture comparison
+
+Two options were evaluated against the repository and the measurements in section 16. MapLibre was not assumed to win.
+
+- **Option 1 — Optimized Leaflet with lazy, region-scoped GeoJSON.** Keep Leaflet and its canvas renderer. Fix how data is packaged and loaded: per-layer display files, region-scoped loading, progressive fetch, normal caching, lazy popups.
+- **Option 2 — MapLibre GL JS with a vector-oriented architecture.** Replace Leaflet with MapLibre (WebGL). Serve layers as vector tiles (PMTiles archives read by range request) or as GeoJSON sources tiled in a worker.
+
+### 7.1 What the measurements say
+
+The current cost is dominated by data packaging, not by the renderer:
+
+- 78% of Aspen hydrology features are downloaded and never drawn (F4).
+- Splitting per layer, rounding coordinates to six decimals and storing evidence once per file cuts the Aspen display data from 3.31 MB to about 0.77 MB gzipped, and Douglas from 1.80 MB to about 0.77 MB (section 16.3). This is the same for either renderer.
+- With everything loaded, heap use is 33 MB (Aspen) and 28 MB (Douglas), and switching the heaviest layer on takes 139–180 ms on a 4×-throttled CPU. Neither is a renderer emergency at today's 1,500–2,400 features per heavy layer.
+- The real main-thread problem is startup: one 1.2–1.4 s long task on a throttled phone-class CPU while everything is parsed and built at once (F2, F7). Progressive per-layer loading addresses it under either option.
+
+### 7.2 Criteria
+
+| Criterion | Option 1 — Leaflet + lazy GeoJSON | Option 2 — MapLibre + vector |
+|---|---|---|
+| Mobile map usable area | Layout work; renderer-independent | Same |
+| Interaction performance | Canvas redraw per pan/zoom. Fine at current counts; degrades as on-screen vertices grow | GPU rendering; smooth at much higher counts; continuous zoom |
+| Initial page load | Library 42 KB gzipped (present) | Library 275 KB gzipped for the v5 single-file build; v6 ships as ES modules with a separate worker file. Needs WebGL |
+| Payload size | About 0.77 MB gzipped per region for all default layers | Tiles load per viewport and zoom; smaller first view. GeoJSON-source mode downloads the same files as Option 1 |
+| Region switching | Fetch that region's files; drop the old layers | Same, or one tile archive per region |
+| Layer count growth | Each layer is one file and one registry entry | Each layer is a tile layer plus style-spec entries |
+| Future Colorado expansion | Works region by region. A statewide single view does not scale as GeoJSON | Strong: tiles make statewide views practical |
+| Recreational-water layers (M4) | Works while a region's displayed water stays within the budget in 16.5 | Works at any density |
+| Trails / COTREX (M6) | Works per region. A statewide trail layer would exceed the budget | Strong |
+| Land presentation | Canvas styles, dashes and opacity are enough for section 13. No fill patterns without extra work | Fill patterns and data-driven styling built in |
+| Accessibility | Pins are DOM elements and already keyboard-focusable; canvas features are not, in either option | Same limits; DOM markers also available. Rotation and pitch must be disabled |
+| Maintainability | Small API the code already uses; plain scripts; no toolchain | Style specification plus a tile pipeline; larger API surface |
+| Migration complexity | Moderate: restructure the app, keep the map code | High: rewrite all map code, popups, pins, fit logic and tests, and add tile generation |
+| Static GitHub Pages | Yes | Yes. PMTiles needs range requests, which Pages supports (F22) |
+| No backend | Yes | Yes |
+| Offline CI / testability | Logic is tested in Node today. Layout and loading can be checked in headless Chrome without a GPU | Rendering needs WebGL in CI (software GL). Tile content needs a tile decoder or the generator to test |
+| Evidence / provenance semantics | Features keep nested `evidence` and `activities` objects; identity is one feature, one object | Vector-tile properties are flat, so nested objects become strings; one feature is cut across tiles, so identity, popups, GPX export and proximity need the original GeoJSON as well |
+| Not loading other regions' geometry | Yes, by construction of the loader | Yes |
+| Browser memory | 28–33 MB measured today; expected lower after the unused hydrology is dropped | Not measured. Typically higher baseline, flatter growth |
+| Lock-in risk | Low. Data stays GeoJSON; a renderer adapter isolates Leaflet | Higher. Style spec and a generated binary tile format |
+
+### 7.3 Option 1 in detail
+
+- **Code and data changes.** New shared shell and modules (section 10). A Python script generates per-layer display files from the published data (section 12). Loader fetches per layer. The two existing apps are retired onto the shell.
+- **Benefits.** Removes the measured bottlenecks; smallest change that unifies the apps; keeps every existing Node test meaningful; no new toolchain; data stays human-readable.
+- **Risks.** Leaflet's canvas renderer slows as displayed geometry grows. A statewide single view or a dense M4/M6 layer could exceed it. Mitigated by a feature budget, zoom gating, and the adapter boundary.
+- **Migration cost.** Medium.
+- **What stays static.** Everything. Display files are committed artifacts.
+- **Preprocessing.** One deterministic offline Python script using existing dependencies. No Node build.
+- **Current GeoJSON still usable.** Yes. Canonical files are unchanged and remain the contract's source; display files are derived from them.
+- **Vector tiles needed.** No.
+- **Rollback.** Revert the PR. Canonical data is untouched, and the old pages can be restored from git.
+
+### 7.4 Option 2 in detail
+
+- **Code and data changes.** Vendor MapLibre and PMTiles. Rewrite all map code. Add a tile build (tippecanoe, a C++ tool not available through the pipeline's Python requirements, or a new Python tiler). Commit binary tile archives. Keep GeoJSON as well for trail search, GPX and proximity.
+- **Benefits.** Scales to statewide and dense layers; smooth interaction; pattern fills; viewport-scoped loading.
+- **Risks.** Largest rewrite in the project so far, in the same milestone as unification; a new binary artifact that reviewers cannot read in a diff; WebGL required on the user's device; CI needs software GL; evidence must be re-joined from flattened tile properties; a drift test needs the tile generator in CI.
+- **Migration cost.** High.
+- **What stays static.** Everything; tiles are files.
+- **Preprocessing.** A tile build step and its toolchain.
+- **Current GeoJSON still usable.** As MapLibre GeoJSON sources, yes, but that mode gives up the payload advantage.
+- **Vector tiles needed.** Yes, to gain the advantages that justify the switch.
+- **Rollback.** Revert the PR; larger blast radius because the map layer and tests are rewritten.
+
+A middle path, MapLibre with GeoJSON sources, moves parsing and tiling to a worker and so removes main-thread long tasks. It pays the full rewrite and the library weight without solving payload, so it is not recommended on its own.
+
+## 8. Recommended architecture
+
+**Option 1: optimized Leaflet with region-scoped, per-layer, lazily loaded display GeoJSON, behind a renderer adapter.**
+
+Reasons:
+
+1. The measured problems are packaging and loading. Option 1 fixes them directly; Option 2 fixes them only by also doing the same data work.
+2. At today's sizes Leaflet is adequate: 28–33 MB heap and sub-200 ms heavy-layer toggles on a throttled CPU.
+3. It keeps M3 to one large change (unification) instead of two (unification plus a renderer and toolchain change).
+4. It keeps evidence semantics simple: a feature stays one object with its nested evidence.
+5. It keeps the toolchain at Python plus plain scripts, and keeps tests offline without a GPU.
+
+What this does **not** decide: MapLibre is not rejected. Option 1 has a ceiling, and M6 (statewide trails) or a dense M4 water layer may reach it. Two things keep that door open:
+
+- **Renderer adapter.** All Leaflet calls live in one module (`explore/map-adapter.js`). The rest of the app does not import Leaflet.
+- **Re-evaluation triggers**, recorded in the ADR. The renderer decision is reopened when any of these becomes true: a region's default-on layers exceed 15,000 displayed features or 1.5 MB gzipped; a single display layer exceeds 5,000 features and cannot be zoom-gated; a product requirement needs one continuous multi-region or statewide view; or the performance thresholds in 16.4 cannot be met.
+
+## 9. Human architecture decision required
+
+**Phase B must not start until the owner chooses one:**
+
+- **A1 — Approve Option 1** as recommended. Phase B proceeds as specified below.
+- **A2 — Choose Option 2.** Sections 10–21 are revised and re-approved before any implementation.
+- **A3 — Ask for more evidence**, for example a throw-away MapLibre prototype measured with the same script. This adds a step before Phase B.
+
+The decision is recorded as `docs/architecture/decisions/ADR-006-explore-rendering-architecture.md` in the Phase B pull request, with the triggers in section 8.
+
+## 10. Target shared app architecture
+
+Sections 10–21 assume decision A1.
+
+### 10.1 Components
+
+All browser code is plain scripts with the existing `module.exports` / global pattern, so Node can test the logic. No module depends on a region ID.
+
+| Component | File | Responsibility |
+|---|---|---|
+| App shell | `v2/index.html`, `v2/explore/shell.js`, `v2/explore/explore.css` | One page for every region. Reads the URL, starts the loader, owns views and focus management. |
+| Region loader | `v2/explore/region-loader.js` | Resolves the region; fetches and checks the manifest, the Explore configuration and the display index; fetches layers on demand; reports per-layer state. Pure functions plus an injected `fetch`. |
+| Layer registry | `v2/explore/layer-registry.js` | Joins manifest layers with Explore configuration into registry entries: title, description, style tier, status text, freshness text. Replaces `MapLayers.definitions` and the list in `preview.js`. |
+| Renderer adapter | `v2/explore/map-adapter.js` | The only file that calls Leaflet. Add/remove layer, fit, basemap, pins, hit-testing callbacks. |
+| Evidence renderer | `v2/explore/evidence.js` | Builds source, provenance, freshness and limitation text from the manifest and a feature's evidence. Pure; returns text and safe URLs, never HTML strings from data. |
+| Land presentation | `v2/explore/land-style.js` | Style tiers and legend entries of section 13. Pure. |
+| Mobile layout | `v2/explore/sheet.js`, `v2/explore/drawer.js` | Results sheet and layer drawer behaviour. |
+| Trail tools | `v2/trail-discovery.js` (unchanged API), `v2/explore/trail-seasons.js` | Search and proximity; the published-season check moved from `DouglasDiscovery`. |
+| Trip logic | `v2/trip-rules.js`, `v2/trust.js` | Changed only as sections 12.5 and 14 specify. |
+| Region inputs | `v2/regions/<id>/region.json`, `v2/regions/<id>/explore.json`, `v2/regions/<id>/display/` | Manifest (trust data), presentation configuration, generated display files. |
+
+### 10.2 Explore configuration
+
+`v2/regions/<id>/explore.json` holds presentation only. It is validated by `v2/pipeline/schema/explore-config.schema.json` and a test. It never carries a trust statement; those come from the manifest.
+
+```json
+{
+  "explore_version": 1,
+  "region_id": "douglas-co",
+  "initial_view": {"center": [-105.05, 39.28], "zoom": 10},
+  "layers": [
+    {"layer_id": "land", "title": "Land management context", "order": 10, "default_on": true, "min_zoom": null},
+    {"layer_id": "waterways", "title": "Named streams", "order": 30, "default_on": true, "min_zoom": null}
+  ],
+  "capabilities": {"trip_planner": false, "trail_search": true, "trail_season_check": true, "gpx_export": true, "saved_list": true, "adventure_pilot": false},
+  "official_links": [{"label": "Forest Service alerts", "url": "https://www.fs.usda.gov/r02/psicc/alerts"}]
+}
+```
+
+Rules: every `layer_id` is a layer in the same region's manifest; every manifest `feature_collection` layer that has a display file appears exactly once; `title` contains none of the words verified, legal, permitted, open, allowed, private or public; URLs are `http(s)`. Layer descriptions shown to the user are the manifest's `limitations` text, not text in this file.
+
+`capabilities` preserves today's per-region behaviour without region-specific code paths:
+
+| Capability | Aspen | Douglas | Reason |
+|---|---|---|---|
+| `trip_planner` (mountain, dates, vehicle, place evaluation, Plan A / backup) | on | off | Douglas has no evaluated place inventory |
+| `adventure_pilot` | on | off | Existing Aspen pilot, unchanged |
+| `trail_search` | on | on | |
+| `trail_season_check` | **off** | on | The Aspen manifest states its trail strings are not evaluated against dates. Turning this on for Aspen would contradict a trust statement |
+| `gpx_export`, `saved_list` | off | on | Existing Douglas behaviour |
+
+### 10.3 Shared source and provenance display
+
+One panel, reachable from the layer drawer and from any feature detail, built by `evidence.js` from the manifest:
+
+- per layer: the source agency and URL, the manifest `limitations`, feature count, transport status and dates from the layer's `status_ref` (through a JavaScript port of `normalize_transport`), and the freshness line of 12.5;
+- per region: the `coverage.statement`, the eight `fact_coverage` statements verbatim, and `known_gaps`;
+- a layer with no transport record (N1) shows "No retrieval status is recorded for this layer", not a date.
+
+Feature detail shows: the feature name or the layer title; the source link; "Source fetched `<date>`"; the layer limitation; and layer-kind detail (trail uses, road designations, land classification per section 13). It never shows `evidence.confidence` and never treats `verification_method: null` as a review.
+
+### 10.4 Shared map controls
+
+Basemap toggle, fit region, zoom in, zoom out, layers, and search. M3 adds no geolocation. One control cluster, same positions in every region. Basemap sources per decision D5.
+
+### 10.5 What region-specific code remains
+
+One file: `v2/regions/douglas-co/extras.js`, holding the Rampart listing verbatim (17.4, decision D6). No other region-specific JavaScript. `discovery.js` and `preview.js` are deleted; `county.css` is deleted.
+
+## 11. Mobile UX requirements
+
+Measured in headless Chrome at device-pixel-ratio 2 for phone and tablet sizes. "Free map area" is the share of viewport points (4 px grid) where the topmost element is the map and not a control, measured by `document.elementFromPoint`, in the default state after entering Explore: sheet collapsed, drawer closed, no dialog open.
+
+| Requirement | 320×568 | 390×844 | 768×1024 | 1440×900 |
+|---|---|---|---|---|
+| Free map area, default state | ≥ 72% (now 68.8% Aspen, 64.7% Douglas) | ≥ 80% (now 79.0%, 76.7%) | ≥ 80% (now 48.7%, 84.5%) | ≥ 75% with the results panel open (now 72.5%, 86.7%); ≥ 90% with it collapsed |
+| Collapsed results sheet height | ≤ 88 px | ≤ 96 px | n/a (panel) | n/a (panel) |
+| Expanded sheet | ≤ 75% of viewport height; a visible collapse control stays on screen | same | panel ≤ 360 px wide, collapsible | panel ≤ 380 px wide, collapsible |
+| Layer drawer | bottom drawer, ≤ 60% of viewport height; ≥ 35% of the map stays visible and unblurred | same | side drawer ≤ 360 px; map stays interactive | same |
+| Horizontal scroll | none | none | none | none |
+
+Further requirements, all sizes:
+
+- **Layer drawer.** Closed by default. Opened from one control. Not a modal backdrop: toggling a layer visibly changes the map while the drawer is open. Closes by its close button and by Escape, and returns focus to the control that opened it.
+- **Touch targets.** Every interactive control is at least 44×44 CSS px. Exceptions: links inside a sentence, and the map attribution links.
+- **Map gestures.** With the sheet collapsed, a one-finger drag starting at any free-map point pans the map, and pinch zooms. Scrolling inside the sheet or drawer never pans the map and never scrolls the page.
+- **Keyboard.** Every control is reachable by Tab in visual order. Enter and Space activate. Escape closes the top overlay. Focus is always visible. The collapsed sheet's body is `inert`. Pins are focusable and named.
+- **No permanent obstruction.** Apart from the top bar, the control cluster and the collapsed sheet, every overlay has a visible close control and closes on Escape. After closing everything, the free map area returns to the default-state threshold. Status banners are at most 44 px tall and can be dismissed.
+- **Reduced motion.** `prefers-reduced-motion` disables sheet, drawer and map animations.
+- **Explore without a trip.** Opening Explore requires no dates or vehicle. Trip inputs, where the region has them, never add or remove map features.
+
+## 12. Region and data-loading design
+
+### 12.1 Display artifacts
+
+A display artifact is a per-layer GeoJSON file generated from the published canonical data. It exists for delivery only. The canonical files stay the published record, stay the contract's subject, and stay downloadable.
+
+Location: `v2/regions/<id>/display/<layer_id>.geojson` and `v2/regions/<id>/display/index.json`.
+
+Generated by a new offline script, `v2/pipeline/scripts/build_display.py`, which reads only committed files and the manifest, contacts nothing, and reads no clock. For each `feature_collection` layer it writes:
+
+```json
+{"type": "FeatureCollection", "layer_id": "waterways", "evidence_table": [{"source_url": "...", "agency": "USGS", "retrieved_at": "...", "last_verified": null, "confidence": "unverified", "verification_method": "arcgis_rest_query", "notes": ""}],
+ "features": [{"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-105.123456, 39.123456]]}, "properties": {"id": "...", "name": "...", "evidence": 0}}]}
+```
+
+Transformations, and nothing else:
+
+1. **Selection.** Every feature of the layer, in canonical order. One exception: for a `water` layer whose features carry a `kind` property, only features for which the existing `MapLayers.displayWater` rule is true. The rule is ported to Python unchanged and pinned by a shared vector test. This is today's display behaviour, not an M4 change.
+2. **Coordinates** rounded to six decimal places. Consecutive duplicate points produced by rounding are removed; no other simplification.
+3. **Evidence by reference.** `properties.evidence` becomes an integer index into `evidence_table`, which holds each distinct evidence object once, unmodified. The loader restores the object, so the rest of the app sees the canonical shape.
+4. Every other property is copied unchanged.
+
+`index.json` lists, per layer: `layer_id`, `path`, `feature_count`, `source_feature_count`, `bytes`, `sha256`, and the `sha256` of the canonical file it was built from. `place_list` layers are not converted; they are small and are read from their canonical paths. The coverage feature gets a display file, `display/coverage.geojson`, built by the same coordinate rule, because in Douglas it lives inside the 6 MB snapshot.
+
+### 12.2 Loading sequence
+
+1. Shell, CSS, Leaflet and scripts load. The map appears with the basemap as soon as Leaflet is ready.
+2. The loader resolves the region from `?region=<id>`; no parameter means `aspen`. An ID that fails `^[a-z0-9-]+$` or has no manifest shows a region-not-found state with a link to the default region. It never falls back silently to another region's data.
+3. It fetches `regions/<id>/region.json`, `explore.json` and `display/index.json`, then the coverage display file and the `place_list` layers. The map is fitted and pins appear. **The map is usable at this point.**
+4. Default-on layers load one at a time in `order`, each in its own task, each showing its own state in the drawer: loading, loaded with count, or failed with a retry control. A failed layer never blocks another.
+5. A layer that is off is not fetched until switched on. A layer with `min_zoom` is fetched when first needed at or above that zoom.
+6. Popups and detail content are built when a feature is tapped, not at load.
+7. Requests use normal HTTP caching with `?v=<first 12 hex of sha256>` from the index. `cache: 'no-store'` is removed.
+8. The loader requests only paths under the active region's manifest, `explore.json` and `display/` directory, plus shared code. It never requests another region's files.
+
+"All layers start enabled" is preserved for both regions: every layer that is on by default today has `default_on: true`. Progressive loading changes when a layer appears, not whether it does.
+
+### 12.3 Contract extension (owner decision D3)
+
+The manifest schema is closed (`additionalProperties: false`), so declaring display artifacts needs a contract change. It is additive and `contract_version` stays `1`:
+
+- `layers[].display`: optional `{"path": "regions/<id>/display/<layer_id>.geojson"}`. Allowed only on `feature_collection` layers.
+- `coverage.display`: optional `{"path": "regions/<id>/display/coverage.geojson"}`. R60, R63 and R64 apply to it; its geometry type and feature properties equal the canonical coverage feature's.
+- New validator rules, with negative tests:
+
+| ID | Rule |
+|---|---|
+| R60 | A `display.path` obeys R03 and lies under `regions/<region.id>/display/`. `index.json` exists, lists exactly the layers (and coverage) that declare `display`, and each listed `sha256` and `bytes` match the file. |
+| R61 | Each display file is a FeatureCollection whose `layer_id` equals the layer. Every feature ID exists in the canonical layer, and `feature_count` equals the number of features. Every canonical feature is present, except features excluded by the water selection rule in 12.1. |
+| R62 | For every display feature, restoring `evidence` from `evidence_table` gives an object equal to the canonical feature's `evidence`, and every other property equals the canonical property. |
+| R63 | Every display coordinate equals the canonical coordinate rounded to six decimals, after duplicate removal. Geometry type is unchanged and the geometry is valid and non-empty. |
+| R64 | The canonical-file `sha256` recorded in `index.json` equals the current file's. A canonical data change without regenerating display files fails. |
+
+The canonical rules R20–R33 keep running against the canonical files. Display files are checked against canonical data, never the other way round.
+
+### 12.4 Negative behaviour in the browser
+
+| Condition | Required behaviour |
+|---|---|
+| Manifest missing, unparseable, or `contract_version` not `1` | Region-not-available state. No layer is drawn. |
+| `region.id` in the manifest differs from the requested ID | Region-not-available state. |
+| `explore.json` missing or invalid | Region-not-available state. |
+| `display/index.json` missing | Region-not-available state. |
+| One display file missing, unparseable or not a FeatureCollection for that layer | That layer shows "Could not load" with retry; other layers load. |
+| A place list fails to load | Map and layers still work; the results sheet says the listings could not load. |
+| Leaflet unavailable | Listings and source panel still work; the map area says the map could not load. |
+
+In every failure state the fact-coverage statements still render if the manifest loaded. A failure is never presented as "no restrictions", "no features" or "nothing here".
+
+### 12.5 Freshness from the manifest (N9)
+
+The hard-coded 30-day and 7-day thresholds are removed from `v2/trip-rules.js` and from the Douglas code.
+
+- **Layer freshness line.** For a layer with a transport record and a non-null `max_age_hours`, the line is built with `Trust.freshness({last_confirmed_at: <last_retrieved_at>, max_age_hours})` used strictly as an age test of a retrieval, and worded as retrieval age: "Fetched `<date>`" plus "older than the refresh policy; refresh needed" when stale. It never says confirmed, verified or current. For `max_age_hours: null` the line is "Fetched `<date>`" only. Douglas keeps its shipped 168 hours through the manifest.
+- **Place review age.** `TripRules.evaluate(place, trip, today, policy)` gains a fourth argument, `{max_age_hours}`, supplied by the shell from the manifest layer the place came from. `stale` becomes: `checked_on` missing or unparseable, `today` unparseable, `today` before `checked_on`, **`max_age_hours` not a positive finite number**, or age greater than `max_age_hours`. There is no default constant in the function. A missing policy is stale, so supportive results fall to unknown and restrictions persist, as M2 section 5.9 requires.
+- **Manifest values (owner decision D4).** Aspen `overnight_options.max_age_hours` changes from `null` to `720`, which is the shipped 30-day behaviour. Aspen `ridb_options` already declares `168`.
+
+## 13. Land evidence presentation (N17)
+
+Style is derived from the manifest, not from the region. `land-style.js` maps `kind` and `spatial_precision` to a tier.
+
+| Tier | Applies to | Fill | Outline | Legend heading |
+|---|---|---|---|---|
+| **G — generalized context** | `land_management` or `wilderness` layers with `spatial_precision: generalized` | opacity ≤ 0.12 | dashed, 1 px, opacity ≤ 0.5; **no outline at zoom ≥ 14** | "Generalized land management context — not parcels" |
+| **P — source-published geometry** | polygon layers with `spatial_precision: source_published` | opacity ≤ 0.15 | solid, ≤ 1.5 px | the layer title, with "boundary as published by `<agency>`" |
+| **C — computed** | `spatial_precision: computed` (research areas) | opacity ≤ 0.10 | dashed, as today | "Computer-screened research areas — not campsites" |
+| **A — authoritative classification** | reserved for a future parcel-grade `land_management` source (M5) | — | — | — |
+| **Unknown** | everything unshaded | none | none | "Unshaded land is unknown — not private, not public, not open" |
+
+Rules:
+
+1. **No tier-A layer exists in M3.** A test asserts that no current layer resolves to tier A. Solid, high-contrast boundaries and strong fills are reserved for it.
+2. **Classes within tier G.** Each distinct value of the layer's `classification_source_field` gets a low-saturation tint from one palette defined in `land-style.js`. Tints distinguish classes; they do not rank them. No class uses red, and no class is styled as a warning or as a clearance.
+3. **`PVT`.** Drawn with the same tier-G treatment as every other class. Its legend label is "PVT — the source's generalized private class; not a parcel finding". The bare words "Private" and "Public" never appear as a legend label or popup title. A value outside the palette's known codes is labelled with the code and "unrecognised source code — unknown", never "private".
+4. **Legend order.** Legend entries follow the manifest's order of appearance in the data, with the Unknown entry always last and always present when a land layer is listed, whether or not the layer is switched on.
+5. **Boundary precision.** At zoom ≥ 14 tier-G outlines are not drawn and the fill remains. The detail panel for a tier-G feature always includes: "Limited-scale boundary. It cannot locate a property line or tell you whether a specific spot is inside this area."
+6. **Detail content for a land feature**, in this order: the source classification code verbatim; the agency and source link; "Source fetched `<date>`"; the precision sentence; the manifest's `ownership` statement; the manifest's `public_access` statement. No inferred owner, no access wording beyond those statements.
+7. **Styling hierarchy.** Context polygons sit below lines and pins and never use a stronger stroke or fill than a road or trail line. Wilderness with `source_published` geometry is tier P.
+8. **No per-region colours.** The Douglas `landColors` table is deleted. Both regions use the same palette and the same legend text.
+
+## 14. N16 rule-ordering corrections
+
+The M2 invariant holds throughout: freshness may reduce confidence but never weakens a known restriction. The `finish` step of M2 section 5.9 is unchanged.
+
+**Principle.** Among the non-freshness checks, every exclusion is evaluated before any caution, and a caution before any supportive result.
+
+### 14.1 `TripRules.evaluate`
+
+Order after the fix:
+
+1. invalid trip dates (unchanged);
+2. stay limit exceeded → excluded;
+3. lodging → room backup label (unchanged position);
+4. tent-only → excluded;
+5. high clearance required and `passenger_car` → excluded;
+6. **outside the mapped vehicle-access season → excluded**;
+7. **high clearance required and `motorhome` → "Motorhome suitability unverified" caution**;
+8. within-season note, dispersed label, default (unchanged).
+
+Only steps 6 and 7 swap. Labels and notes are unchanged. A place with `requires_high_clearance`, `access` and a motorhome trip outside the access season now returns the exclusion instead of the caution. Every other input returns what it returns today. No shipped place has both properties (F15), so the existing golden rows must be byte-identical.
+
+### 14.2 `Trust.applyRules`
+
+- Zero matching rules: unchanged.
+- One matching rule: unchanged.
+- **Two or more matching rules:** restrictive values are merged across the place and all matching rules, most restrictive wins: `stay_limit_days` is the smallest finite positive value; `requires_high_clearance` is `true` if any is `true`. `ruleReview` stays `'Conflicting rule records need review'`. `ruleSource` is the first matching rule's `source_url` in registry order, and a new `ruleSources` array lists every matching rule's `source_url`.
+
+A missing, `null` or looser rule value never replaces a stricter value. Freshness of the rules is not consulted for the merge.
+
+### 14.3 Root legacy `trip-rules.js` (owner decision D7)
+
+The root file has the same motorhome ordering and no rules registry. If D7 is approved, apply 14.1 steps 6–7 to the root function and nothing else, under the same constraints M2 set for that file.
+
+## 15. Register-item disposition
+
+| Item | M3 action | Result |
+|---|---|---|
+| **N16** rule ordering | Fixed (section 14) | **Retired**; kept as a regression marker like N6 |
+| **N17** land styling | Fixed (section 13) | **Retired**; kept as a regression marker |
+| **N9** hard-coded thresholds | Thresholds read from the manifest (12.5) | **Retired for `v2/`.** The root legacy file keeps its 30-day constant; the register entry is reworded to say so |
+| **N14** repeated evidence | Display files store evidence once per file | **Retired for browser delivery.** The canonical bundle is unchanged; the entry is reworded to say so |
+| **N13** `v2/map-data.json` unmanifested | Delete the file and its download link, if D8 is approved | **Retired if D8 approved**; otherwise deferred |
+| **N7** Rampart listing hard-coded | Relocated verbatim to `extras.js`; not cleaned up | **Deferred to M7.** Entry updated with the new file name |
+| **N11** place-list source URLs unchecked | Not touched; the loader reads place lists as they are | **Deferred** |
+| N1, N2, N3, N12 transport gaps | Shown honestly in the source panel; data unchanged | Remain pinned |
+| N4, N5, N8, N10, N18 | Unchanged | Remain |
+| N6, N15 | Regression tests keep passing | Remain as markers |
+
+The register in `v2/pipeline/docs/data-contract.md` currently labels N7, N11, N13 and N14 "Milestone 3". Phase B corrects those labels to match this table.
+
+## 16. Performance baseline and targets
+
+### 16.1 Method
+
+Measured on 2026-10-04 at `3dc0fef` with `docs/specs/M3-baseline/measure.mjs`: headless Chrome 154 driven over the DevTools protocol, pages served by `python3 -m http.server` on the same machine, browser cache cleared per run. Raw results are in `docs/specs/M3-baseline/baseline.json`.
+
+Limits of the method: the local server does not compress and has no network delay, so timings are parse-and-build time, not download time. "4× CPU" is Chrome's CPU throttle, a rough stand-in for a mid-range phone. Production transfer sizes were measured separately with `curl` against GitHub Pages. No real phone was used.
+
+### 16.2 Baseline
+
+| Measure | Aspen (`v2/`) | Douglas |
+|---|---|---|
+| Same-origin requests at load | 18 | 10 |
+| Same-origin bytes, uncompressed | 11,821,383 | 6,368,868 |
+| Largest data file, raw / gzipped as served | `map-data-v2.json` 10,086,079 / 2,839,369 | `research.json` 6,173,713 / 1,798,387 |
+| Second largest | `trails.geojson` 1,476,318 / 474,377 | — |
+| Features downloaded / drawn (map layers) | 7,161 / 1,789 | 2,609 / 2,609 |
+| Coordinates downloaded | 208,733 | 116,876 |
+| `JSON.parse` of largest file (Node, unthrottled) | 93 ms | 47 ms |
+| Time until data loaded and all layers built, 390×844, 4× CPU | 2,669 ms | 1,478 ms |
+| Same, unthrottled | 615 ms | 381 ms |
+| Long tasks during load, 4× CPU: total / longest | 2,186 ms / 1,234 ms | 1,426 ms / 538 ms |
+| JS heap after load and GC | 33.4 MB | 27.6 MB |
+| Heaviest layer off / on, 4× CPU | 62 ms / 139 ms (1,555 water features) | 50 ms / 181 ms (2,359 waterways) |
+| Layer drawer cover on phones | 75–77%, modal | 74–78%, modal |
+
+Free map area and control sizes are in section 11.
+
+### 16.3 What the display artifacts save (computed from the published data)
+
+| Layer set, gzipped | As published | Six decimals + evidence by reference |
+|---|---|---|
+| Aspen layers the browser draws (incl. displayed water and trails) | 1,839,525 | 768,725 |
+| Aspen hydrology that is never drawn | 1,400,932 | not shipped to the browser |
+| Douglas layers | 1,754,845 | 766,644 |
+| Largest single display file | — | Douglas `waterways` 402,487; Aspen displayed water 262,474 |
+
+### 16.4 Acceptance thresholds
+
+Deterministic thresholds are enforced in CI. Timing thresholds are measured locally with the committed script and reported in the PR, because CI machines are too variable to gate on time.
+
+| Threshold | Value | Enforced |
+|---|---|---|
+| Uncompressed same-origin bytes to reach "map usable" (step 3 of 12.2), per region | ≤ 500,000 | CI |
+| Uncompressed same-origin bytes with every default-on layer loaded, per region | ≤ 4,500,000 (now 11.8 MB and 6.4 MB) | CI |
+| Gzipped size of all display files of a region | ≤ 1,000,000 | CI |
+| Gzipped size of any one display file | ≤ 450,000 | CI |
+| Requests to another region's paths | 0 | CI |
+| Features delivered but never drawn | 0 | CI |
+| Time to "map usable", 390×844, 4× CPU, local | ≤ 1,000 ms | local, reported |
+| Time until all default-on layers are drawn, same conditions | Aspen ≤ 2,000 ms; Douglas ≤ 1,500 ms | local, reported |
+| Longest long task during load, same conditions | ≤ 600 ms (now 1,234 ms and 538 ms) | local, reported |
+| Heaviest loaded layer switched on, same conditions | ≤ 200 ms | local, reported |
+| JS heap after load and GC | Aspen ≤ 33.4 MB; Douglas ≤ 30.4 MB (baseline + 10%) | local, reported |
+
+### 16.5 Growth budget for M4–M8
+
+Later milestones add layers under these limits, checked by the same CI test:
+
+- one display layer: at most 5,000 features and 450,000 bytes gzipped, or it declares `min_zoom` or is split;
+- a region's default-on set: at most 15,000 features and 1,500,000 bytes gzipped;
+- exceeding either without a remedy is a re-evaluation trigger (section 8), not something to raise the limit for.
+
+## 17. Migration and compatibility plan
+
+### 17.1 URLs
+
+| URL today | After M3 |
+|---|---|
+| `/v2/` | Unchanged entry. Aspen landing as today; "Explore the open map" opens Explore for `aspen`. |
+| `/v2/?region=<id>` | New. Opens that region. `&view=map` opens Explore directly. |
+| `/v2/regions/douglas-co/` | Kept as a small page that forwards to `/v2/?region=douglas-co&view=map` with `location.replace`, and shows a plain link if scripts are off. Bookmarks keep working. |
+| `/v2/map-data-v2.json`, `/v2/trails.geojson`, `/v2/regions/douglas-co/research.json` and the other canonical files | Unchanged paths and content. |
+| `/` (root legacy site) | Unchanged. |
+
+A region with no trip planner (`trip_planner: false`) skips the landing form and opens Explore.
+
+### 17.2 Stored state
+
+Existing keys are read and kept: `ohvernight-trip-v1` for Aspen trip and plan; `ohvernight-douglas-plan-v1`, `-notes` and `-trip` for Douglas. No key is renamed or deleted. Saved IDs that no longer resolve are dropped silently, as today.
+
+### 17.3 Behaviour that must not change
+
+- Aspen: planner, trip evaluation results (golden file), Plan A / backup, adventure pilot results and ordering, trail search results, nearby-trail and nearby-camping lists, source-health wording from `Trust.sourceSummary`.
+- Douglas: browse modes and counts, season-check labels from the moved `season` function, GPX output byte-for-byte, saved list and export shape, nearby lists, coverage notes content.
+- Both: every layer on by default today is on by default; trip inputs never hide map features.
+
+Behaviour that changes on purpose: layout, drawer, progressive loading, land styling (13), feature detail presentation, rule ordering (14), freshness wording for RIDB places if D4 is approved, and the Douglas basemap if D5 is approved.
+
+### 17.4 Rampart listing (N7, owner decision D6)
+
+`preview.js` is deleted, so its hard-coded Rampart record needs a home. It moves **verbatim** to `v2/regions/douglas-co/extras.js`, exposed as one record that the shell adds to the Douglas camping results. No wording, date or behaviour changes. It is not moved into a data file, not validated and not extended; that is M7. A test pins the record's text equal to the base-commit text.
+
+### 17.5 Commit structure
+
+1. `fix: evaluate exclusions before cautions and merge conflicting rules` (section 14)
+2. `feat: generate per-layer display artifacts with a drift check` (12.1, 12.3)
+3. `feat: declare display artifacts and review policy in region manifests`
+4. `feat: add shared region loader, layer registry and evidence renderer`
+5. `feat: add unified mobile-first Explore shell`
+6. `feat: present land as generalized context` (section 13)
+7. `refactor: move Aspen and Douglas onto the shared shell`
+8. `test: add browser layout, loading and performance checks`
+9. `docs: record the rendering decision and update the contract and register`
+
+Commit 1 is independent and can be reverted alone. Commits 2–3 add files without changing either app.
+
+## 18. Expected files and components
+
+New:
+
+- `v2/explore/shell.js`, `region-loader.js`, `layer-registry.js`, `map-adapter.js`, `evidence.js`, `land-style.js`, `sheet.js`, `drawer.js`, `trail-seasons.js`, `explore.css`
+- `v2/regions/aspen/explore.json`, `v2/regions/douglas-co/explore.json`
+- `v2/regions/aspen/display/` (index plus one file per displayed layer), `v2/regions/douglas-co/display/`
+- `v2/regions/douglas-co/extras.js`
+- `v2/pipeline/scripts/build_display.py`
+- `v2/pipeline/schema/explore-config.schema.json`
+- `v2/pipeline/tests/test_display_artifacts.py`, `test_explore_config.py`
+- `v2/pipeline/tests/region-loader.test.cjs`, `layer-registry.test.cjs`, `evidence-render.test.cjs`, `land-style.test.cjs`, `rule-ordering.test.cjs`, `trail-seasons.test.cjs`
+- `v2/pipeline/tests/fixtures/display-water-vectors.json`
+- `v2/pipeline/tests/browser/run.mjs`, `v2/pipeline/tests/browser/README.md`
+- `docs/architecture/decisions/ADR-006-explore-rendering-architecture.md`
+
+Modified:
+
+- `v2/index.html`, `v2/app.js` (reduced to the Aspen planner and adventure-pilot capability code, or absorbed into the shell), `v2/styles.css`
+- `v2/trip-rules.js`, `v2/trust.js` — sections 12.5 and 14 only
+- `v2/map-layers.js` — `displayWater` kept; `definitions` and `describe` removed once the registry replaces them
+- `v2/regions/aspen/region.json`, `v2/regions/douglas-co/region.json` — `display` entries; `overnight_options.max_age_hours` if D4 approved. No `fact_coverage`, `sources.scope`, `limitations` or `known_gaps` text changes.
+- `v2/regions/douglas-co/index.html` — forwarding page
+- `v2/pipeline/schema/region-manifest.schema.json`, `v2/pipeline/scripts/lib/region_contract.py` — 12.3 only
+- `v2/pipeline/docs/data-contract.md`, `v2/pipeline/README.md`, `v2/README.md`, `v2/regions/*/README.md`, `docs/architecture/system-overview.md`, `ROADMAP.md` (M3 status only), `AGENTS.md` (repository map)
+- `.github/workflows/ci.yml` — syntax-check list; the `browser` job if D9 approved
+- `trip-rules.js` (root) — only if D7 approved
+- Existing tests that import removed APIs (`map-layers.test.cjs`, `douglas-discovery.test.cjs`, `published-data.test.cjs`) are updated to the new module names with the same assertions; the PR lists each changed assertion.
+
+Deleted: `v2/regions/douglas-co/preview.js`, `discovery.js`, `county.css`; `v2/map-data.json` if D8 approved. Approval of this specification is the `AGENTS.md` deletion approval for these named files only.
+
+## 19. Test plan
+
+All tests are offline. Node and Python tests read no clock and write nothing inside the repository.
+
+**Unit tests (Node).**
+
+- **T1 Region loader.** With an injected `fetch`: resolves the default and named regions; rejects a malformed ID; each row of 12.4; a failed layer does not block others; off layers are not requested; requested URLs carry the index hash; the set of requested paths for `aspen` contains no `douglas-co` path and the reverse.
+- **T2 Layer registry.** For both real regions, every registry entry comes from a manifest layer; descriptions equal the manifest `limitations`; today's default-on layers are default-on.
+- **T3 Evidence renderer.** The M2 T7 source pattern is extended to `v2/explore/*.js`. Output never contains the `confidence` value; a `null` verification method produces no review wording; a layer with no transport record yields the N1 sentence; a legacy transport record normalises as the Python function does, using shared vectors; fact-coverage statements are passed through byte-identical; no output contains verified, legal, permitted or "open to".
+- **T4 Land style.** Tier mapping for every current layer; no layer resolves to tier A; tier-G opacity and outline limits; no outline at zoom 14; `PVT` and unrecognised-code labels; Unknown entry present and last; both regions produce the same palette.
+- **T5 Rule ordering.** Motorhome plus outside-season plus high clearance → excluded, fresh and stale; motorhome within season → caution unchanged; two and three matching rules merge to the most restrictive, with stale and unconfirmed rules; a looser second rule does not loosen; `ruleReview` non-null; `ruleSources` lists all. End to end: two rules, one with a 5-day limit, an 8-night trip → excluded.
+- **T6 Golden compatibility.** `trip-evaluation-golden.json` rows are unchanged for `v2/` when the policy is 720 hours. If D7 is approved, the root rows are unchanged.
+- **T7 Freshness policy.** `evaluate` with policy 720 equals the base-commit result for every golden row; with a missing, `null`, zero or negative policy, supportive results are "Source review is stale" and exclusions persist; no numeric day constant remains in `v2/trip-rules.js` or the Explore code (source-text check).
+- **T8 Trail seasons.** The moved `season`, `windows`, `days` and `gpx` functions return base-commit output for the existing Douglas test inputs.
+- **T9 Compatibility.** Adventure-pilot options and ordering, trail search results and nearby lists for Aspen equal base-commit output for a fixed input set. Douglas browse counts for each mode equal base-commit counts. The Rampart record text equals the base-commit text.
+
+**Python tests.**
+
+- **T10 Display artifacts.** `build_display.py` run in memory reproduces every committed display file and `index.json` byte-for-byte. Negative tests for R60–R64, one mutation each, on a synthetic region. The Python water selection agrees with `MapLayers.displayWater` on `display-water-vectors.json`, which Node also runs.
+- **T11 Explore configuration.** Both files validate; each rule in 10.2 has a negative test; the Aspen file has `trail_season_check: false`.
+- **T12 Existing M2 tests** pass. `test_region_contract.py` T2 and T5 are updated only to include the new declared paths; no pinned non-conformance set grows.
+- **T13 Budgets.** Section 16.4's byte and count thresholds and 16.5's limits, computed from committed files.
+
+**Browser check (`tests/browser/run.mjs`).** Headless Chrome over the DevTools protocol, no npm dependency, all non-local requests blocked so it runs offline (the basemap is absent and the app must still work). For each region at 320×568, 390×844, 768×1024 and 1440×900:
+
+- **B1** free map area and sheet height meet section 11;
+- **B2** no horizontal scroll; no control under 44×44 apart from the listed exceptions;
+- **B3** the drawer opens, stays within its size limit, a layer toggle changes the map's layer set while it is open, Escape closes it and focus returns;
+- **B4** a synthetic one-finger drag from a free-map point changes the map centre; a drag inside the sheet does not;
+- **B5** Tab reaches every visible control; the collapsed sheet body receives no focus;
+- **B6** after opening and closing every overlay, free map area is back above the threshold;
+- **B7** the request log contains no other region's path and satisfies the byte thresholds;
+- **B8** each failure row of 12.4, by blocking the relevant URL;
+- **B9** `/v2/regions/douglas-co/` lands on the Douglas Explore view; stored Aspen and Douglas state from base-commit keys is honoured;
+- **B10** land layer computed styles match tier G, and the Unknown legend entry is present.
+
+**Performance regression check.** The same script records the timing and heap measures of 16.4 into a JSON report. The PR includes the report and a comparison with `docs/specs/M3-baseline/baseline.json`.
+
+**Manual matrix**, recorded in the PR, because headless Chrome is not a phone: iOS Safari and Android Chrome on one real device each, both regions — pan, pinch, sheet drag, drawer, a trail detail, a land detail, rotate to landscape, and a reload on a throttled connection. Any failure is a blocking finding.
+
+## 20. Acceptance criteria
+
+1. CI is green, including the `browser` job if D9 is approved.
+2. The Python suite reports more than 88 tests and the Node suite more than 38, all passing.
+3. Section 11's table and bullet requirements pass in the browser check at all four sizes for both regions.
+4. Section 16.4's CI thresholds pass; the PR reports the local timing measures against their thresholds.
+5. Loading `?region=aspen` requests no `douglas-co` path, and the reverse.
+6. `git diff --stat main...HEAD` shows no change to `v2/map-data-v2.json`, `v2/trails.geojson`, `v2/overnight-options.json`, `v2/ridb-options.json`, `v2/destinations.json`, `v2/regions/douglas-co/research.json`, `v2/pipeline/config/`, or any root file other than `AGENTS.md`, `ROADMAP.md` and, if D7 is approved, `trip-rules.js`.
+7. In both manifests, `fact_coverage`, `sources`, `known_gaps`, `coverage` and every `limitations` string are byte-identical to `main`.
+8. Rebuilding display artifacts from a clean checkout produces no diff.
+9. Mutation proofs, run locally and not committed, with the failing test names pasted:
+   a. swap steps 6 and 7 of 14.1 back → T5 fails;
+   b. restore the `matches.length!==1` early return → T5 fails;
+   c. restore a `30*86400000` constant in `evaluate` → T7 fails;
+   d. change one coordinate in a display file → R63;
+   e. change one canonical feature without rebuilding → R64;
+   f. set a tier-G outline to solid 2 px → T4 and B10 fail;
+   g. label the `PVT` class "Private" → T4 fails;
+   h. make the loader fetch `regions/douglas-co/display/index.json` while in `aspen` → T1 and B7 fail;
+   i. set `trail_season_check: true` for Aspen → T11 fails.
+10. No file under `v2/explore/` references a region ID, `ASPEN`, `douglas` or a region path literal (source-text test). Region-specific text exists only under `v2/regions/<id>/`.
+11. No browser code reads `evidence.confidence` (the M2 T7 pattern still passes) and none contains the words verified, legal or permitted in user-facing strings outside the manifest statements.
+12. The register in `data-contract.md` matches section 15, and `ADR-006` records the decision and the triggers in section 8.
+13. `grep -rn "no-store" v2/*.js v2/explore` prints nothing.
+14. The manual matrix is recorded with device, OS and browser versions.
+15. The PR description follows the `AGENTS.md` handoff format and lists every changed assertion in a pre-existing test.
+
+## 21. Rollback plan
+
+- **Whole milestone:** revert the merge. Canonical data files are untouched by M3, so the previous pages work again as they were. Stored browser state uses unchanged keys.
+- **Rule ordering only:** commit 1 reverts alone, at the cost of reintroducing N16.
+- **Display artifacts:** they are additive files. If a display file is wrong, the layer can be regenerated or the manifest's `display` entry removed; canonical data is the fallback source for a rebuild, not for the browser.
+- **Land styling:** commit 6 reverts alone, reintroducing N17.
+- **After merge, before confidence:** the Douglas forwarding page can be pointed back at a restored `preview.js` from git history in a small follow-up PR.
+
+## 22. Risks
+
+- **Scope.** This is the largest change so far: a new shell, a loader, generated artifacts, a contract extension and the migration of two apps. The commit structure is designed so that review can stop after commit 3 and after commit 6.
+- **Behaviour drift during migration.** Two apps' worth of behaviour is being re-hosted. T6, T8 and T9 pin outputs to base-commit results; anything not pinned can drift unnoticed. Codex must add a pin before moving a behaviour, not after.
+- **Leaflet ceiling.** Option 1 does not scale to a statewide single view. The budget and triggers make the limit explicit, but M6 may reopen the renderer decision.
+- **Derived data.** Display files are a second copy of published geometry. R60–R64 and the rebuild check hold them to the canonical data; if those are weakened, the two can diverge silently.
+- **Coordinate rounding.** Six decimals moves a point by up to about 6 cm. It is display only, and canonical data is unchanged, but a rounded boundary must never be used for a contract check.
+- **Headless measurements are not phones.** Thresholds were derived on a desktop CPU with throttling. The manual matrix is the only real-device evidence.
+- **Browser check in CI.** It depends on the runner image shipping Chrome. If that proves unreliable, the check stays a required local step and the CI job is dropped (D9).
+- **Trust wording moves into shared code.** One mistake now affects every region. T3, T4 and criterion 11 guard it; reviewers should read every user-facing string in `evidence.js` and `land-style.js`.
+- **RIDB place freshness** tightens from 30 to 7 days if D4 is approved as recommended. The direction is conservative, but four listings will show "Source review is stale" sooner.
+- **Basemap change for Douglas** (D5) changes what that page looks like at high zoom.
+- **Date sensitivity.** Aspen place reviews pass 30 days on 2026-10-25. Golden tests pass explicit dates, so tests are unaffected, but live output will already be in the stale state when M3 ships.
+
+## 23. Decisions requiring owner approval
+
+| # | Decision | Recommendation |
+|---|---|---|
+| D1 | **Rendering architecture** (section 9): Option 1, Option 2, or more evidence first. | **Option 1**, with the adapter and the re-evaluation triggers. |
+| D2 | M3 stays one milestone with Phases A and B, delivered as one PR with the commit structure in 17.5. | Approve. Splitting into two PRs (commits 1–3, then 4–9) is a reasonable alternative if a smaller first review is preferred. |
+| D3 | **Contract extension**: optional `layers[].display` and rules R60–R64, with `contract_version` staying `1`. | Approve. It is additive and the canonical rules are untouched. |
+| D4 | **Review-age policy from the manifest**: Aspen `overnight_options.max_age_hours` `null` → `720` (no behaviour change); RIDB places use their layer's existing `168` (stale after 7 days instead of 30). | Approve both. Alternative: add a separate review-age field and keep RIDB at 30 days. |
+| D5 | **One basemap for all regions**: USGS imagery and topo. Douglas stops using Esri World Imagery and the OpenStreetMap tile server. | Approve. USGS is already the attributed source. |
+| D6 | **Rampart listing (N7)**: relocate verbatim to `extras.js`; clean-up stays in M7. | Approve. Alternatives: pull the clean-up into M3 (scope expansion), or drop the listing until M7. |
+| D7 | **Root legacy site**: apply the motorhome ordering fix (14.3) to the root `trip-rules.js`. | Approve, strictly scoped, as M2 did for staleness. |
+| D8 | **N13**: delete `v2/map-data.json` and its download link. Nothing in `v2/` reads it; the root copy stays. | Approve. Otherwise N13 stays deferred. |
+| D9 | **CI**: add a `browser` job running the headless-Chrome check. | Approve, with the fallback in section 22. |
+| D10 | **Default layer visibility** stays "all on", loaded progressively. | Approve. Turning heavy layers off by default would be a product change and is not proposed. |
+| D11 | **Douglas entry**: the forwarding page opens Explore directly, with no landing form. | Approve. |
+| D12 | **Land palette and legend wording** in section 13, including the `PVT` and Unknown labels. These are trust-bearing text. | Approve as written, or supply replacement wording. |
+
+## Handoff back to review
+
+Per `AGENTS.md`: what changed; what was deliberately left alone; which checks ran with output; remaining uncertainty. Include the performance report, the manual matrix, the mutation-proof output from criterion 9, and the list of changed assertions from criterion 15.
