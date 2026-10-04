@@ -5,17 +5,23 @@ const path = require('node:path');
 
 const TripRules = require('../../trip-rules.js');
 const Trust = require('../../trust.js');
+const RootTripRules = require('../../../trip-rules.js');
 const V2 = path.resolve(__dirname, '../..');
 const load = relative => JSON.parse(fs.readFileSync(path.join(V2, relative), 'utf8'));
 const golden = load('pipeline/tests/fixtures/trip-evaluation-golden.json');
 const registry = load('pipeline/config/rules-registry.json');
 const v2Places = [...load('overnight-options.json').places, ...load('ridb-options.json').places];
+const rootPlaces = load('../overnight-options.json').places;
 const trips = golden.trips;
 const vehicles = golden.vehicles;
 const suffix = ' The source review is out of date; recheck the linked sources before travel.';
 
 function v2Evaluate(place, trip, today, now) {
   return TripRules.evaluate(Trust.applyRules(place, registry, Date.parse(`${now}T00:00:00Z`)), trip, today);
+}
+
+function rootEvaluate(place, trip, today) {
+  return RootTripRules.evaluate(place, trip, today);
 }
 
 function assertGolden(rows, places, evaluate) {
@@ -119,4 +125,55 @@ test('T14: stale and unconfirmed rules merge restrictions most restrictively', (
   assert.equal(Trust.applyRules({id: 'rule-place', stay_limit_days: 3},
     {rules: [{...staleRule, stay_limit_days: 5, requires_high_clearance: false}]},
     Date.parse('2026-09-26T00:00:00Z')).stay_limit_days, 3);
+});
+
+test('T15: root fresh evaluations match the base golden matrix', () => {
+  assertGolden(golden.root.flatMap(place => place.results), rootPlaces,
+    (place, trip, today) => rootEvaluate(place, trip, today));
+});
+
+test('T15: stale root restrictions survive without adding stay-limit logic', () => {
+  const cases = [
+    {tent_only: true, kind: 'dispersed'},
+    {requires_high_clearance: true, kind: 'dispersed'},
+    {requires_high_clearance: true, kind: 'dispersed', vehicle: 'motorhome'},
+    {kind: 'dispersed', access: {designations: {passenger_car: {
+      designation: 'open', dates_open: '05/01-09/30'}}}},
+  ];
+  for (const base of cases) {
+    const vehicle = base.vehicle || 'passenger_car';
+    const trip = {arrive: '2027-01-15', depart: '2027-01-17', vehicle};
+    const place = {...base, checked_on: '2026-09-24'};
+    const fresh = rootEvaluate(place, trip, '2026-09-26');
+    const stale = rootEvaluate(place, trip, '2026-10-25');
+    assert.equal(stale.status, fresh.status);
+    assert.equal(stale.label, fresh.label);
+    assert.equal(stale.tripNote, fresh.tripNote + suffix);
+    assert.equal(stale.sourceStale, true);
+  }
+});
+
+test('T15: stale root supportive outcomes become unknown', () => {
+  for (const place of [{kind: 'lodging'}, {kind: 'dispersed'}]) {
+    const result = rootEvaluate({...place, checked_on: '2026-09-24'},
+      {arrive: '2026-07-10', depart: '2026-07-12', vehicle: 'passenger_car'}, '2026-10-25');
+    assert.equal(result.status, 'review');
+    assert.equal(result.label, 'Source review is stale');
+    assert.doesNotMatch(result.tripNote, /Within the mapped/);
+    assert.equal(result.sourceStale, true);
+  }
+});
+
+test('T15: stale root shipped exclusions remain excluded', () => {
+  for (const place of rootPlaces) {
+    for (const vehicle of vehicles) {
+      for (const tripBase of trips) {
+        const trip = {...tripBase, vehicle};
+        const fresh = rootEvaluate(place, trip, golden.today);
+        if (fresh.status !== 'excluded') continue;
+        const stale = rootEvaluate(place, trip, '2027-06-01');
+        assert.equal(stale.status, 'excluded', `${place.id}/${vehicle}/${trip.arrive}`);
+      }
+    }
+  }
 });
