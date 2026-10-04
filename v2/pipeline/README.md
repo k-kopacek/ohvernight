@@ -23,7 +23,7 @@ To ingest developed camping inventory, provide `RIDB_API_KEY` in your environmen
 
 ## Outputs and publication
 
-One output is published locally: `data/processed/map-data-v2.json`. After a validated run, copy it to `v2/map-data-v2.json` to publish it; the processed copy is not tracked. It contains:
+The pipeline produces an untracked staging output at `data/processed/map-data-v2.json`. After a validated run, copy/promote it to the canonical app-facing `v2/map-data-v2.json` to publish it. It contains:
 
 - `trip`: the dates and vehicle actually evaluated.
 - `source_status`: explicit per-step retrieval outcomes.

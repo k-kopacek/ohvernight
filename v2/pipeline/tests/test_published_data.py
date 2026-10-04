@@ -143,7 +143,6 @@ class PublishedDataTests(unittest.TestCase):
                     self.assert_activity_records(feature)
 
     def test_place_inventories_have_safe_records(self):
-        place_ids = set()
         for relative_path in ("overnight-options.json", "ridb-options.json"):
             inventory = self.load(relative_path)
             self.assertEqual(inventory["schema_version"], 1)
@@ -154,7 +153,6 @@ class PublishedDataTests(unittest.TestCase):
                 self.assertRegex(identifier, r"^[a-z0-9_-]+$")
                 self.assertNotIn(identifier, ids)
                 ids.add(identifier)
-                place_ids.add(identifier)
                 self.assert_coordinates(place["coordinates"])
                 self.assertIn(place["kind"], {"campground", "dispersed", "lodging"})
                 self.assert_http_url(place["source"])
@@ -167,15 +165,23 @@ class PublishedDataTests(unittest.TestCase):
                     self.assertIs(place["needs_review"], True)
                     self.assertTrue(place["ridb_facility_id"])
 
-        return place_ids
-
     def test_rules_registry_only_matches_unknown_permission_places(self):
         place_ids = set()
+        ridb_facility_ids = set()
         for relative_path in ("overnight-options.json", "ridb-options.json"):
-            place_ids.update(place["id"] for place in self.load(relative_path)["places"])
+            for place in self.load(relative_path)["places"]:
+                place_ids.add(place["id"])
+                if place.get("ridb_facility_id"):
+                    ridb_facility_ids.add(str(place["ridb_facility_id"]))
         registry = self.load("pipeline/config/rules-registry.json")
         for rule in registry["rules"]:
-            self.assertTrue(set(rule.get("place_ids", [])).issubset(place_ids))
+            for identifier in rule.get("place_ids", []):
+                if identifier in place_ids:
+                    continue
+                match = re.fullmatch(r"ridb-(.+)", identifier)
+                self.assertIsNotNone(match, f"unknown registry place id: {identifier}")
+                self.assertIn(match.group(1), ridb_facility_ids,
+                              f"unknown RIDB facility reference: {identifier}")
             self.assertEqual(rule["camping_permission"], "unknown")
 
     def test_destinations_have_unique_valid_coordinates(self):

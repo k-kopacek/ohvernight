@@ -38,6 +38,7 @@ coverage/
 # Pipeline inputs and generated staging output. v2/map-data-v2.json is the
 # tracked public copy; processed output stays ignored.
 v2/pipeline/_selftest_scratch/
+# Reviewed records may contain submitted private details; add intentionally only.
 v2/pipeline/data/raw/*
 !v2/pipeline/data/raw/.gitkeep
 # Reviewed import audit copies are kept deliberately.

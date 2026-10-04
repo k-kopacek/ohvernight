@@ -4,7 +4,7 @@
   "rules": [
     {
       "id": "lincoln-creek-listed-sites",
-      "place_ids": ["lincolncreek"],
+      "place_ids": ["lincolncreek", "ridb-259461"],
       "road_names": ["LINCOLN CREEK"],
       "scope": "Agency-listed Lincoln Creek dispersed sites only; not blanket permission along the road",
       "source_url": "https://www.fs.usda.gov/r02/whiteriver/recreation/lincoln-creek-dispersed-camping",

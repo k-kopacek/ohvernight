@@ -2,6 +2,7 @@ import copy
 import datetime as dt
 import importlib
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -24,6 +25,7 @@ leads = importlib.import_module("08_ingest_leads")
 review = importlib.import_module("09_reviewed_sites")
 roads = importlib.import_module("02_fetch_mvum_roads")
 land = importlib.import_module("01_fetch_land_ownership")
+fire = importlib.import_module("06_fetch_fire_stage_monitor")
 
 def ev():
     return make_evidence("https://example.org/source", "Test source")
@@ -187,6 +189,32 @@ class RegressionTests(unittest.TestCase):
             bad=copy.deepcopy(result)
             bad["layers"]["dispersed_corridor_points"]=fc(feature(Point(-106.82,39.19)))
             with self.assertRaisesRegex(ValueError,"Synthetic"): validate_bundle(bad)
+
+    def test_fire_monitor_uses_public_bundle_when_staging_baseline_is_missing(self):
+        class HtmlResponse:
+            text = "updated fire source"
+            def raise_for_status(self): pass
+
+        with tempfile.TemporaryDirectory() as path:
+            root = Path(path)
+            staging = root / "staging"
+            public_bundle = root / "map-data-v2.json"
+            public_bundle.write_text(json.dumps({"layers": {
+                "fire_restriction_stage": {"features": [{
+                    "properties": {"source_hash": "old-hash"}
+                }]}
+            }}))
+            with patch.dict(os.environ, {"ASPEN_OUTPUT_DIR": str(staging)}):
+                with patch.object(fire, "CANONICAL_BUNDLE_PATH", public_bundle):
+                    with patch.object(fire, "source", return_value={
+                        "url": "https://example.org/fire", "agency": "Test source"
+                    }), patch.object(fire, "new_session", return_value=type(
+                        "Session", (), {"get": lambda self, *args, **kwargs: HtmlResponse()}
+                    )()):
+                        fire.main()
+
+            output = json.loads((staging / "fire_restriction_stage.geojson").read_text())
+            self.assertTrue(output["features"][0]["properties"]["source_changed"])
 
     def test_curated_site_expires_and_requires_all_claims(self):
         review_data={"checked_on":"2026-09-24","expires_on":"2026-10-01",
