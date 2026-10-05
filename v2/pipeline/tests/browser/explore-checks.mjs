@@ -40,6 +40,24 @@ export async function runExploreChecks(client,origin,signal,root){
  }
  const bytes=async urls=>{let count=0;const paths=new Set();for(const url of new Set(urls)){const u=new URL(url);if(u.origin!==origin)continue;let p=resolve(root,'.'+u.pathname);if(u.pathname.endsWith('/'))p=resolve(p,'index.html');if(!paths.has(p)){paths.add(p);count+=(await readFile(p)).length;}}return count;};
  async function drag(point,dx,dy){await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:point.x,y:point.y}]});for(let i=1;i<=5;i++)await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x+dx*i/5,y:point.y+dy*i/5}]});await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
+ async function assertSelection(label,cleared=false){
+  const selection=await evaluate(`(()=>{
+   const paths=window.__rendered.flatMap(g=>Object.values(g._layers)).filter(l=>l.options.selected).map(l=>l.feature.properties.id);
+   const pins=[...document.querySelectorAll('.leaflet-marker-icon.is-selected')].map(e=>({id:e.dataset.featureId,pressed:e.getAttribute('aria-pressed')}));
+   return {id:explore.state.selection?.featureId,paths,pins};
+  })()`);
+  const ids=[...new Set([...selection.paths,...selection.pins.map(p=>p.id)])];
+  assert.deepEqual(ids,cleared?[]:[selection.id],label+' exact selected id and no others');
+  for(const pin of selection.pins)assert.equal(pin.pressed,'true',label+' pin pressed');
+  if(cleared)assert.equal(selection.id,undefined,label+' shell cleared');
+ }
+ let gestureSequence=0;
+ async function flick(point,dy){
+  const timestamp=4102444800+(gestureSequence++);
+  await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point],timestamp});
+  await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x,y:point.y+dy}],timestamp:timestamp+.04});
+  await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[],timestamp:timestamp+.08});
+ }
  const results=[];
  try{
  for(const id of ['aspen','douglas-co'])for(const [width,height,minimum] of [[320,568,72],[390,844,80],[768,1024,80],[1440,900,75]]){
@@ -61,11 +79,26 @@ export async function runExploreChecks(client,origin,signal,root){
    for(const state of ['collapsed','half','expanded']){await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');result.sheetFreeMapPct[state]=await evaluate(AREA);}
    await evaluate('explore.sheet.setState("collapsed")');const unchanged=await evaluate('explore.state.view.center');
    const headerPoint=()=>evaluate('(()=>{const r=explore.$("sheet-toggle").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+24}})()');
-   for(const [dy,state] of [[-60,'half'],[-60,'expanded'],[60,'half'],[60,'collapsed']]){await drag(await headerPoint(),0,dy);assert.equal(await evaluate('explore.sheet.state'),state,'A11 synthetic sheet swipe');}
+   for(const [dy,state] of [[-60,'half'],[-60,'expanded'],[60,'half'],[60,'collapsed']]){await flick(await headerPoint(),dy);assert.equal(await evaluate('explore.sheet.state'),state,'A11 synthetic sheet swipe');}
    assert.deepEqual(await evaluate('explore.state.view.center'),unchanged,'A11 sheet swipe never pans map');
+   async function slowSheetDrag(start,dy,content=false){
+    const pt=content?await evaluate('(()=>{const r=explore.$("sheet-body").getBoundingClientRect();return {x:r.x+3,y:r.y+36}})()'):await headerPoint();
+    const initial=await evaluate('explore.$("sheet").getBoundingClientRect().height');
+    await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[pt]});
+    for(let i=1;i<=3;i++){await delay(110,undefined,{signal});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:pt.x,y:pt.y+dy*i/3}]});
+     const h=await evaluate('explore.$("sheet").getBoundingClientRect().height');if(i<3){assert.ok(dy<0?h>initial:h<initial,'A11 sheet follows finger before release');assert.ok(h>64&&h<height*.75,'A11 intermediate height between endpoints');}}
+    await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+   }
+   await slowSheetDrag('collapsed',-height*.65);await evaluate('explore.$("search").click()');assert.equal(await evaluate('explore.sheet.state'),'expanded','A11 long swipe skips half');
+   await evaluate('explore.$("sheet-body").scrollTop=0');await slowSheetDrag('expanded',height*.35,true);assert.equal(await evaluate('explore.sheet.state'),'half','A11 content at top drags sheet');
+   await evaluate('explore.$("sheet-body").scrollTop=0');await slowSheetDrag('half',height*.2,true);assert.equal(await evaluate('explore.sheet.state'),'collapsed','A11 half content at top collapses');
+   await evaluate('explore.sheet.setState("expanded");explore.$("sheet-body").scrollTop=120');const scrolled=await evaluate('explore.$("sheet-body").scrollTop');assert.ok(scrolled>0,'A11 scrollable content fixture');
+   const cp=await evaluate('(()=>{const r=explore.$("sheet-body").getBoundingClientRect();return {x:r.x+20,y:r.y+50}})()');await drag(cp,0,35);assert.equal(await evaluate('explore.sheet.state'),'expanded','A11 scrolled content keeps sheet state');assert.ok(await evaluate('explore.$("sheet-body").scrollTop')<scrolled,'A11 scrolled content scrolls independently');
+   assert.deepEqual(await evaluate('explore.state.view.center'),unchanged,'A11 content drags never pan map');await evaluate('explore.sheet.setState("collapsed")');
+
    await evaluate('explore.drawer.open();explore.sheet.setState("half")');assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 sheet opening closes drawer');
    await evaluate('explore.drawer.open();explore.$("map").dispatchEvent(new MouseEvent("click",{bubbles:true}))');assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 exposed map tap dismisses drawer');
-   await evaluate('explore.drawer.open()');const hp=await evaluate('(()=>{const r=explore.$("drawer").querySelector(".explore-heading h1").getBoundingClientRect();return {x:r.x+20,y:r.y+12}})()');await drag(hp,0,65);assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 drawer swipe dismisses');
+   await evaluate('explore.drawer.open()');const hp=await evaluate('(()=>{const r=explore.$("drawer").querySelector(".explore-heading h1").getBoundingClientRect();return {x:r.x+20,y:r.y+12}})()');await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hp]});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:hp.x,y:hp.y+40}]});assert.ok(await evaluate('explore.$("drawer").getBoundingClientRect().bottom>innerHeight'),'A11 drawer follows finger before release');await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 drawer swipe dismisses');
   }
   const point=await evaluate(`(()=>{const m=explore.$('map');for(let y=150;y<innerHeight-120;y+=20)for(let x=80;x<innerWidth-80;x+=20){const e=document.elementFromPoint(x,y);if(m.contains(e)&&!e.closest('.leaflet-control'))return {x,y};}throw Error('no free map point')})()`);
   const center=await evaluate('explore.state.view.center');await drag(point,35,25);await poll('JSON.stringify(explore.state.view.center)!=='+JSON.stringify(JSON.stringify(center)),'map drag');
@@ -85,9 +118,9 @@ export async function runExploreChecks(client,origin,signal,root){
    const filtered=[...list.querySelectorAll('button')].filter(e=>e.classList.contains('explore-result')||e.parentElement===explore.$('search-results'));
    if(!filtered.length)throw Error('A11 filtered list disappeared');window.__a11Count=filtered.length;filtered[0].click();
   })()`);
-  assert.ok(await evaluate('!!explore.state.selection&&window.__rendered.some(group=>{let selected=false;group.eachLayer(item=>{if(item.options.selected)selected=true});return selected})'),'A11 result is highlighted by adapter');
+  await assertSelection('A11 selected search result');
   assert.equal(await evaluate('!explore.$("detail-view").hidden&&explore.$("list-view").hidden&&!document.querySelector("dialog[open]")'),true,'A11 selection opens sheet detail');
-  await evaluate('explore.$("detail-back").click()');
+  await evaluate('explore.$("detail-back").click()');await assertSelection('A11 Back clears result',true);
   assert.equal(await evaluate('window.__a11List.parentElement===explore.$("list-view")&&!window.__a11List.hidden&&window.__a11Query.value===window.__a11Value'),true,'A11 Back preserves list and filter');
   assert.equal(await evaluate('[...window.__a11List.querySelectorAll("button")].filter(e=>e.classList.contains("explore-result")||e.parentElement===explore.$("search-results")).length'),await evaluate('window.__a11Count'),'A11 filtered results persist');
   await key('Escape');
@@ -113,17 +146,27 @@ export async function runExploreChecks(client,origin,signal,root){
    const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id);
    if(!item)throw Error('A11 trail renderer item absent');item.fire('click',{latlng:item.getBounds().getCenter()});
   })()`);
-  assert.equal(await evaluate('explore.state.selection.featureId===window.__a11Trail.properties.id&&!explore.$("detail-view").hidden'),true,'A11 trail tap selects and opens detail');
+  assert.equal(await evaluate('explore.state.selection.featureId===window.__a11Trail.properties.id&&!explore.$("detail-view").hidden'),true,'A11 trail tap selects and opens detail');await assertSelection('A11 exact trail tap');
   assert.equal(await evaluate(`(()=>{const b=ExploreShell.bounds({features:[window.__a11Trail]}),v=explore.state.view.bounds;return v[0][0]<=b[0][0]&&v[0][1]<=b[0][1]&&v[1][0]>=b[1][0]&&v[1][1]>=b[1][1]})()`),true,'A11 full trail bounds fitted');
   const trailText=await evaluate('explore.$("detail-view").textContent'),trailFields=await evaluate('window.__a11Trail.properties');
   for(const value of [trailFields.name,trailFields.trail_number,trailFields.surface,trailFields.allowed_terra_use].filter(Boolean))assert.ok(trailText.includes(value),'A11 carried trail field');
   assert.ok(trailText.includes('Source fetched '+trailFields.evidence.retrieved_at.slice(0,10)));
   assert.ok(trailText.includes(manifest.layers.find(e=>e.kind==='trails').limitations),'A11 trail limitation');assert.doesNotMatch(trailText,/\blength\b|elevation gain/i,'A11 no fabricated trail measures');
   await evaluate('explore.$("detail-back").click()');
-  const landTexts=await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='land_management'),f=explore.region.layers.get(entry.id).data.features[0];const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id);item.fire('click',{latlng:item.getBounds().getCenter()});return ExploreLand.detail(explore.manifest,explore.manifest.layers.find(e=>e.id===entry.id),f).items.map(x=>x.text)})()`);
+  const landTexts=await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='land_management'),f=explore.region.layers.get(entry.id).data.features[0];window.__a11LandId=f.properties.id;const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id);item.fire('click',{latlng:item.getBounds().getCenter()});return ExploreLand.detail(explore.manifest,explore.manifest.layers.find(e=>e.id===entry.id),f).items.map(x=>x.text)})()`);
   assert.deepEqual(await evaluate('[...explore.$("detail-body").querySelectorAll("p,a")].slice(0,'+landTexts.length+').map(e=>e.textContent)'),landTexts,'A11 land detail exact wording and order');
-  assert.equal(await evaluate('!explore.$("detail-view").hidden&&!!explore.state.selection'),true,'A11 land tap selects');assert.ok(!['Private','Public'].includes(await evaluate('explore.$("detail-title").textContent')));
+  assert.equal(await evaluate('!explore.$("detail-view").hidden&&explore.state.selection?.featureId===window.__a11LandId'),true,'A11 land tap selects');await assertSelection('A11 exact land tap');assert.ok(!['Private','Public'].includes(await evaluate('explore.$("detail-title").textContent')));
   await evaluate('explore.$("detail-back").click();explore.sheet.setExpanded(false)');
+  await evaluate(`(()=>{
+   const entry=explore.region.registry.find(e=>e.format==='place_list'&&e.kind==='overnight_inventory')||explore.region.registry.find(e=>e.kind==='recreation_sites');
+   const f=entry.format==='place_list'?explore.region.places[entry.id][0]:explore.region.layers.get(entry.id).data.features.find(f=>f.geometry?.type==='Point'&&f.properties.site_type==='CAMPGROUND');
+   explore.showDetail(entry,f);window.__a11PinId=f.id||f.properties.id;
+  })()`);await assertSelection('A11 exact place/site pin');
+  assert.equal(await evaluate('(()=>{const e=document.querySelector(".leaflet-marker-icon.is-selected");return e?.dataset.featureId===window.__a11PinId&&e.getAttribute("aria-pressed")==="true"})()'),true,'A11 pin selected class and aria');
+  assert.ok(await evaluate('[...explore.$("detail-body").firstElementChild.querySelectorAll("button")].some(e=>e.dataset.save||e.textContent==="Save to plan"||e.textContent==="Remove from saved")'),'A11 save action immediately under title/status');
+  assert.ok((await evaluate('explore.$("detail-body").firstElementChild.textContent')).includes('Saving a place does not confirm it is suitable or available.'));
+  if(width>=768)assert.equal(await evaluate('explore.$("sheet").getBoundingClientRect().height'),height*.75,'A11 selection keeps full side panel');
+  await evaluate('explore.$("detail-back").click()');await assertSelection('A11 Back clears pin',true);await evaluate('explore.sheet.setExpanded(false)');
   const prefix='/v2/regions/'+id+'/',json=async name=>JSON.parse(await readFile(resolve(root,'v2/regions',id,name)));
   const cases=[['manifest missing',u=>u.pathname===prefix+'region.json'?{status:404}:null,false],['manifest unparseable',u=>u.pathname===prefix+'region.json'?{body:'{'}:null,false],['contract version',async u=>u.pathname===prefix+'region.json'?{body:JSON.stringify({...await json('region.json'),contract_version:2})}:null,true],['region mismatch',async u=>{if(u.pathname!==prefix+'region.json')return null;const m=await json('region.json');m.region.id='other';return {body:JSON.stringify(m)};},true],['config missing',u=>u.pathname===prefix+'explore.json'?{status:404}:null,true],['config invalid',async u=>u.pathname===prefix+'explore.json'?{body:JSON.stringify({...await json('explore.json'),explore_version:2})}:null,true],['index missing',u=>u.pathname===prefix+'display/index.json'?{status:404}:null,true]];
   for(const [label,intercept,hasManifest] of cases){await navigate(origin+'/v2/?region='+id+'&view=map',intercept);assert.equal(await evaluate('explore.$("summary").textContent'),'Region not available','B8 '+label);assert.deepEqual(await evaluate('Object.keys(window.__handed)'),[],'B8 no data layers');if(hasManifest){await evaluate('explore.showSources()');assert.ok((await evaluate('explore.$("source-body").textContent')).includes(manifest.fact_coverage.public_access.statement));await key('Escape');}}

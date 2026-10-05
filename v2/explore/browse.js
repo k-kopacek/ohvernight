@@ -39,10 +39,10 @@
    const complete=region.layers.get(trailEntry.id)?.state==='loaded'&&region.layers.get(siteEntry.id)?.state==='loaded';
    if(complete){const all=records();saved=saved.filter(id=>all.has(id));$('summary').textContent=`${trails().length} trail segments · ${D.camping(sites()).length} campgrounds · ${sites().filter(f=>f.properties.site_type==='TRAILHEAD').length} trailheads. Closures unconfirmed.`;}else $('summary').textContent='Loading';
    if(shell.extrasFailed)paragraph(box,'Listings could not load');for(const id of saved){const f=records().get(id);if(f)box.append(result(f));}if(shell.isListActive(browser.body))renderBrowse();}
-  function detail(entry,f,box){
+  function detail(entry,f,box,actions=box){
    if(!f.properties.activities&&!['CAMPGROUND','TRAILHEAD','DISPERSED_AREA'].includes(f.properties.site_type))return;
-   const p=f.properties;box.append(link('Official listing / source ↗',source(f)));paragraph(box,'Published source · current access unconfirmed');
-   if(caps.saved_list)box.append(button(saved.includes(p.id)?'Remove from saved':'Save to plan',()=>{if(saved.includes(p.id))saved=saved.filter(x=>x!==p.id);else if(saved.length<40)saved.push(p.id);persist();render();show(f);}));
+   const p=f.properties;box.append(link('Official listing / source ↗',source(f)));paragraph(actions,'Published source · current access unconfirmed');
+   if(caps.saved_list){actions.append(button(saved.includes(p.id)?'Remove from saved':'Save to plan',()=>{if(saved.includes(p.id))saved=saved.filter(x=>x!==p.id);else if(saved.length<40)saved.push(p.id);persist();render();show(f);}));paragraph(actions,'Saving a place does not confirm it is suitable or available.');}
    if(p.activities&&caps.gpx_export){box.append(button('Download segment GPX',()=>download((p.trail_number||p.id)+'.gpx',D.gpx(f),'application/gpx+xml')));paragraph(box,'This is a county-clipped segment, not a complete route. GPX does not provide turn-by-turn guidance or confirm rideable connections.');}
    if(f.geometry?.type==='Point'){const [lon,lat]=f.geometry.coordinates;box.append(link('Directions to facility ↗',`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`));paragraph(box,'Check approach roads and trailer parking before travel. Directions are for this facility, not a verified riding route.');}
    if(p.activities){box.append(el('h2',trip.activity?D.activities[trip.activity]:'Published activities'));if(trip.activity)paragraph(box,D.season(f,trip.activity,trip.start,trip.end));

@@ -49,7 +49,7 @@
     layer.eachLayer(item=>{
       const feature=item.feature,featureId=feature?.properties?.id||item.featureId;
       const chosen=selected?.id===id&&selected.featureId===featureId;
-      const icon=item.getElement?.();if(icon){icon.classList.toggle('is-selected',chosen);icon.setAttribute('aria-pressed',String(chosen));}
+      const icon=item.getElement?.();if(icon){icon.dataset.featureId=String(featureId);icon.classList.toggle('is-selected',chosen);icon.setAttribute('aria-pressed',String(chosen));}
       if(feature&&style&&item.setStyle){
         const base=typeof style==='function'?style(feature):style;
         const polygon=/Polygon$/.test(feature.geometry?.type);

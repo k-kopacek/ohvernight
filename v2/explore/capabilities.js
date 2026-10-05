@@ -102,7 +102,7 @@
     box.append(button('View camping & nearby trails',()=>{adventure.node.close();showPlace(place);}));}
    if(!options.length)paragraph(box,region.layers.get(trailEntry()?.id)?.state==='loaded'?'No camping-and-trail matches in this small pilot. Try a different activity or explore the map. This does not mean the activity is unavailable in the area.':'Trail data could not load. You can still explore the camping listings on the map.');if(!adventure.node.open)adventure.show();
   }
-  function detail(entry,feature,box){
+  function detail(entry,feature,box,actions=box){
    if(entry.kind==='trails'){
     box.append(el('h3','Camping nearby'));paragraph(box,'Within about 5 miles of this mapped segment, in a straight line. These are not trailhead distances or connecting routes. Access and camping permission need checking.');
     const nearby=T.nearby(feature,inventory(region).map(x=>x.place));for(const {place,miles} of nearby)box.append(button(place.name+' · About '+miles.toFixed(1)+' mi direct · View camping details',()=>showPlace(place)));
@@ -112,9 +112,9 @@
    if(entry.format==='place_list'&&entry.kind==='overnight_inventory'){
     const p=places.find(p=>p.id===feature.id);if(!p)return;
     box.append(link(p.kind==='lodging'?'Official site & booking ↗':p.source_is_search?'Find official listing on Recreation.gov ↗':'Official listing & camping details ↗',p.source));
-    for(const text of [p.label,p.tripNote,p.note])paragraph(box,text);box.append(el('h3','Before you commit'));for(const text of p.unknowns||[])paragraph(box,text);
-    for(const slot of ['a','b']){const node=button(slot==='a'?(plan.a===p.id?'Saved as Plan A':'Save as Plan A'):(plan.b===p.id?'Saved as backup':'Save as backup'),()=>{const other=slot==='a'?'b':'a';plan[slot]=plan[slot]===p.id?null:p.id;if(plan[other]===p.id)plan[other]=null;persist();render();showPlace(p);});node.dataset.save=slot;node.setAttribute('aria-pressed',String(plan[slot]===p.id));box.append(node);}
-    paragraph(box,'Saving a place does not confirm it is suitable or available.');box.append(link('Open directions ↗','https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(p.coordinates[1]+','+p.coordinates[0])));
+    paragraph(actions,p.label);for(const text of [p.tripNote,p.note])paragraph(box,text);box.append(el('h3','Before you commit'));for(const text of p.unknowns||[])paragraph(box,text);
+    for(const slot of ['a','b']){const node=button(slot==='a'?(plan.a===p.id?'Saved as Plan A':'Save as Plan A'):(plan.b===p.id?'Saved as backup':'Save as backup'),()=>{const other=slot==='a'?'b':'a';plan[slot]=plan[slot]===p.id?null:p.id;if(plan[other]===p.id)plan[other]=null;persist();render();showPlace(p);});node.dataset.save=slot;node.setAttribute('aria-pressed',String(plan[slot]===p.id));actions.append(node);}
+    paragraph(actions,'Saving a place does not confirm it is suitable or available.');box.append(link('Open directions ↗','https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(p.coordinates[1]+','+p.coordinates[0])));
     paragraph(box,'Listing reviewed '+p.checked_on+'. '+p.locationBasis+'.');box.append(link('Location source ↗',p.mapSource));
     if(p.access)box.append(link('USFS vehicle designation ↗',p.access.evidence.source_url));
     paragraph(box,'Distances are straight-line, not driving distances. Directions may not reflect closures or permission to use the approach.');
