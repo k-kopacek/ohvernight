@@ -246,6 +246,26 @@ filling and repairs invalid topology with Shapely. The source is generalized
 management context; county parcel precision and campsite legality cannot be
 inferred from that repair.
 
+## Display delivery contract (M3 PR A)
+
+The optional `display` declarations and rules R60–R64 are additive to contract
+version 1. The canonical region and source files remain authoritative. A
+display artifact is a derived delivery product, not a second source of truth;
+it is reproducible from committed files by `build_display.py` and the rebuild
+check detects drift. Evidence is carried by reference only to reduce payload:
+nothing is dropped, merged or flattened, and restoring the reference gives
+the canonical evidence object exactly. The validator checks display artifacts
+against canonical data, never the reverse.
+
+The stable display rules are: **R60**, declared paths stay under the active
+region and the index is exact with matching file hashes and byte counts;
+**R61**, each display is a FeatureCollection with the declared layer ID and
+the complete canonical feature set subject only to the water-selection rule;
+**R62**, restored evidence and all other properties equal canonical values;
+**R63**, geometry type and validity are preserved and coordinates are only
+rounded to six decimals with consecutive duplicates removed; and **R64**, the
+recorded canonical-file hash matches the current canonical file.
+
 ## Known non-conformance register
 
 These are recorded, not silently repaired, except N6 and N15, which are fixed
@@ -259,17 +279,17 @@ runtime regressions retained as markers.
 | N4 | `evidence.confidence` differs for the same source across regions. | T7 |
 | N5 | Aspen `land_ownership` says ownership although data is limited-scale management context. | kind/R28 |
 | N6 | Staleness ordering hid restrictions in v2 and `Trust.applyRules`; fixed in M2. | T10–T14 |
-| N7 | Rampart designated-dispersed listing, including a paraphrased seasonal closure and date-only retrieval, is hard-coded in `preview.js`. | Milestone 3 |
+| N7 | Rampart designated-dispersed listing, including a paraphrased seasonal closure and date-only retrieval, is hard-coded in `preview.js`. | Milestone 7 (deferred) |
 | N8 | Aspen MVUM publishes `access_status: designated_open` on 51 features for a past trip. | R27 |
-| N9 | 7- and 30-day freshness thresholds remain hard-coded in `preview.js` and `trip-rules.js`. | Milestone 3 |
+| N9 | The v2 trip evaluator reads the manifest policy; the 7-day `preview.js` and root 30-day legacy thresholds remain until their later migrations. | Milestone 3 PR A partial; PR B completes v2 |
 | N10 | Douglas recreation `seasonal_operational_status` can be historical. | manifest fields |
-| N11 | Place-list per-record source URLs are not checked against declared sources. | Milestone 3 |
+| N11 | Place-list per-record source URLs are not checked against declared sources. | Milestone 3 PR B (deferred) |
 | N12 | Douglas snapshot predates current fetch status for trails and roads. | T5 |
-| N13 | `v2/map-data.json` legacy extract is outside any manifest. | Milestone 3 |
-| N14 | Per-feature evidence is duplicated for payload size. | Milestone 3 |
+| N13 | `v2/map-data.json` legacy extract is outside any manifest. | Retired in Milestone 3 PR A |
+| N14 | Per-feature evidence is duplicated for payload size in the canonical files; display delivery deduplicates it for PR B. | Milestone 3 PR B (deferred) |
 | N15 | Root legacy site had the same staleness ordering; fixed in M2. | T15 |
-| N16 | Motorhome clearance caution can precede vehicle-season exclusion, and conflicting rules are not applied. | deferred |
-| N17 | Land styling exceeds generalized evidence. | spatial precision declaration; Milestone 3 UI |
+| N16 | Motorhome clearance caution can precede vehicle-season exclusion, and conflicting rules are not applied. | Retired in Milestone 3 PR A |
+| N17 | Land styling exceeds generalized evidence. | spatial precision declaration; Milestone 3 PR B (deferred) |
 | N18 | Water lacks recreational-use semantics; names are not usefulness evidence. | limitations and fact coverage |
 
 All checks are offline and time-independent. Adding or changing a layer,
