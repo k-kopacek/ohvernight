@@ -11,12 +11,14 @@
     for (let day=+first; day<=+last; day+=86400000) days.push(new Date(day).toISOString().slice(5));
     return days;
   }
-  function evaluate(place, trip, today=new Date().toISOString().slice(0,10)) {
+  function evaluate(place, trip, today=new Date().toISOString().slice(0,10), policy) {
     const days=tripDays(trip.arrive,trip.depart);
     let result={...place,status:'review',label:'Needs trip review',tripNote:'Access, overnight permission and availability need confirmation.'};
     if (!days) return {...result,label:'Enter valid trip dates',tripNote:'Choose a stay of 1–366 nights.'};
     const checked=parseDate(place.checked_on), current=parseDate(today);
-    const stale=!checked || !current || current<checked || current-checked>30*86400000;
+    const maxAgeHours=policy?.max_age_hours;
+    const stale=!checked || !current || current<checked ||
+      !Number.isFinite(maxAgeHours) || maxAgeHours<=0 || current-checked>maxAgeHours*3600000;
     const finish=fresh=>{
       if (!stale) return {...fresh,sourceStale:false};
       if (fresh.status==='excluded' || fresh.label==='Motorhome suitability unverified')

@@ -2,7 +2,7 @@
 'use strict';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mobile=()=>matchMedia('(max-width:760px)').matches;
-let map,markers,baseLayer,data,inventory,bundle=null,ridb=null,registry=null,coverage=null,places=[],kind='all',selected=null;
+let map,markers,baseLayer,data,inventory,bundle=null,ridb=null,registry=null,coverage=null,manifest=null,places=[],kind='all',selected=null;
 let pipelineLayers=new Map(),layerRecords=null,view='planner',trails=null,ridbLoadMessage='';
 const enabledLayers=new Set(MapLayers.definitions.map(d=>d.id));
 let trip={resort:'aspen',arrive:'2027-01-15',depart:'2027-01-17',vehicle:'passenger_car'},plan={a:null,b:null};
@@ -61,7 +61,12 @@ function renderPlan(){
  $('saved-plan').querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>{plan[b.dataset.clear]=null;persist();renderPlan();selectedDetails();});
 }
 function render(){
- places=inventory.places.map(p=>TripRules.evaluate(Trust.applyRules(p,registry),trip));
+ const policies={
+   overnight_options:manifest?.layers?.find(layer=>layer.id==='overnight_options')?.max_age_hours,
+   ridb_options:manifest?.layers?.find(layer=>layer.id==='ridb_options')?.max_age_hours,
+ };
+ places=inventory.places.map(p=>TripRules.evaluate(Trust.applyRules(p,registry),trip,undefined,
+   {max_age_hours:p.source_is_search?policies.ridb_options:policies.overnight_options}));
  const shown=visible().sort((a,b)=>(a.status==='excluded')-(b.status==='excluded') || (distance(a)||0)-(distance(b)||0));
  if(!shown.some(p=>p.id===selected))selected=shown[0]?.id||null;
  const conflicts=places.filter(p=>p.status==='excluded').length;
@@ -169,7 +174,7 @@ try{
  const load=async path=>{const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw Error('Location data unavailable');return r.json();};
  const optional=async path=>{try{return await load(path);}catch{return null;}};
  const loadRidb=async()=>{try{const r=await fetch('./ridb-options.json',{cache:'no-store'});if(!r.ok){ridbLoadMessage=r.status===404?'The campground import file is missing from this website. The API key is checked separately during import.':'Campground data could not load. Try reloading the page.';return null;}return await r.json();}catch{ridbLoadMessage='Campground data could not be read. Try reloading the page.';return null;}};
- [data,inventory,bundle,ridb,registry,coverage,trails]=await Promise.all([load('./destinations.json'),load('./overnight-options.json'),optional('./map-data-v2.json'),loadRidb(),optional('./pipeline/config/rules-registry.json'),optional('./pipeline/config/aoi.geojson'),optional('./trails.geojson')]);
+ [data,inventory,bundle,ridb,registry,coverage,trails,manifest]=await Promise.all([load('./destinations.json'),load('./overnight-options.json'),optional('./map-data-v2.json'),loadRidb(),optional('./pipeline/config/rules-registry.json'),optional('./pipeline/config/aoi.geojson'),optional('./trails.geojson'),load('./regions/aspen/region.json')]);
  if(trails?.type!=='FeatureCollection'||!Array.isArray(trails.features))trails=null;
  if(inventory.schema_version!==1||!Array.isArray(inventory.places)||!Array.isArray(data.resorts))throw Error('Invalid location data');
  if(bundle?.schema_version!==2||!bundle.trip||!bundle.layers)bundle=null;

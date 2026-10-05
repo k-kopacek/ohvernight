@@ -17,7 +17,8 @@ const vehicles = golden.vehicles;
 const suffix = ' The source review is out of date; recheck the linked sources before travel.';
 
 function v2Evaluate(place, trip, today, now) {
-  return TripRules.evaluate(Trust.applyRules(place, registry, Date.parse(`${now}T00:00:00Z`)), trip, today);
+  return TripRules.evaluate(Trust.applyRules(place, registry, Date.parse(`${now}T00:00:00Z`)), trip, today,
+    {max_age_hours: 720});
 }
 
 function rootEvaluate(place, trip, today) {
@@ -152,6 +153,26 @@ test('T5: an outside-season motorhome trip is excluded before the clearance caut
     {arrive: '2027-01-15', depart: '2027-01-17', vehicle: 'motorhome'}, '2026-09-26');
   assert.equal(result.status, 'excluded');
   assert.equal(result.label, 'Outside mapped vehicle-access season');
+});
+
+test('T7: missing or invalid review-age policy makes supportive results stale', () => {
+  const place = {id: 'policy', kind: 'dispersed', checked_on: '2026-09-26'};
+  const trip = {arrive: '2026-09-26', depart: '2026-09-27', vehicle: 'passenger_car'};
+  for (const policy of [undefined, {}, {max_age_hours: null}, {max_age_hours: 0}, {max_age_hours: -1}]) {
+    const result = TripRules.evaluate(place, trip, '2026-09-26', policy);
+    assert.equal(result.status, 'review');
+    assert.equal(result.label, 'Source review is stale');
+    assert.equal(result.sourceStale, true);
+  }
+});
+
+test('T7: the review-age policy is measured in hours and has no embedded day constant', () => {
+  const source = fs.readFileSync(path.join(V2, 'trip-rules.js'), 'utf8');
+  assert.doesNotMatch(source, /30\s*\*\s*86400000/);
+  const place = {id: 'policy-current', kind: 'dispersed', checked_on: '2026-09-25'};
+  const trip = {arrive: '2026-09-26', depart: '2026-09-27', vehicle: 'passenger_car'};
+  assert.equal(TripRules.evaluate(place, trip, '2026-09-26', {max_age_hours: 24}).sourceStale, false);
+  assert.equal(TripRules.evaluate(place, trip, '2026-09-27', {max_age_hours: 24}).sourceStale, true);
 });
 
 test('T15: root fresh evaluations match the base golden matrix', () => {
