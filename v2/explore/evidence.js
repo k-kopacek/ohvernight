@@ -32,8 +32,9 @@
     return {lines,links,count};
   }
   function region(manifest){
-    return {lines:[manifest.coverage.statement,...Object.values(manifest.fact_coverage).map(fact=>fact.statement),...manifest.known_gaps],
-      links:Object.values(manifest.fact_coverage).flatMap(fact=>fact.official_urls.map(url=>({label:'Open source ↗',url:safeUrl(url)}))).filter(item=>item.url)};
+    const facts=Object.values(manifest.fact_coverage||{});
+    return {lines:[manifest.coverage?.statement,...facts.map(fact=>fact.statement),...(manifest.known_gaps||[])].filter(value=>typeof value==='string'),
+      links:facts.flatMap(fact=>(fact.official_urls||[]).map(url=>({label:'Open source ↗',url:safeUrl(url)}))).filter(item=>item.url)};
   }
   function feature(manifest,declaration,record,title){
     const properties=record.properties||record;

@@ -7,7 +7,8 @@ const root=path.resolve(__dirname,'../..');
 const readJson=relative=>JSON.parse(fs.readFileSync(path.join(root,relative),'utf8'));
 
 function fixtureConfig(manifest,defaults=[]){
-  return {explore_version:1,layers:manifest.layers.map((layer,index)=>({
+  return {explore_version:1,region_id:manifest.region.id,initial_view:{center:[0,0],zoom:10},
+    capabilities:{trip_planner:false,trail_search:true,trail_season_check:false,gpx_export:false,saved_list:false,adventure_pilot:false},official_links:[],layers:manifest.layers.map((layer,index)=>({
     layer_id:layer.id,title:'Layer '+layer.id,order:index,default_on:defaults.includes(layer.id),min_zoom:null
   }))};
 }
@@ -161,4 +162,27 @@ test('criterion 10: explore modules contain no region IDs, literal region paths,
     assert.doesNotMatch(source,/regions\/[a-z0-9-]+\//i,name);
     assert.doesNotMatch(source,/fromCharCode|\[\s*\d+(?:\s*,\s*\d+)+\s*\]\s*\.map/,name);
   }
+});
+
+test('T1: invalid configuration fails before geometry and still exposes the loaded manifest',async()=>{
+ const manifest=readJson('regions/aspen/region.json'),index=readJson('regions/aspen/display/index.json');
+ const config=readJson('regions/aspen/explore.json');let seen;
+ for(const mutate of [c=>c.explore_version=2,c=>c.region_id='other',c=>c.initial_view.center=[181,0],
+   c=>c.layers[0].title='Verified places',c=>c.capabilities.trail_search='yes',c=>c.extras_path='other.js']){
+  const broken=structuredClone(config);mutate(broken);const fixture=fixtureFetch(manifest,broken,index);
+  await assert.rejects(createRegionLoader({fetch:fixture.fetch,onManifest:value=>seen=value}).loadRegion('?region=aspen'),error=>error.code==='REGION_NOT_AVAILABLE');
+  assert.equal(seen,manifest);assert.equal(fixture.calls.some(url=>url.includes('.geojson')),false);
+ }
+});
+
+test('T1: progressive defaults yield separately, preserve order, defer by zoom, and reuse loaded files',async()=>{
+ const m=readJson('regions/aspen/region.json'),index=readJson('regions/aspen/display/index.json'),config=readJson('regions/aspen/explore.json');
+ config.layers[0].min_zoom=14;const fixture=fixtureFetch(m,config,index);const loaded=await createRegionLoader({fetch:fixture.fetch}).loadRegion('?region=aspen');
+ let yields=0;const events=[];
+ const results=await loaded.loadDefaultLayers({zoom:10,yieldTask:async()=>{yields++;},onState:value=>events.push(value.state)});
+ assert.equal(yields,m.layers.filter(layer=>layer.format==='feature_collection').length);
+ assert.equal(results[0].state,'deferred');assert.deepEqual(results.map(x=>x.id),config.layers.filter(x=>m.layers.find(y=>y.id===x.layer_id).format==='feature_collection').map(x=>x.layer_id));
+ assert.equal(fixture.calls.some(url=>url.startsWith(m.layers[0].display.path+'?')),false);
+ assert.equal((await loaded.loadLayer(m.layers[0].id,14)).state,'loaded');const n=fixture.calls.length;
+ await loaded.loadLayer(m.layers[0].id,14);assert.equal(fixture.calls.length,n);assert.ok(events.includes('loading'));
 });

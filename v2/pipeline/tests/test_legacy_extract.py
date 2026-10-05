@@ -12,6 +12,7 @@ class LegacyExtractTests(unittest.TestCase):
         allowed = set()
         for manifest_path in (ROOT / "v2" / "regions").glob("*/region.json"):
             allowed.add(manifest_path.relative_to(ROOT).as_posix())
+            allowed.add((manifest_path.parent / 'explore.json').relative_to(ROOT).as_posix())
             manifest = json.loads(manifest_path.read_text())
             def add_paths(value):
                 if isinstance(value, dict):

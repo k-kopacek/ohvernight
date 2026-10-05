@@ -1,0 +1,177 @@
+{
+  "explore_version": 1,
+  "region_id": "aspen",
+  "initial_view": {
+    "center": [
+      -106.83,
+      39.18
+    ],
+    "zoom": 12
+  },
+  "layers": [
+    {
+      "layer_id": "land_ownership",
+      "title": "Land management context",
+      "order": 0,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "wilderness",
+      "title": "Wilderness",
+      "order": 10,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "mvum_roads",
+      "title": "Forest vehicle roads",
+      "order": 20,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "hydrology",
+      "title": "Named water",
+      "order": 30,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "lodging_developed",
+      "title": "Facility inventory",
+      "order": 40,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "wildlife_sensitivity",
+      "title": "Wildlife context",
+      "order": 50,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "fire_restriction_stage",
+      "title": "Fire notice page monitor",
+      "order": 60,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "dispersed_corridors",
+      "title": "Areas to research",
+      "order": 70,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "dispersed_corridor_points",
+      "title": "Research points",
+      "order": 80,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "leads",
+      "title": "Community leads",
+      "order": 90,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "reviewed_sites",
+      "title": "Reviewed sites",
+      "order": 100,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "trails",
+      "title": "Forest trails",
+      "order": 110,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "overnight_options",
+      "title": "Overnight listings",
+      "order": 120,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "ridb_options",
+      "title": "Campground inventory",
+      "order": 130,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "destinations",
+      "title": "Destinations",
+      "order": 140,
+      "default_on": true,
+      "min_zoom": null
+    }
+  ],
+  "capabilities": {
+    "trip_planner": true,
+    "trail_search": true,
+    "trail_season_check": false,
+    "gpx_export": false,
+    "saved_list": false,
+    "adventure_pilot": true,
+    "region_extras": false
+  },
+  "official_links": [
+    {
+      "label": "Forest Service alerts",
+      "url": "https://www.fs.usda.gov/r02/whiteriver/alerts"
+    },
+    {
+      "label": "Pitkin County notices",
+      "url": "https://pitkincounty.com/CivicAlerts.asp"
+    }
+  ],
+  "storage_keys": {
+    "trip": "ohvernight-trip-v1"
+  },
+  "trip_defaults": {
+    "resort": "aspen",
+    "arrive": "2027-01-15",
+    "depart": "2027-01-17",
+    "vehicle": "passenger_car"
+  },
+  "landing": {
+    "eyebrow": "ASPEN / SNOWMASS FIELD TEST",
+    "title": "Choose your adventure.",
+    "lead": "Find camping near the trails you want to explore. Start with your dates, vehicle and activity, or explore the map freely.",
+    "note": "Colorado · Aspen / Snowmass pilot. Statewide coverage is still being built.",
+    "explore_label": "Explore the open map",
+    "mountains": [
+      {
+        "value": "aspen",
+        "label": "Aspen Mountain"
+      },
+      {
+        "value": "highlands",
+        "label": "Aspen Highlands"
+      },
+      {
+        "value": "buttermilk",
+        "label": "Buttermilk"
+      },
+      {
+        "value": "snowmass",
+        "label": "Snowmass"
+      }
+    ],
+    "region_links": [
+      {
+        "label": "Explore Douglas County dirt biking & camping →",
+        "region_id": "douglas-co"
+      }
+    ]
+  }
+}

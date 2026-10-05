@@ -1,0 +1,97 @@
+{
+  "explore_version": 1,
+  "region_id": "douglas-co",
+  "initial_view": {
+    "center": [
+      -105.05,
+      39.28
+    ],
+    "zoom": 10
+  },
+  "layers": [
+    {
+      "layer_id": "trails",
+      "title": "Forest trails",
+      "order": 0,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "roads",
+      "title": "USFS road geometry",
+      "order": 10,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "recreation",
+      "title": "Recreation sites",
+      "order": 20,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "land",
+      "title": "Land management context",
+      "order": 30,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "wilderness",
+      "title": "Wilderness",
+      "order": 40,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "waterbodies",
+      "title": "Named lakes & reservoirs",
+      "order": 50,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "waterways",
+      "title": "Named streams",
+      "order": 60,
+      "default_on": true,
+      "min_zoom": null
+    }
+  ],
+  "capabilities": {
+    "trip_planner": false,
+    "trail_search": true,
+    "trail_season_check": true,
+    "gpx_export": true,
+    "saved_list": true,
+    "adventure_pilot": false,
+    "region_extras": true
+  },
+  "official_links": [
+    {
+      "label": "Forest Service alerts",
+      "url": "https://www.fs.usda.gov/r02/psicc/alerts"
+    },
+    {
+      "label": "County fire restrictions",
+      "url": "https://dcsheriff.net/sheriffs-office/divisions/emergency-management/fire-restrictions/"
+    },
+    {
+      "label": "Official maps & motor-vehicle maps",
+      "url": "https://www.fs.usda.gov/r02/psicc/maps-guides"
+    }
+  ],
+  "storage_keys": {
+    "plan": "ohvernight-douglas-plan-v1",
+    "notes": "ohvernight-douglas-plan-v1-notes",
+    "trip": "ohvernight-douglas-plan-v1-trip"
+  },
+  "trip_defaults": {
+    "activity": "motorcycling",
+    "vehicle": "Car / SUV"
+  },
+  "export_names": {
+    "plan": "ohvernight-douglas-plan.json"
+  }
+}

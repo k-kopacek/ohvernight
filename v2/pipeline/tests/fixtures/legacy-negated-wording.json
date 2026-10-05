@@ -1,0 +1,15 @@
+{
+  "strings": [
+    {
+      "text": "Explore the open map",
+      "source": "v2/index.html"
+    }
+  ],
+  "non_display_patterns": [
+    {
+      "file": "v2/explore/layer-registry.js",
+      "text": "const FORBIDDEN_WORDS=/\\b(verified|legal|permitted|open|allowed|private|public)\\b/i;",
+      "reason": "Enforces the Explore configuration word rule; never displayed."
+    }
+  ]
+}

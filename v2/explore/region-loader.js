@@ -90,6 +90,7 @@
       let manifest;
       try{manifest=await readJson(fetcher,makeUrl(manifestPath));}
       catch(error){throw new RegionLoaderError('REGION_NOT_AVAILABLE','Region manifest could not be loaded: '+error.message);}
+      if(manifest&&typeof manifest==='object')options.onManifest?.(manifest);
       if(!manifest || manifest.contract_version!==1 || manifest.region?.id!==regionId){
         throw new RegionLoaderError('REGION_NOT_AVAILABLE','Manifest does not describe the requested region');
       }
@@ -123,6 +124,7 @@
         if(!entry) throw new Error('Unknown layer: '+layerId);
         if(entry.minZoom!==null && zoom!==undefined && Number(zoom)<entry.minZoom) return {id:layerId,state:'deferred',minZoom:entry.minZoom};
         if(entry.format!=='feature_collection' || !entry.displayPath) return {id:layerId,state:'unavailable'};
+        if(entry.state==='loaded')return {id:layerId,state:'loaded',count:entry.count,data:entry.data};
         entry.state='loading';
         try{
           entry.data=await fetchDisplay(regionId,entry.displayPath,index,entry.id);
@@ -134,9 +136,12 @@
           return {id:layerId,state:'failed',error};
         }
       }
-      async function loadDefaultLayers(){
+      async function loadDefaultLayers({zoom,onState,yieldTask=()=>Promise.resolve()}={}){
         const result=[];
-        for(const entry of [...state.values()].filter(item=>item.defaultOn)) result.push(await loadLayer(entry.id));
+        for(const entry of [...state.values()].filter(item=>item.defaultOn&&item.format==='feature_collection')){
+          await yieldTask();onState?.({id:entry.id,state:'loading'});
+          const loaded=await loadLayer(entry.id,zoom);result.push(loaded);onState?.(loaded);
+        }
         return result;
       }
       return {regionId,manifest,config,index,coverage,places,registry:entries,layers:state,loadLayer,loadDefaultLayers};
