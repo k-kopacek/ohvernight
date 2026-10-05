@@ -58,6 +58,17 @@ A3 was approved by the owner on 2026-10-04 with pull request #7.
 - *Rules.* These are presentation only. No field carries a trust statement, a limitation, a source description, a freshness policy or a rule; those stay in the manifest. Every string in `explore.json` obeys the word rule of 10.2 (extended from `title` to all strings), except a base-commit string inventoried under A4. T11 gains a negative test for each new field, including an attempt to declare a script path.
 - *Sections changed by A5:* 10.2, 19 (T11).
 
+**A6 (2026-10-04, coordinator amendment during PR B; approved when the owner merges PR B) — GPX export and proximity read display geometry (17.3, T8, T9).**
+
+- *Finding.* Section 17.3 lists "GPX output byte-for-byte" for Douglas. At the base commit the GPX writer serialises canonical coordinates at full precision (about 14 decimals). After migration the browser holds only display geometry, rounded to six decimals (12.1), and criterion 19 forbids fetching `research.json`. A GPX file exported from a real trail therefore cannot be byte-identical to the base-commit file. The same applies to raw distances in the nearby lists.
+- *Resolution.*
+  1. The moved `gpx`, `season`, `windows`, `days` and proximity functions are pinned as pure functions: for fixed inputs committed as fixtures, output is byte-identical to the base-commit functions (T8, T9). The functions themselves do not round, reformat or drop anything.
+  2. On real data their input is the display geometry. An exported GPX file carries six-decimal coordinates, a difference of at most about 6 cm from the canonical file, and omits a line part that A1 dropped as degenerate. Track structure, names, metadata, source and retrieval fields are otherwise identical to the base commit.
+  3. For every real feature of both regions, the nearby lists computed from display geometry show the same entries, in the same order, with the same displayed distance text as the base commit computed from canonical geometry. A test checks this for all features; any difference is a stop-and-report finding, not something to absorb.
+  4. No canonical-precision sidecar or export artifact is added; that would widen the display contract for no practical gain at this source's accuracy.
+- *User-visible effect.* Exported GPX coordinates have six decimals instead of about fourteen. Nothing else changes.
+- *Sections changed by A6:* 17.3, 19 (T8, T9).
+
 Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `docs/audits/architecture-audit.md`, `docs/specs/M2-regional-data-contract.md`, `v2/pipeline/docs/data-contract.md`.
 
 M3 is one milestone with two phases:
@@ -642,7 +653,7 @@ Existing keys are read and kept: `ohvernight-trip-v1` for Aspen trip and plan; `
 ### 17.3 Behaviour that must not change
 
 - Aspen: planner, trip evaluation results (golden file), Plan A / backup, adventure pilot results and ordering, trail search results, nearby-trail and nearby-camping lists, source-health wording from `Trust.sourceSummary`.
-- Douglas: browse modes and counts, season-check labels from the moved `season` function, GPX output byte-for-byte, saved list and export shape, nearby lists, coverage notes content.
+- Douglas: browse modes and counts, season-check labels from the moved `season` function, GPX output byte-for-byte for fixed inputs and six-decimal coordinates on real data (A6), saved list and export shape, nearby lists, coverage notes content.
 - Both: every layer on by default today is on by default; trip inputs never hide map features.
 
 Behaviour that changes on purpose: layout, drawer, progressive loading, land styling (13), feature detail presentation, rule ordering (14), RIDB listings going stale after 168 hours instead of 30 days (D4), the Douglas basemap (D5), and the Douglas entry URL forwarding straight to Explore (D11).
