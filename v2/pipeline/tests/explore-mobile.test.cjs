@@ -30,3 +30,16 @@ test('A11 sheet gestures, handle activation and Escape preserve inertness and ma
  assert.equal(sheet.state,'collapsed');assert.equal(body.inert,true);assert.equal(toggle.focused,true);
  sheet.destroy();toggle.dispatchEvent(new Event('click'));assert.equal(sheet.state,'collapsed');
 });
+test('A11 drawer swipe and Escape dismiss non-modally and return focus',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');
+ class Node extends EventTarget{constructor(){super();this.attrs={};}setAttribute(k,v){this.attrs[k]=v;}focus(){this.focused=true;}}
+ const element=new Node(),opener=new Node(),closeButton=new Node(),header=new Node(),doc=new Node();element.querySelector=()=>header;doc.querySelector=()=>null;
+ const context={module:{exports:{}},document:doc,CustomEvent,matchMedia:()=>({matches:false})};vm.runInNewContext(fs.readFileSync(require.resolve('../../explore/drawer.js'),'utf8'),context);
+ const drawer=context.module.exports.createDrawer(element,opener,closeButton);assert.equal(element.hidden,true);
+ drawer.open();assert.equal(element.hidden,false);assert.equal(closeButton.focused,true);assert.equal(opener.attrs['aria-expanded'],'true');
+ const pointer=(type,y)=>{const e=new Event(type,{cancelable:true});Object.assign(e,{pointerId:1,clientX:10,clientY:y});Object.defineProperty(e,'target',{value:{closest:()=>null}});header.dispatchEvent(e);};
+ pointer('pointerdown',20);pointer('pointerup',80);assert.equal(element.hidden,true);assert.equal(opener.focused,true);
+ opener.focused=false;drawer.open();drawer.close(false);assert.equal(opener.focused,false,'sheet opening does not steal handle focus');
+ drawer.open();const escape=new Event('keydown');escape.key='Escape';doc.dispatchEvent(escape);assert.equal(element.hidden,true);assert.equal(opener.focused,true);
+ drawer.destroy();opener.dispatchEvent(new Event('click'));assert.equal(element.hidden,true);
+});

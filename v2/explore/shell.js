@@ -24,6 +24,12 @@
     const $=id=>host.querySelector('#explore-'+id);
     const sheet=scope.ExploreSheet.createSheet($('sheet'),$('sheet-toggle'),$('sheet-body'));
     const drawer=scope.ExploreDrawer.createDrawer($('drawer'),$('layers'),$('drawer-close'));
+    const phone=()=>!scope.matchMedia('(min-width:768px)').matches;
+    const drawerState=event=>{if(phone()&&event.detail.open)sheet.setState('collapsed');};
+    const sheetState=event=>{if(phone()&&event.detail.state!=='collapsed')drawer.close(false);};
+    const mapTap=()=>{if(phone())drawer.close();};
+    $('drawer').addEventListener('drawerstatechange',drawerState);
+    $('sheet').addEventListener('sheetstatechange',sheetState);$('map').addEventListener('click',mapTap);
     let region,manifest,mapAvailable=false,zoom=options.initialView?.zoom||10;
     const visibleLayers=new Set(),rows=new Map(),state={mapUsable:false,defaultLayersLoaded:false,view:null};
       const active={state,visibleLayers,sheet,drawer,get region(){return region;},showSources,showDetail,select,showList,isListActive,openDialog,$,element,button,drawLayer};
@@ -199,7 +205,7 @@
       }
     }
     active.start=start;active.renderResults=renderResults;active.renderSearch=renderSearch;
-    active.destroy=()=>{sheet.destroy();drawer.destroy();M.destroy();host.replaceChildren();};
+    active.destroy=()=>{$('drawer').removeEventListener('drawerstatechange',drawerState);$('sheet').removeEventListener('sheetstatechange',sheetState);$('map').removeEventListener('click',mapTap);sheet.destroy();drawer.destroy();M.destroy();host.replaceChildren();};
     return active;
   }
   const api={createShell,bounds};if(typeof module!=='undefined')module.exports=api;scope.ExploreShell=api;
