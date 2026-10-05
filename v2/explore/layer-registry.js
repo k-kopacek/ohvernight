@@ -85,6 +85,7 @@
         pointer:layer.pointer,
         sourceIds:Array.isArray(layer.source_ids)?layer.source_ids.slice():[],
         geometryTypes:Array.isArray(layer.geometry_types)?layer.geometry_types.slice():[],
+        allowNullGeometry:layer.allow_null_geometry===true,
         state:'idle'
       };
     });

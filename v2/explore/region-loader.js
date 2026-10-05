@@ -133,6 +133,7 @@
         entry.state='loading';
         try{
           entry.data=await fetchDisplay(regionId,entry.displayPath,index,entry.id);
+          if(!entry.allowNullGeometry&&entry.data.features.some(feature=>feature.geometry===null))throw new Error('Layer does not allow non-spatial records');
           entry.state='loaded';
           entry.count=entry.data.features.length;
           return {id:layerId,state:'loaded',count:entry.count,data:entry.data};

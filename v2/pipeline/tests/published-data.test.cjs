@@ -14,3 +14,7 @@ test('Aspen and Douglas activity vocabularies stay in parity', () => {
   assert.deepEqual(Object.keys(trails.features[0].properties.activities).sort(), activities);
   assert.deepEqual(Object.keys(douglas.layers.trails.features[0].properties.activities).sort(), activities);
 });
+
+test('shared layer selection API keeps only displayWater after registry migration',()=>{
+  assert.deepEqual(Object.keys(require('../../map-layers.js')),['displayWater']);
+});

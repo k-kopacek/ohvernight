@@ -25,7 +25,7 @@
   const {element:el,button,$}=shell,M=scope.ExploreMap,E=scope.ExploreEvidence;
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))||fallback;}catch{return fallback;}};
   const stored=read(config.storage_keys.trip,{});
-  let trip={...config.trip_defaults,...stored.trip},plan={a:null,b:null,...stored.plan},places=[],kind='all',conflicts=true;
+  let trip={...config.trip_defaults,...stored.trip},plan={a:null,b:null,...stored.plan},places=[],kind='all',conflicts=true,lastAdventure='';
   const destinationEntry=region.registry.find(x=>x.kind==='destinations'),resorts=region.places[destinationEntry?.id]||[];
   if(!resorts.some(r=>r.id===trip.resort))trip.resort=config.trip_defaults.resort;
   if(!R.tripDays(trip.arrive,trip.depart)){trip.arrive=config.trip_defaults.arrive;trip.depart=config.trip_defaults.depart;}
@@ -67,6 +67,7 @@
   for(const item of config.landing.region_links||[]){const node=el('a',item.label);node.href='?region='+encodeURIComponent(item.region_id)+'&view=map';card.append(node);}
   paragraph(card,'The map helps you research. It does not replace the official source, current conditions, or local confirmation.');
   landing.hidden=new URLSearchParams(scope.location.search).get('view')==='map';
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!landing.hidden&&!document.querySelector('dialog[open]')){landing.hidden=true;$('sheet-toggle').focus();}});
   const tools=el('div',undefined,'explore-planner-tools');shell.$('sheet-header')?.append(tools);
   const toolbar=el('div');toolbar.append(button('Plan a trip',()=>{for(const k of Object.keys(settingsFields))settingsFields[k].value=trip[k];settings.show();}),button('Change my adventure',()=>{landing.hidden=false;for(const k of ['resort','arrive','depart','vehicle'])landingFields[k].value=trip[k];}));
   function entryFor(place){return inventory(region).find(x=>x.place.id===place.id)?.entry;}
@@ -89,15 +90,17 @@
    const shown=places.filter(p=>(kind==='all'||p.kind===kind)&&(conflicts||p.status!=='excluded')).sort((a,b)=>(a.status==='excluded')-(b.status==='excluded')||miles(a)-miles(b));
    for(const place of shown)box.append(result(place));if(!shown.length&&!failed)paragraph(box,'No places match. Try another stay type or include conflicts.');
    paragraph(box,'Availability is not checked. Satellite imagery does not show current snow or road conditions. List filters affect the list only; map layers have their own switches.');
+   if(adventure.node.open)showAdventure(lastAdventure);
   }
   function showAdventure(activity){
+   lastAdventure=activity;
    const box=adventure.body;box.replaceChildren();const options=T.adventureOptions(places,trails(),activity);
    paragraph(box,T.activities[activity]+' + camping · '+trip.arrive+' to '+trip.depart+' · '+options.length+' options in this pilot');
    paragraph(box,'Research suggestions, not verified itineraries. Camping date and vehicle conflicts are shown. Trail use dates, closures and connecting access still need review. Distances are straight-line to mapped segments, not trailheads.');
    for(const {place,trails:nearby} of options){box.append(el('h2',place.name));paragraph(box,place.label);paragraph(box,place.tripNote);paragraph(box,'Ordered by camping conflicts, then distance to the nearest matching trail.');
     for(const {feature,miles} of nearby){paragraph(box,(feature.properties.name||'Unnamed trail')+' · about '+miles.toFixed(1)+' mi direct');const r=feature.properties.activities[activity];paragraph(box,[r.managed?'Managed: '+r.managed:'',r.accpt?'Accepted: '+r.accpt:'',r.restricted?'Restricted: '+r.restricted:'',r.disc?'Discouraged: '+r.disc:''].filter(Boolean).join(' · '));}
     box.append(button('View camping & nearby trails',()=>{adventure.node.close();showPlace(place);}));}
-   if(!options.length)paragraph(box,region.layers.get(trailEntry()?.id)?.state==='loaded'?'No camping-and-trail matches in this small pilot. Try a different activity or explore the map. This does not mean the activity is unavailable in the area.':'Trail data could not load. You can still explore the camping listings on the map.');adventure.show();
+   if(!options.length)paragraph(box,region.layers.get(trailEntry()?.id)?.state==='loaded'?'No camping-and-trail matches in this small pilot. Try a different activity or explore the map. This does not mean the activity is unavailable in the area.':'Trail data could not load. You can still explore the camping listings on the map.');if(!adventure.node.open)adventure.show();
   }
   function detail(entry,feature,box){
    if(entry.kind==='trails'){
@@ -120,7 +123,7 @@
     if(!nearby.length)paragraph(box,region.layers.get(trailEntry()?.id)?.state==='loaded'?'No mapped trails within five miles in this pilot.':'Trail data is not loaded.');
    }
   }
-  return {render,detail,get trip(){return trip;},get plan(){return plan;}};
+  return {render,detail,pins(entry){return entry.kind==='overnight_inventory'?inventory(region).filter(x=>x.entry.id===entry.id).map(x=>x.place):region.places[entry.id];},get trip(){return trip;},get plan(){return plan;}};
  }
  const api={inventory,evaluate,sourceSummary,attach};if(typeof module!=='undefined')module.exports=api;scope.ExploreCapabilities=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

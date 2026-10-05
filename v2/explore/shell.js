@@ -18,7 +18,7 @@
       <header class="explore-topbar"><span class="explore-region"></span><nav aria-label="Explore"><button id="explore-layers" type="button" aria-expanded="false">Layers</button><button id="explore-search" type="button">Search</button></nav></header>
       <nav class="explore-tools" aria-label="Map controls"><button id="explore-satellite" type="button" aria-pressed="true">Satellite</button><button id="explore-topo" type="button" aria-pressed="false">Topo</button><button id="explore-fit" type="button">Fit area</button><button id="explore-zoom-in" type="button" aria-label="Zoom in">+</button><button id="explore-zoom-out" type="button" aria-label="Zoom out">−</button></nav>
       <section id="explore-sheet" class="explore-sheet" aria-label="Results"><div class="explore-sheet-header"><button id="explore-sheet-toggle" class="explore-sheet-toggle" type="button" aria-expanded="false">Results · Expand</button><p id="explore-summary" class="explore-summary" role="status">Loading</p></div><div id="explore-sheet-body" class="explore-sheet-body" inert></div></section>
-      <aside id="explore-drawer" class="explore-drawer" aria-label="Layers & legend" hidden><div class="explore-heading"><h1>Layers & legend</h1><button id="explore-drawer-close" type="button" aria-label="Close layers">×</button></div><button id="explore-sources" type="button">Sources & coverage</button><div id="explore-layer-list"></div></aside>
+      <aside id="explore-drawer" class="explore-drawer" aria-label="Layers & legend" hidden><div class="explore-heading"><h1>Layers & legend</h1><button id="explore-drawer-close" type="button" aria-label="Close layers">×</button></div><p>Turn layers on or off. Colors explain what the map can tell you; they do not prove a place is legal to camp.</p><p>All layers start on. Dates and vehicle choices do not hide map features. Tap a road or shaded area to learn more.</p><button id="explore-sources" type="button">Sources & coverage</button><div id="explore-layer-list"></div></aside>
       <dialog id="explore-source-dialog" class="explore-dialog" aria-labelledby="explore-source-title"><div class="explore-heading"><h1 id="explore-source-title">Sources & coverage</h1><button type="button" data-close aria-label="Close sources">×</button></div><div id="explore-source-body"></div></dialog>
       <dialog id="explore-detail-dialog" class="explore-dialog" aria-labelledby="explore-detail-title"><div class="explore-heading"><h1 id="explore-detail-title">Source details</h1><button type="button" data-close aria-label="Close details">×</button></div><div id="explore-detail-body"></div></dialog>
       <dialog id="explore-search-dialog" class="explore-dialog" aria-labelledby="explore-search-title"><div class="explore-heading"><h1 id="explore-search-title">Find trails</h1><button type="button" data-close aria-label="Close search">×</button></div><label>Trail name or number<input id="explore-query" type="search"></label><label>Activity<select id="explore-activity"><option value="">All activities</option></select></label><div id="explore-search-results"></div></dialog>
@@ -31,14 +31,15 @@
       const active={state,visibleLayers,sheet,drawer,get region(){return region;},showSources,showDetail,openDialog,$,element,button,drawLayer};
     function banner(text){$('banner').hidden=false;$('banner').querySelector('span').textContent=text;}
     $('banner').querySelector('button').onclick=()=>{$('banner').hidden=true;};
-    const dialogOpeners=new Map();
+    const dialogOpeners=new Map(),boundDialogs=new WeakSet();
     function openDialog(dialog,opener=document.activeElement){
       for(const other of host.querySelectorAll('dialog[open]'))other.close();
+      if(!opener||opener.closest('[hidden],[inert]'))opener=$('sheet-toggle');
+      if(!boundDialogs.has(dialog)){dialog.addEventListener('close',()=>dialogOpeners.get(dialog)?.focus());boundDialogs.add(dialog);}
       dialogOpeners.set(dialog,opener);dialog.showModal();dialog.querySelector('button').focus();
     }
     for(const dialog of host.querySelectorAll('dialog')){
       dialog.querySelector('[data-close]').onclick=()=>dialog.close();
-      dialog.addEventListener('close',()=>dialogOpeners.get(dialog)?.focus());
     }
     function appendEvidence(box,output){
       if(output.items){for(const item of output.items){
@@ -54,7 +55,10 @@
         const entry=region.registry.find(item=>item.id===declaration.id),loaded=region.layers.get(declaration.id);
         body.append(element('h2',entry?.title||declaration.id));
         appendEvidence(body,E.layer(manifest,declaration,region.index,loaded?.count||0,Date.now()));
-        if(loaded?.state==='loaded')body.append(element('p',loaded.count+' map features loaded'));
+        if(loaded?.state==='loaded')body.append(element('p',loaded.count+' features'));
+        for(const feature of loaded?.data?.features||[])if(feature.geometry===null&&declaration.allow_null_geometry===true){
+          const node=button(feature.properties.name||entry.title,()=>showDetail(entry,feature));node.dataset.nonspatial=declaration.id;body.append(node);
+        }
       }
       for(const link of region?.config.official_links||[])appendEvidence(body,{lines:[],links:[{label:link.label,url:E.safeUrl(link.url)}].filter(item=>item.url)});
       if(active.extras?.coverage)body.append(element('p',active.extras.coverage.text));
@@ -114,7 +118,9 @@
       }
     }
     function renderResults(){
-      if(active.capabilities){active.capabilities.render();return;}
+      if(active.capabilities){active.capabilities.render();
+        if(Object.values(region.places).some(list=>!Array.isArray(list))){$('summary').textContent='Listings could not load';$('sheet-body').append(element('p','Listings could not load'));}
+        return;}
       if(options.renderResults){options.renderResults(active);return;}
       const body=$('sheet-body');body.replaceChildren();
       const lists=Object.entries(region.places),failed=lists.some(([,list])=>!Array.isArray(list));
@@ -147,12 +153,13 @@
         active.capabilities=scope.ExploreCapabilities?.attach(active);
         host.querySelector('.explore-region').textContent=manifest.region.name;
         renderDrawer();renderResults();
-        if(mapAvailable){M.fit(bounds(region.coverage));for(const entry of region.registry.filter(item=>item.format==='place_list')){
-          const pins=region.places[entry.id];if(Array.isArray(pins)){M.setPins(entry.id,pins);M.onFeature(entry.id,pin=>showDetail(entry,pin));M.setVisible(entry.id,visibleLayers.has(entry.id));}
+        if(mapAvailable){M.addLayer('coverage',region.coverage,{color:'#fff',weight:1,opacity:.5,dashArray:'6 5',fill:false});M.fit(bounds(region.coverage));for(const entry of region.registry.filter(item=>item.format==='place_list')){
+          const pins=active.capabilities?.pins?.(entry)||region.places[entry.id];if(Array.isArray(pins)){M.setPins(entry.id,pins);M.onFeature(entry.id,pin=>showDetail(entry,pin));M.setVisible(entry.id,visibleLayers.has(entry.id));}
         }}
         $('search').hidden=!region.config.capabilities.trail_search;
         for(const [id,label] of Object.entries(scope.TrailDiscovery?.activities||{})){const option=element('option',label);option.value=id;$('activity').append(option);}
         state.mapUsable=true;options.onReady?.(active);
+        await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
         await region.loadDefaultLayers({zoom,onState:drawLayer,yieldTask:()=>new Promise(resolve=>setTimeout(resolve,0))});
         state.defaultLayersLoaded=true;options.onComplete?.(active);return active;
       }catch(error){

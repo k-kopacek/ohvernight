@@ -205,3 +205,29 @@ test('T1: progressive defaults yield separately, preserve order, defer by zoom, 
  assert.equal((await loaded.loadLayer(m.layers[0].id,14)).state,'loaded');const n=fixture.calls.length;
  await loaded.loadLayer(m.layers[0].id,14);assert.equal(fixture.calls.length,n);assert.ok(events.includes('loading'));
 });
+
+test('T13: loader request bytes and feature consumers meet CI thresholds for both regions',async()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const boot=[...new Set([...html.matchAll(/(?:src|href)="\.\/([^"?#]+)/g)].map(x=>x[1])),'index.html'];
+ const size=paths=>[...new Set(paths)].reduce((n,p)=>n+fs.statSync(path.join(root,p.split('?')[0])).size,0);
+ for(const id of ['aspen','douglas-co']){
+  const manifest=readJson('regions/'+id+'/region.json'),config=readJson('regions/'+id+'/explore.json'),index=readJson('regions/'+id+'/display/index.json');
+  const fixture=fixtureFetch(manifest,config,index,id),region=await createRegionLoader({fetch:fixture.fetch}).loadRegion('?region='+id);
+  const extra=config.capabilities.region_extras?['regions/'+id+'/extras.js']:[];
+  assert.ok(size([...boot,...extra,...fixture.calls])<=500000,id+' map usable');
+  const results=await region.loadDefaultLayers({zoom:19});
+  assert.ok(size([...boot,...extra,...fixture.calls])<=4500000,id+' default-on');
+  assert.equal(fixture.calls.some(p=>p.startsWith('regions/'+(id==='aspen'?'douglas-co':'aspen')+'/')),false);
+  assert.equal(fixture.calls.includes('map-data-v2.json'),false);assert.equal(fixture.calls.includes('regions/douglas-co/research.json'),false);
+  for(const result of results){assert.equal(result.state,'loaded');assert.equal(result.data.features.length,index.artifacts.find(x=>x.layer_id===result.id).feature_count);
+   for(const feature of result.data.features)if(feature.geometry===null){assert.equal(manifest.layers.find(x=>x.id===result.id).allow_null_geometry,true);assert.ok(require('../../explore/capabilities.js').sourceSummary(region,Date.parse('2026-10-01')).fire);}
+  }
+ }
+});
+
+test('T1: null geometry allowance comes from the manifest flag',async()=>{
+ const manifest=readJson('regions/aspen/region.json'),index=readJson('regions/aspen/display/index.json'),config=readJson('regions/aspen/explore.json');
+ const layer=manifest.layers.find(x=>x.allow_null_geometry);layer.allow_null_geometry=false;
+ const fixture=fixtureFetch(manifest,config,index),region=await createRegionLoader({fetch:fixture.fetch}).loadRegion('?region=aspen');
+ assert.equal((await region.loadLayer(layer.id)).state,'failed');
+});

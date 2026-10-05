@@ -39,6 +39,10 @@
     {
       "source": "v2/regions/douglas-co/index.html",
       "text": "County/state trails, complete cross-county routes, precise parcels, live availability, verified difficulty and turn-by-turn navigation are not included. Named water does not confirm recreation access or perennial flow. GPX exports contain clipped source segments, not verified routes. Facility “open” fields may be old and are not treated as current status."
+    },
+    {
+      "text": "Turn layers on or off. Colors explain what the map can tell you; they do not prove a place is legal to camp.",
+      "source": "v2/index.html"
     }
   ],
   "non_display_patterns": [

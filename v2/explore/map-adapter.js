@@ -27,12 +27,17 @@
     setBasemap('satellite');publishView();return true;
   }
   function notify(id,feature,coordinates){handlers.get(id)?.(feature,coordinates);}
+  function marker(latlng,pin){
+    const L=scope.L,icon=document.createElement('span');icon.className='pin-badge';icon.textContent=pin.symbol||pin.number||'•';
+    return L.marker(latlng,{title:pin.name,alt:pin.name,keyboard:true,pane:'markerPane',
+      icon:L.divIcon({className:'explore-pin',html:icon,iconSize:[44,44],iconAnchor:[22,22]})});
+  }
   function addLayer(id,featureCollection,style){
     removeLayer(id);if(!map)return;
     const L=scope.L;
     const pane=featureCollection.features.some(feature=>/LineString$/.test(feature.geometry?.type))?'overlayPane':'context';
     const layer=L.geoJSON(featureCollection,{pane,style,
-      pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{...(typeof style==='function'?style(feature):style),radius:7,pane:'markerPane'}),
+      pointToLayer:(feature,latlng)=>marker(latlng,feature.properties),
       onEachFeature:(feature,item)=>item.on('click',event=>notify(id,feature,[event.latlng.lng,event.latlng.lat]))});
     layers.set(id,layer);layer.addTo(map);
   }
@@ -43,10 +48,8 @@
     removeLayer(id);if(!map)return;
     const L=scope.L,group=L.layerGroup();
     for(const pin of pins){
-      const icon=document.createElement('span');icon.className='pin-badge';icon.textContent=pin.symbol||'•';
-      const marker=L.marker([pin.coordinates[1],pin.coordinates[0]],{title:pin.name,alt:pin.name,keyboard:true,
-        icon:L.divIcon({className:'explore-pin',html:icon,iconSize:[44,44],iconAnchor:[22,22]})});
-      marker.on('click',()=>notify(id,pin,pin.coordinates.slice()));marker.addTo(group);
+      const item=marker([pin.coordinates[1],pin.coordinates[0]],pin);
+      item.on('click',()=>notify(id,pin,pin.coordinates.slice()));item.addTo(group);
     }
     layers.set(id,group);group.addTo(map);
   }
