@@ -5,6 +5,7 @@
   const LABEL_LIMIT=32;
   const HIT_TOLERANCE=14;
   const TOUCH_TAP_WINDOW=280;
+  const TOUCH_CLICK_WINDOW=700,TOUCH_RADIUS=30;
   let pendingTap,mouseTapZoom,lastTouch;
   let selected=null;
   const reduced=()=>scope.matchMedia?.('(prefers-reduced-motion:reduce)').matches===true;
@@ -44,6 +45,10 @@
     return candidates.sort((a,b)=>a.priority-b.priority||a.distance-b.distance||
       (a.priority===2?a.area-b.area:0)||b.order-a.order||String(a.featureId).localeCompare(String(b.featureId)))[0]||null;
   }
+  function matchingTouch(event,record){
+    if(!record||event.pointerType==='mouse')return null;const age=event.timeStamp-record.time;
+    return age>=0&&age<=TOUCH_CLICK_WINDOW&&Math.hypot(event.clientX-record.clientX,event.clientY-record.clientY)<=TOUCH_RADIUS?record:null;
+  }
   function resolveTap(point){
     const candidates=[],project=p=>map.latLngToContainerPoint([p[1],p[0]]);let order=0;
     const surface=map.getContainer?.()?.getBoundingClientRect();
@@ -54,7 +59,7 @@
       if(!box?.width||!handlers.has(id)||!map.hasLayer(layers.get(id)))continue;
       if(point.x>=box.left-surface.left&&point.x<=box.right-surface.left&&point.y>=box.top-surface.top&&point.y<=box.bottom-surface.top){
         const feature=item.feature||item.labelProperties;
-        return {layerId:id,featureId:feature.properties?.id||feature.id,feature};
+        candidates.push({priority:.5,distance:0,order:0,area:0,layerId:id,featureId:feature.properties?.id||feature.id,feature});
       }
     }
     for(const [id,group] of layers){order++;if(!handlers.has(id)||!map.hasLayer(group))continue;
@@ -82,7 +87,7 @@
     cancelTap();
     // An immediate mouse selection may fit a large feature. A double click
     // still zooms from the view in which the user began the gesture.
-    if(event.originalEvent?.pointerType!=='touch'&&!event.originalEvent?.sourceCapabilities?.firesTouchEvents&&mouseTapZoom!==undefined)
+    if(event.originalEvent?.pointerType!=='touch'&&!matchingTouch(event.originalEvent||{},lastTouch)&&mouseTapZoom!==undefined)
       map.setZoomAround(event.latlng,Math.min(19,mouseTapZoom+1),{animate:false});
   }
   function publishView(){
@@ -101,12 +106,14 @@
     map.on('moveend zoomend',publishView);
     map.on('dblclick',doubleClick);
     const surface=map.getContainer?.();
-    if(surface){const touchEnd=event=>{const touch=event.changedTouches[0];if(touch&&event.touches.length===0){const r=surface.getBoundingClientRect();lastTouch={time:event.timeStamp,point:{x:touch.clientX-r.left,y:touch.clientY-r.top}};}};
+    if(surface){const touchEnd=event=>{const touch=event.changedTouches[0];if(touch&&event.touches.length===0){const r=surface.getBoundingClientRect();lastTouch={time:event.timeStamp,clientX:touch.clientX,clientY:touch.clientY,point:{x:touch.clientX-r.left,y:touch.clientY-r.top}};}};
       surface.addEventListener('touchend',touchEnd,{passive:true});mapBindings.push([surface,'touchend',touchEnd,false]);
       const click=event=>{
       if(event.detail>1||event.target.closest?.('.leaflet-control')||map.dragging?.moved()||(!event.clientX&&!event.clientY))return;
-      const touch=event.pointerType==='touch'||event.sourceCapabilities?.firesTouchEvents;
-      const r=surface.getBoundingClientRect(),point=touch&&lastTouch?lastTouch.point:{x:event.clientX-r.left,y:event.clientY-r.top};
+      const remembered=matchingTouch(event,lastTouch);if(lastTouch&&event.timeStamp-lastTouch.time>TOUCH_CLICK_WINDOW)lastTouch=null;
+      if(event.pointerType==='mouse')lastTouch=null;
+      const touch=event.pointerType==='touch'||!!remembered;
+      const r=surface.getBoundingClientRect(),point=remembered?remembered.point:{x:event.clientX-r.left,y:event.clientY-r.top};
       cancelTap();if(touch)pendingTap=setTimeout(()=>selectTap(point),TOUCH_TAP_WINDOW);else {mouseTapZoom=map.getZoom();selectTap(point);}
     };surface.addEventListener('click',click,true);mapBindings.push([surface,'click',click,true]);}
     map.setView([view.center[1],view.center[0]],view.zoom,{animate:false});
@@ -119,6 +126,7 @@
     setBasemap('satellite');publishView();return true;
   }
   function notify(id,feature,coordinates){handlers.get(id)?.(feature,coordinates);}
+  function pinActivation(event){const original=event.originalEvent;return !!original&&(original.type?.startsWith('key')||(original.clientX===0&&original.clientY===0));}
   function marker(latlng,pin){
     const L=scope.L,icon=document.createElement('span');icon.className='pin-badge';icon.textContent=pin.symbol||pin.number||'•';
     return L.marker(latlng,{title:pin.name,alt:pin.name,keyboard:true,pane:'markerPane',
@@ -130,7 +138,7 @@
     const pane=featureCollection.features.some(feature=>/LineString$/.test(feature.geometry?.type))?'overlayPane':'context';
     const layer=L.geoJSON(featureCollection,{pane,style,interactive:false,
       pointToLayer:(feature,latlng)=>marker(latlng,feature.properties),
-      onEachFeature:(feature,item)=>{if(item.getLatLng)item.on('click',event=>{if(event.originalEvent?.type?.startsWith('key'))notify(id,feature,feature.geometry.coordinates.slice());});}});
+      onEachFeature:(feature,item)=>{if(item.getLatLng)item.on('click',event=>{if(pinActivation(event))notify(id,feature,feature.geometry.coordinates.slice());});}});
     layers.set(id,layer);styles.set(id,style);layer.addTo(map);
   }
   function removeLayer(id){const layer=layers.get(id);if(layer&&map)map.removeLayer(layer);layers.delete(id);styles.delete(id);labelRules.delete(id);refreshLabels();if(selected?.id===id)selected=null;}
@@ -161,7 +169,7 @@
     const L=scope.L,group=L.layerGroup();
     for(const pin of pins){
       const item=marker([pin.coordinates[1],pin.coordinates[0]],pin);item.featureId=pin.id;item.labelProperties=pin;
-      item.on('click',event=>{if(event.originalEvent?.type?.startsWith('key'))notify(id,pin,pin.coordinates.slice());});item.addTo(group);
+      item.on('click',event=>{if(pinActivation(event))notify(id,pin,pin.coordinates.slice());});item.addTo(group);
     }
     layers.set(id,group);group.addTo(map);
   }

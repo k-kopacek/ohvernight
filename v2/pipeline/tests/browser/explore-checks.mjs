@@ -89,8 +89,10 @@ export function trailSamples(features,crossingIds){
  for(const f of byId){if(ids.size>=8)break;ids.add(f.properties.id);}
  return [...ids].map(id=>features.find(f=>f.properties.id===id));
 }
+// Readiness must belong to the loaded destination document, not its forwarding page.
+export function destinationLoaded(frame,url,loaded){return frame.url===url&&loaded.has(frame.loaderId);}
 export async function runExploreChecks(client,origin,signal,root){
- let running=true,current={externalBlocked:0,responses:[],escaped:[],errors:[],consoleErrors:[]},pumpError;
+ let running=true,current={externalBlocked:0,responses:[],escaped:[],errors:[],consoleErrors:[]},pumpError;const loaded=new Set();
  const interception=async(method,params)=>{try{return await client.command(method,params);}catch(error){if(!error.message.includes('Invalid InterceptionId'))throw error;}};
  const evaluate=async expression=>{signal.throwIfAborted();if(pumpError)throw pumpError;const r=await client.command('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw new Error(expression+' '+JSON.stringify(r.exceptionDetails));return r.result.value;};
  const pump=(async()=>{while(running){const e=client.events.shift();if(!e){await delay(5,undefined,{signal});continue;}
@@ -100,19 +102,23 @@ export async function runExploreChecks(client,origin,signal,root){
    const replacement=await current.intercept?.(url);
    if(replacement)await interception('Fetch.fulfillRequest',{requestId,responseCode:replacement.status||200,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(replacement.body||'').toString('base64')});
    else await interception('Fetch.continueRequest',{requestId});
-  }else if(e.method==='Network.responseReceived'&&current){const response=e.params.response;if(new URL(response.url).origin===origin)current.responses.push({url:response.url,status:response.status});else if(!response.url.startsWith('data:'))current.escaped.push(response.url);}
+  }else if(e.method==='Page.lifecycleEvent'&&e.params.name==='load')loaded.add(e.params.loaderId);
+  else if(e.method==='Network.responseReceived'&&current){const response=e.params.response;if(new URL(response.url).origin===origin)current.responses.push({url:response.url,status:response.status});else if(!response.url.startsWith('data:'))current.escaped.push(response.url);}
   else if(e.method==='Runtime.exceptionThrown'&&current)current.errors.push(e.params.exceptionDetails);
   else if(e.method==='Log.entryAdded'&&current&&e.params.entry.level==='error'&&!e.params.entry.text.includes('ERR_BLOCKED_BY_CLIENT'))current.consoleErrors.push(e.params.entry.text);
  }} )().catch(error=>{pumpError=error;});
  await client.command('Network.enable');await client.command('Network.setCacheDisabled',{cacheDisabled:true});await client.command('Runtime.enable');await client.command('Log.enable');await client.command('Page.enable');
+ await client.command('Page.setLifecycleEventsEnabled',{enabled:true});
  await client.command('Fetch.enable',{patterns:[{urlPattern:'*',requestStage:'Request'}]});
  await client.command('Page.addScriptToEvaluateOnNewDocument',{source:INIT});
  await client.command('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
  const poll=async(expression,label)=>{for(let i=0;i<600;i++){signal.throwIfAborted();if(await evaluate(expression))return;await delay(20,undefined,{signal});}throw new Error('Browser state did not settle: '+label+' '+JSON.stringify(await evaluate('window.explore?.state')));};
  const key=async key=>{const code=key===' '?'Space':key,windowsVirtualKeyCode={Escape:27,Tab:9,Enter:13,' ':32}[key],text=key==='Enter'?'\r':key===' '?' ':undefined;await client.command('Input.dispatchKeyEvent',{type:'keyDown',key,code,windowsVirtualKeyCode,...(text?{text}: {})});await client.command('Input.dispatchKeyEvent',{type:'keyUp',key,code,windowsVirtualKeyCode});};
  async function navigate(url,intercept){
-  await client.command('Page.navigate',{url:'about:blank'});current={url,responses:[],errors:[],consoleErrors:[],escaped:[],externalBlocked:0,intercept};
-  await client.command('Page.navigate',{url});await poll('!!window.explore&&(explore.state.defaultLayersLoaded||explore.state.error)','load');assert.deepEqual(current.errors,[],'uncaught browser errors');if(!intercept){assert.deepEqual(current.consoleErrors,[],'browser console errors');assert.ok(current.responses.every(x=>x.status<400),'same-origin request failed');}assert.deepEqual(current.escaped,[],'non-local request escaped blocking');return current;
+  async function documentAt(destination){for(let i=0;i<600;i++){signal.throwIfAborted();if(pumpError)throw pumpError;const {frameTree}=await client.command('Page.getFrameTree');if(destinationLoaded(frameTree.frame,destination,loaded))return;await delay(20,undefined,{signal});}throw new Error('Destination document did not load: '+destination);}
+  await client.command('Page.navigate',{url:'about:blank'});await documentAt('about:blank');current={url,responses:[],errors:[],consoleErrors:[],escaped:[],externalBlocked:0,intercept};
+  await client.command('Page.navigate',{url});await documentAt(url.endsWith('/v2/regions/douglas-co/')?origin+'/v2/?region=douglas-co&view=map':url);
+  await poll('!!window.explore&&(explore.state.defaultLayersLoaded||explore.state.error)','load');assert.deepEqual(current.errors,[],'uncaught browser errors');if(!intercept){assert.deepEqual(current.consoleErrors,[],'browser console errors');assert.ok(current.responses.every(x=>x.status<400),'same-origin request failed');}assert.deepEqual(current.escaped,[],'non-local request escaped blocking');return current;
  }
  const bytes=async urls=>{let count=0;const paths=new Set();for(const url of new Set(urls)){const u=new URL(url);if(u.origin!==origin)continue;let p=resolve(root,'.'+u.pathname);if(u.pathname.endsWith('/'))p=resolve(p,'index.html');if(!paths.has(p)){paths.add(p);count+=(await readFile(p)).length;}}return count;};
  async function drag(point,dx,dy){await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:point.x,y:point.y}]});for(let i=1;i<=5;i++)await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x+dx*i/5,y:point.y+dy*i/5}]});await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
@@ -256,6 +262,8 @@ export async function runExploreChecks(client,origin,signal,root){
   assert.ok((await evaluate('explore.$("detail-body").firstElementChild.textContent')).includes('Saving a place does not confirm it is suitable or available.'));
   if(width<768){assert.equal(await evaluate(`(()=>{const button=[...explore.$('detail-body').firstElementChild.querySelectorAll('button')].find(e=>e.dataset.save||e.textContent==='Save to plan'||e.textContent==='Remove from saved'),r=button.getBoundingClientRect();return r.top>=explore.$('sheet').getBoundingClientRect().top&&r.bottom<=innerHeight})()`),true,'A11 save control visible in half sheet');}
   assert.equal(await evaluate('document.querySelector(".leaflet-marker-icon.is-selected").getBoundingClientRect().width'),44,'A11 lighter pin retains 44px target');assert.equal(await evaluate('document.querySelector(".leaflet-marker-icon.is-selected .pin-badge").getBoundingClientRect().width'),28,'A11 lighter pin badge');
+  await evaluate('window.__assistivePin=document.querySelector(".leaflet-marker-icon.is-selected");explore.$("detail-back").click();window.__assistivePin.click()');
+  assert.equal(await evaluate('explore.state.selection?.featureId'),await evaluate('window.__a11PinId'),'R3 programmatic zero-coordinate pin activation');await assertSelection('R3 assistive pin highlight');
 
   if(width>=768)assert.equal(await evaluate('explore.$("sheet").getBoundingClientRect().height'),height*.75,'A11 selection keeps full side panel');
   await evaluate('explore.$("detail-back").click()');await assertSelection('A11 Back clears pin',true);await evaluate('explore.sheet.setExpanded(false)');
@@ -293,6 +301,12 @@ export async function runExploreChecks(client,origin,signal,root){
    }
    result.a12Trails.push({featureId,onLine:true,besideLinePx:6});
   }
+  await evaluate(`(()=>{const e=explore.region.registry.find(e=>e.kind==='trails');window.__safariFeature=explore.region.layers.get(e.id).data.features.find(f=>f.properties.id===${JSON.stringify(sampleIds[0])});__frameLine(window.__safariFeature,18)})()`);
+  const safariPoint=await evaluate('__pointForFeature(window.__safariFeature)');await tap(safariPoint);
+  await evaluate(`(()=>{const e=document.elementFromPoint(${safariPoint.x},${safariPoint.y});e.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:${Math.round(safariPoint.x)},clientY:${Math.round(safariPoint.y)}}))})()`);
+  assert.equal(await evaluate('explore.state.selection'),null,'R2 Safari plain compatibility click remains deferred');
+  await poll('explore.state.selection?.featureId==='+JSON.stringify(sampleIds[0]),'R2 plain click uses fractional touch position');await assertSelection('R2 Safari-compatible touch selection');
+  await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
   result.a12LandModes=[];
   for(const mode of ['plain','search','trail detail','after drawer']){
    await evaluate(`(()=>{if(!explore.$('detail-view').hidden)explore.$('detail-back').click();if(${JSON.stringify(mode)}==='plain')explore.sheet.setState('collapsed');if(${JSON.stringify(mode)}==='search')explore.$('search').click();if(${JSON.stringify(mode)}==='trail detail')explore.select(window.__a11TrailEntry,window.__a11Trail);if(${JSON.stringify(mode)}==='after drawer'){explore.drawer.open();explore.drawer.close();}__framePolygon(window.__a11Land)})()`);

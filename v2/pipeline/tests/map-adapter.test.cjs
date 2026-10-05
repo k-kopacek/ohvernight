@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'../..'),source=fs.readFileSync(path.join(root,'explore/map-adapter.js'),'utf8');
 const names=['init','addLayer','removeLayer','setVisible','setStyle','setPins','onFeature','fit','setBasemap','destroy','setSelected','setLabels'];
-function predicates(){const context={};vm.runInNewContext(source.replace('const api={init,','scope.testPredicates={hitGeometry,chooseHit,resolveTap,HIT_TOLERANCE,layers,handlers,labelled,setMap:value=>{map=value;}}; const api={init,'),context);return context.testPredicates;}
+function predicates(){const context={};vm.runInNewContext(source.replace('const api={init,','scope.testPredicates={hitGeometry,chooseHit,resolveTap,HIT_TOLERANCE,layers,handlers,labelled,matchingTouch,pinActivation,setMap:value=>{map=value;}}; const api={init,'),context);return context.testPredicates;}
 const project=([x,y])=>({x,y});
 test('A12 hit tolerance includes the boundary for lines and points, including multipart lines',()=>{
  const H=predicates(),line={type:'LineString',coordinates:[[0,0],[100,0]]};
@@ -113,4 +113,32 @@ test('A12 touch selection uses fractional touch coordinates rather than the roun
  const end=new Event('touchend');end.changedTouches=[{clientX:15.5,clientY:100.6}];end.touches=[];surface.dispatchEvent(end);
  const click=new Event('click');Object.assign(click,{clientX:16,clientY:101,pointerType:'touch',detail:1});surface.dispatchEvent(click);
  assert.equal(chosen,undefined,'touch selection is deferred');scheduled();assert.equal(chosen,'target','fractional touch wins over rounded click neighbor');A.destroy();
+});
+
+test('R2: touch records match Safari plain clicks, expire, and reject another location or backwards timestamp',()=>{
+ const H=predicates(),record={time:100,clientX:20.5,clientY:50.5,point:{x:20.5,y:50.5}};
+ assert.equal(H.matchingTouch({timeStamp:150,clientX:21,clientY:51},record),record);
+ assert.equal(H.matchingTouch({timeStamp:800,clientX:21,clientY:51},record),record);
+ assert.equal(H.matchingTouch({timeStamp:801,clientX:21,clientY:51},record),null);
+ assert.equal(H.matchingTouch({timeStamp:150,clientX:100,clientY:51},record),null);
+ assert.equal(H.matchingTouch({timeStamp:99,clientX:21,clientY:51},record),null);
+ assert.equal(H.matchingTouch({timeStamp:150,clientX:21,clientY:51,pointerType:'mouse'},record),null,'hybrid mouse remains immediate');
+});
+test('R3: keyboard and assistive pin activation select directly, physical clicks stay with the resolver',()=>{
+ const H=predicates();assert.equal(H.pinActivation({originalEvent:{type:'keypress'}}),true);
+ assert.equal(H.pinActivation({originalEvent:{type:'click',clientX:0,clientY:0}}),true);
+ assert.equal(H.pinActivation({originalEvent:{type:'click',clientX:40,clientY:80}}),false);
+});
+test('R4: direct points win over another feature label; labels win over lines and polygons',()=>{
+ const H=predicates(),label={priority:.5,distance:0,order:1,featureId:'label'};
+ assert.equal(H.chooseHit([label,{priority:0,distance:12,order:1,featureId:'pin'}]).featureId,'pin');
+ assert.equal(H.chooseHit([label,{priority:1,distance:0,order:2,featureId:'line'},{priority:2,distance:0,order:3,area:2,featureId:'land'}]).featureId,'label');
+});
+test('R4: resolver selects a point beneath another feature label box',()=>{
+ const H=predicates(),line={properties:{id:'label'},geometry:{type:'LineString',coordinates:[[0,0],[100,0]]}},pin={properties:{id:'pin'},geometry:{type:'Point',coordinates:[40,20]}};
+ H.layers.set('labels',{eachLayer(){}});H.handlers.set('labels',()=>{});
+ H.labelled.add({feature:line,labelLayerId:'labels',getTooltip:()=>({getElement:()=>({getBoundingClientRect:()=>({left:20,right:80,top:10,bottom:30,width:60})})})});
+ H.layers.set('points',{eachLayer(fn){fn({feature:pin,getLatLng:()=>[20,40]});}});H.handlers.set('points',()=>{});
+ H.setMap({getContainer:()=>({getBoundingClientRect:()=>({left:0,top:0})}),hasLayer:()=>true,latLngToContainerPoint:p=>({x:p[1],y:p[0]})});
+ assert.equal(H.resolveTap({x:40,y:20}).featureId,'pin');
 });
