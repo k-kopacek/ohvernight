@@ -11,12 +11,14 @@
     for (let day=+first; day<=+last; day+=86400000) days.push(new Date(day).toISOString().slice(5));
     return days;
   }
-  function evaluate(place, trip, today=new Date().toISOString().slice(0,10)) {
+  function evaluate(place, trip, today=new Date().toISOString().slice(0,10), policy) {
     const days=tripDays(trip.arrive,trip.depart);
     let result={...place,status:'review',label:'Needs trip review',tripNote:'Access, overnight permission and availability need confirmation.'};
     if (!days) return {...result,label:'Enter valid trip dates',tripNote:'Choose a stay of 1–366 nights.'};
     const checked=parseDate(place.checked_on), current=parseDate(today);
-    const stale=!checked || !current || current<checked || current-checked>30*86400000;
+    const maxAgeHours=policy?.max_age_hours;
+    const stale=!checked || !current || current<checked ||
+      !Number.isFinite(maxAgeHours) || maxAgeHours<=0 || current-checked>maxAgeHours*3600000;
     const finish=fresh=>{
       if (!stale) return {...fresh,sourceStale:false};
       if (fresh.status==='excluded' || fresh.label==='Motorhome suitability unverified')
@@ -30,8 +32,6 @@
     if (place.tent_only) return finish({...result,status:'excluded',label:'Tent-only · vehicle-sleeping mismatch',tripNote:'The published sites are walk-in and tent-only.'});
     if (place.requires_high_clearance && trip.vehicle==='passenger_car')
       return finish({...result,status:'excluded',label:'High clearance required',tripNote:'The agency specifies high clearance. Passenger-car access does not meet that requirement.'});
-    if (place.requires_high_clearance && trip.vehicle==='motorhome')
-      return finish({...result,label:'Motorhome suitability unverified',tripNote:'High clearance is required; motorhome dimensions and suitability have not been checked.'});
     if (place.access) {
       const designation=place.access.designations[trip.vehicle];
       // Only accept the agency's exact MM/DD-MM/DD interval format.
@@ -41,6 +41,8 @@
         return finish({...result,status:'excluded',label:'Outside mapped vehicle-access season',tripNote:'At least one trip day, including departure, falls outside the published designation for the campground road. This is a road-access check, not a campground operating calendar.'});
       if (valid) result.tripNote='Within the mapped campground-road designation. Full approach, current conditions, sleeping setup, operating dates and availability still need confirmation.';
     }
+    if (place.requires_high_clearance && trip.vehicle==='motorhome')
+      return finish({...result,label:'Motorhome suitability unverified',tripNote:'High clearance is required; motorhome dimensions and suitability have not been checked.'});
     if (place.kind==='dispersed') result.label='Dispersed area · access unverified';
     return finish(result);
   }

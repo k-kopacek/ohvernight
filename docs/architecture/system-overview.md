@@ -63,8 +63,8 @@ pyproj, PyYAML, jsonschema).
 | Aspen | `v2/map-data-v2.json` (about 10 MB), `v2/trails.geojson`, `v2/overnight-options.json`, `v2/ridb-options.json`, `v2/destinations.json`, `v2/pipeline/config/rules-registry.json` | Schema-v2 bundle, a bare FeatureCollection, and place lists |
 | Douglas County | `v2/regions/douglas-co/research.json` (about 6 MB) | One file, `schema_version: 1`, layers keyed by name |
 
-`v2/map-data.json` is a legacy OpenStreetMap extract that is published but not
-covered by any manifest. Attribution and limits are in
+The root `map-data.json` is a legacy OpenStreetMap extract published outside
+the v2 manifests. Attribution and limits are in
 [DATA-LICENSE.md](../../DATA-LICENSE.md) and `v2/DATA-LICENSE.md`.
 
 ## Deployment

@@ -17,7 +17,8 @@ const vehicles = golden.vehicles;
 const suffix = ' The source review is out of date; recheck the linked sources before travel.';
 
 function v2Evaluate(place, trip, today, now) {
-  return TripRules.evaluate(Trust.applyRules(place, registry, Date.parse(`${now}T00:00:00Z`)), trip, today);
+  return TripRules.evaluate(Trust.applyRules(place, registry, Date.parse(`${now}T00:00:00Z`)), trip, today,
+    {max_age_hours: 720});
 }
 
 function rootEvaluate(place, trip, today) {
@@ -127,9 +128,122 @@ test('T14: stale and unconfirmed rules merge restrictions most restrictively', (
     Date.parse('2026-09-26T00:00:00Z')).stay_limit_days, 3);
 });
 
+test('T5: conflicting rule records merge the most restrictive values and retain every source', () => {
+  const rules = [
+    {place_ids: ['conflict'], stay_limit_days: 8, requires_high_clearance: false,
+      last_confirmed_at: '2026-09-26T00:00:00Z', max_age_hours: 24,
+      source_url: 'https://example.org/looser'},
+    {place_ids: ['conflict'], stay_limit_days: 5, requires_high_clearance: true,
+      last_confirmed_at: '2026-01-01T00:00:00Z', max_age_hours: 24,
+      source_url: 'https://example.org/stricter'},
+    {place_ids: ['conflict'], stay_limit_days: 12, requires_high_clearance: false,
+      last_confirmed_at: null, max_age_hours: 24,
+      source_url: 'https://example.org/third'},
+  ];
+  const result = Trust.applyRules({id: 'conflict', stay_limit_days: 10}, {rules}, Date.parse('2026-09-27T00:00:00Z'));
+  assert.equal(result.stay_limit_days, 5);
+  assert.equal(result.requires_high_clearance, true);
+  assert.equal(result.ruleReview, 'Conflicting rule records need review');
+  assert.equal(result.ruleSource, 'https://example.org/looser');
+  assert.deepEqual(result.ruleSources, rules.map(rule => rule.source_url));
+  const looser = Trust.applyRules({id: 'conflict', stay_limit_days: 3, requires_high_clearance: true}, {rules});
+  assert.equal(looser.stay_limit_days, 3);
+  assert.equal(looser.requires_high_clearance, true);
+});
+
+test('T5: an outside-season motorhome trip is excluded before the clearance caution, fresh and stale', () => {
+  const place = {id: 'seasonal-rv', kind: 'dispersed', checked_on: '2026-09-26',
+    requires_high_clearance: true, access: {designations: {
+      motorhome: {designation: 'open', dates_open: '05/01-09/30'}}}};
+  const result = TripRules.evaluate(place,
+    {arrive: '2027-01-15', depart: '2027-01-17', vehicle: 'motorhome'}, '2026-09-26', {max_age_hours: 720});
+  assert.equal(result.status, 'excluded');
+  assert.equal(result.label, 'Outside mapped vehicle-access season');
+  const stale = TripRules.evaluate(place,
+    {arrive: '2027-01-15', depart: '2027-01-17', vehicle: 'motorhome'}, '2026-10-30', {max_age_hours: 720});
+  assert.equal(stale.status, 'excluded');
+  assert.equal(stale.label, 'Outside mapped vehicle-access season');
+  assert.equal(stale.tripNote, result.tripNote + suffix);
+  const inSeason = TripRules.evaluate({...place, access: {designations: {
+    motorhome: {designation: 'open', dates_open: '01/01-12/31'}}}},
+    {arrive: '2027-01-15', depart: '2027-01-17', vehicle: 'motorhome'}, '2026-09-26', {max_age_hours: 720});
+  assert.equal(inSeason.status, 'review');
+  assert.equal(inSeason.label, 'Motorhome suitability unverified');
+});
+
+test('T5: two matching rules exclude an eight-night trip under the five-day limit', () => {
+  const rules = [
+    {place_ids: ['two-rules'], stay_limit_days: 5, requires_high_clearance: true,
+      last_confirmed_at: '2026-01-01T00:00:00Z', max_age_hours: 24,
+      source_url: 'https://example.org/stale-limit'},
+    {place_ids: ['two-rules'], stay_limit_days: 12, requires_high_clearance: false,
+      last_confirmed_at: null, max_age_hours: 24,
+      source_url: 'https://example.org/unconfirmed-looser'},
+  ];
+  const merged = Trust.applyRules({id: 'two-rules', kind: 'dispersed', checked_on: '2026-09-26'},
+    {rules}, Date.parse('2026-09-26T00:00:00Z'));
+  assert.equal(merged.stay_limit_days, 5);
+  assert.equal(merged.requires_high_clearance, true);
+  assert.deepEqual(merged.ruleSources, rules.map(rule => rule.source_url));
+  const result = TripRules.evaluate(merged,
+    {arrive: '2026-09-26', depart: '2026-10-04', vehicle: 'high_clearance'},
+    '2026-09-26', {max_age_hours: 720});
+  assert.equal(result.status, 'excluded');
+  assert.equal(result.label, 'Stay exceeds published limit');
+});
+
+test('T7: missing or invalid review-age policy makes supportive results stale', () => {
+  const place = {id: 'policy', kind: 'dispersed', checked_on: '2026-09-26'};
+  const trip = {arrive: '2026-09-26', depart: '2026-09-27', vehicle: 'passenger_car'};
+  for (const policy of [undefined, {}, {max_age_hours: null}, {max_age_hours: 0}, {max_age_hours: -1}]) {
+    const result = TripRules.evaluate(place, trip, '2026-09-26', policy);
+    assert.equal(result.status, 'review');
+    assert.equal(result.label, 'Source review is stale');
+    assert.equal(result.sourceStale, true);
+    for (const restricted of [
+      {tent_only: true},
+      {requires_high_clearance: true},
+      {access: {designations: {passenger_car: {designation: 'open', dates_open: '05/01-09/30'}}}},
+      {stay_limit_days: 1},
+    ]) {
+      const vehicle = 'passenger_car';
+      const trip = restricted.stay_limit_days ? {arrive: '2026-09-26', depart: '2026-09-29', vehicle} :
+        {arrive: '2027-01-15', depart: '2027-01-17', vehicle};
+      const excluded = TripRules.evaluate({...restricted, kind: 'dispersed', checked_on: '2026-09-26'}, trip, '2026-09-26', policy);
+      assert.equal(excluded.status, 'excluded');
+    }
+  }
+});
+
+test('T7: the review-age policy is measured in hours and has no embedded day constant', () => {
+  const source = fs.readFileSync(path.join(V2, 'trip-rules.js'), 'utf8');
+  assert.doesNotMatch(source, /30\s*\*\s*86400000/);
+  const place = {id: 'policy-current', kind: 'dispersed', checked_on: '2026-09-25'};
+  const trip = {arrive: '2026-09-26', depart: '2026-09-27', vehicle: 'passenger_car'};
+  assert.equal(TripRules.evaluate(place, trip, '2026-09-26', {max_age_hours: 24}).sourceStale, false);
+  assert.equal(TripRules.evaluate(place, trip, '2026-09-27', {max_age_hours: 24}).sourceStale, true);
+});
+
 test('T15: root fresh evaluations match the base golden matrix', () => {
   assertGolden(golden.root.flatMap(place => place.results), rootPlaces,
     (place, trip, today) => rootEvaluate(place, trip, today));
+});
+
+test('T5: root outside-season motorhome ordering preserves exclusion and caution', () => {
+  const outside = {kind: 'dispersed', checked_on: '2026-09-26', requires_high_clearance: true,
+    access: {designations: {motorhome: {designation: 'open', dates_open: '05/01-09/30'}}}};
+  const trip = {arrive: '2027-01-15', depart: '2027-01-17', vehicle: 'motorhome'};
+  const fresh = rootEvaluate(outside, trip, '2026-09-26');
+  assert.equal(fresh.status, 'excluded');
+  assert.equal(fresh.label, 'Outside mapped vehicle-access season');
+  const stale = rootEvaluate(outside, trip, '2026-11-01');
+  assert.equal(stale.status, 'excluded');
+  assert.equal(stale.label, fresh.label);
+  assert.equal(stale.tripNote, fresh.tripNote + suffix);
+  const inSeason = rootEvaluate({...outside, access: {designations: {
+    motorhome: {designation: 'open', dates_open: '01/01-12/31'}}}}, trip, '2026-09-26');
+  assert.equal(inSeason.status, 'review');
+  assert.equal(inSeason.label, 'Motorhome suitability unverified');
 });
 
 test('T15: stale root restrictions survive without adding stay-limit logic', () => {

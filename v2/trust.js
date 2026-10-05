@@ -9,7 +9,22 @@
   function sameTrip(a,b){return !!a&&!!b&&['arrive','depart','vehicle'].every(k=>a[k]===b[k]);}
   function applyRules(place,registry,now=Date.now()){
     const matches=(registry?.rules||[]).filter(r=>r.place_ids?.includes(place.id));
-    if(matches.length!==1)return {...place,ruleReview:matches.length?'Conflicting rule records need review':null};
+    if(!matches.length)return {...place,ruleReview:null};
+    if(matches.length>1){
+      const limits=[place.stay_limit_days ?? place.max_stay_days,
+        ...matches.map(rule=>rule.stay_limit_days)]
+        .filter(value=>Number.isFinite(value)&&value>0);
+      const mergedLimit=limits.length?{stay_limit_days:Math.min(...limits)}:{};
+      const mergedClearance=place.requires_high_clearance===true||
+        matches.some(rule=>rule.requires_high_clearance===true);
+      const ruleSources=matches.map(rule=>rule.source_url);
+      return {...place,
+        ...mergedLimit,
+        ...(mergedClearance?{requires_high_clearance:true}:{}),
+        ruleReview:'Conflicting rule records need review',
+        ruleSource:ruleSources[0],
+        ruleSources};
+    }
     const rule=matches[0], current=freshness(rule,now)==='current';
     const limits=[place.stay_limit_days ?? place.max_stay_days,rule.stay_limit_days]
       .filter(value=>Number.isFinite(value)&&value>0);

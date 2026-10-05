@@ -42,8 +42,21 @@ jobs:
           node --check v2/trail-discovery.js
           node --check v2/trip-rules.js
           node --check v2/trust.js
+          node --check v2/explore/transport.js
+          node --check v2/explore/layer-registry.js
+          node --check v2/explore/region-loader.js
           node --check v2/regions/douglas-co/preview.js
           node --check v2/regions/douglas-co/discovery.js
           node --check app.js
           node --check trip-rules.js
       - run: node --test v2/pipeline/tests/*.test.cjs
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node v2/pipeline/tests/browser/run.mjs

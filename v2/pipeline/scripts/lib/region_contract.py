@@ -6,6 +6,8 @@ the files it points to, and the evidence semantics without reading the clock.
 from __future__ import annotations
 
 import json
+import copy
+import hashlib
 import math
 import re
 from datetime import datetime, timezone
@@ -59,6 +61,240 @@ def _json_pointer(document, pointer):
         else:
             current = current[token]
     return current
+
+
+def _display_water(feature):
+    properties = feature.get("properties") or {}
+    geometry = feature.get("geometry") or {}
+    name = properties.get("name")
+    return (isinstance(name, str) and bool(name.strip()) and
+            ((properties.get("kind") == "flowline" and geometry.get("type") in {"LineString", "MultiLineString"}) or
+             (properties.get("kind") == "waterbody" and geometry.get("type") in {"Polygon", "MultiPolygon"})))
+
+
+def _display_round_path(points, minimum):
+    if not points:
+        return None, 1
+    rounded = [[round(float(point[0]), 6), round(float(point[1]), 6)] for point in points]
+    closed = rounded[0] == rounded[-1]
+    result = [rounded[0]]
+    for point in rounded[1:]:
+        if point != result[-1]:
+            result.append(point)
+    if closed and len(result) > 1 and result[-1] != result[0]:
+        result.append(result[0])
+    if len(result) < minimum:
+        return None, 1
+    return result, 0
+
+
+def _display_transform_geometry(geometry):
+    if geometry is None:
+        return None, 0
+    result = dict(geometry)
+    coords = geometry.get("coordinates")
+    geometry_type = geometry.get("type")
+    if geometry_type == "Point":
+        result["coordinates"] = [round(float(coords[0]), 6), round(float(coords[1]), 6)]
+    elif geometry_type == "MultiPoint":
+        result["coordinates"] = [[round(float(point[0]), 6), round(float(point[1]), 6)] for point in coords]
+    elif geometry_type == "LineString":
+        path, dropped = _display_round_path(coords, 2)
+        return (None, dropped) if path is None else ({**result, "coordinates": path}, dropped)
+    elif geometry_type == "MultiLineString":
+        lines, dropped = [], 0
+        for line in coords:
+            path, count = _display_round_path(line, 2)
+            dropped += count
+            if path is not None:
+                lines.append(path)
+        if not lines:
+            return None, dropped
+        result["coordinates"] = lines
+    elif geometry_type == "Polygon":
+        rings, dropped = [], 0
+        for index, ring in enumerate(coords):
+            path, count = _display_round_path(ring, 4)
+            dropped += count
+            if index == 0 and path is None:
+                return None, dropped
+            if path is not None:
+                rings.append(path)
+        result["coordinates"] = rings
+    elif geometry_type == "MultiPolygon":
+        polygons, dropped = [], 0
+        for polygon in coords:
+            if not polygon:
+                dropped += 1
+                continue
+            exterior, count = _display_round_path(polygon[0], 4)
+            dropped += count
+            if exterior is None:
+                continue
+            rings = [exterior]
+            for hole in polygon[1:]:
+                path, count = _display_round_path(hole, 4)
+                dropped += count
+                if path is not None:
+                    rings.append(path)
+            polygons.append(rings)
+        if not polygons:
+            return None, dropped
+        result["coordinates"] = polygons
+    else:
+        raise ValueError(f"unsupported geometry type: {geometry_type}")
+    return result, 0 if geometry_type in {"Point", "MultiPoint"} else dropped
+
+
+def _display_geometry_well_formed(geometry):
+    if not isinstance(geometry, dict) or not geometry.get("type") or "coordinates" not in geometry:
+        return False
+    geometry_type = geometry["type"]
+    coords = geometry["coordinates"]
+    if geometry_type == "Point":
+        return isinstance(coords, list) and len(coords) >= 2 and all(isinstance(value, (int, float)) and math.isfinite(value) for value in coords[:2])
+    if geometry_type == "MultiPoint":
+        return isinstance(coords, list) and bool(coords) and all(
+            isinstance(point, list) and len(point) >= 2 and all(isinstance(value, (int, float)) and math.isfinite(value) for value in point[:2])
+            for point in coords
+        )
+    if geometry_type == "LineString":
+        return isinstance(coords, list) and len(coords) >= 2 and all(isinstance(point, list) and len(point) >= 2 for point in coords)
+    if geometry_type == "MultiLineString":
+        return isinstance(coords, list) and bool(coords) and all(
+            isinstance(line, list) and len(line) >= 2 and all(isinstance(point, list) and len(point) >= 2 for point in line)
+            for line in coords
+        )
+    if geometry_type == "Polygon":
+        return isinstance(coords, list) and bool(coords) and all(
+            isinstance(ring, list) and len(ring) >= 4 and ring[0] == ring[-1] for ring in coords
+        )
+    if geometry_type == "MultiPolygon":
+        return isinstance(coords, list) and bool(coords) and all(
+            isinstance(polygon, list) and bool(polygon) and all(
+                isinstance(ring, list) and len(ring) >= 4 and ring[0] == ring[-1] for ring in polygon
+            ) for polygon in coords
+        )
+    return False
+
+
+def _display_json_bytes(value):
+    return (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode("utf-8")
+
+
+def _resolved_bytes(resolve, path, document):
+    raw_bytes = getattr(resolve, "raw_bytes", None)
+    if raw_bytes is not None and path in raw_bytes:
+        return raw_bytes[path]
+    return _display_json_bytes(document)
+
+
+def _display_error(manifest, layer, detail):
+    _error("R60", manifest, layer, detail)
+
+
+def _validate_display(manifest, resolve, coverage):
+    region_id = manifest["region"]["id"]
+    declared = [(layer["id"], layer) for layer in manifest["layers"] if layer.get("display")]
+    if manifest.get("coverage", {}).get("display"):
+        declared.append(("coverage", manifest["coverage"]))
+    if not declared:
+        return
+    index_path = f"regions/{region_id}/display/index.json"
+    try:
+        index = resolve(index_path)
+    except (KeyError, IndexError, TypeError, ValueError, FileNotFoundError):
+        _display_error(manifest, None, "display index does not resolve")
+    if not isinstance(index, dict) or not isinstance(index.get("artifacts"), list):
+        _display_error(manifest, None, "display index is invalid")
+    entries = {entry.get("layer_id"): entry for entry in index["artifacts"] if isinstance(entry, dict)}
+    if set(entries) != {layer_id for layer_id, _ in declared} or len(entries) != len(index["artifacts"]):
+        _display_error(manifest, None, "display index does not list exactly declared artifacts")
+    expected_prefix = f"regions/{region_id}/display/"
+    if any(not isinstance(entry.get("path"), str) or not entry["path"].startswith(expected_prefix) or
+           entry["path"] == expected_prefix or ".." in Path(entry["path"]).parts or entry["path"].startswith("/")
+           for entry in index["artifacts"] if isinstance(entry, dict)):
+        _display_error(manifest, None, "display index contains a path outside the active region")
+    for layer_id, declaration in declared:
+        if layer_id != "coverage" and declaration.get("format") != "feature_collection":
+            _display_error(manifest, layer_id, "display is allowed only on feature collections")
+        display_ref = declaration["display"]
+        display_path = display_ref.get("path") if isinstance(display_ref, dict) else None
+        if (not isinstance(display_path, str) or not display_path.startswith(expected_prefix) or
+                display_path == expected_prefix or ".." in Path(display_path).parts or display_path.startswith("/")):
+            _display_error(manifest, layer_id, "display path is outside the region display directory")
+        entry = entries.get(layer_id)
+        if not isinstance(entry, dict) or entry.get("path") != display_path:
+            _display_error(manifest, layer_id, "display index path does not match manifest")
+        try:
+            display_document = resolve(display_path)
+        except (KeyError, IndexError, TypeError, ValueError, FileNotFoundError):
+            _display_error(manifest, layer_id, "display file does not resolve")
+        display_bytes = _resolved_bytes(resolve, display_path, display_document)
+        if entry.get("bytes") != len(display_bytes) or entry.get("sha256") != hashlib.sha256(display_bytes).hexdigest():
+            _display_error(manifest, layer_id, "display file hash or byte count differs from index")
+        if entry.get("canonical_sha256") != hashlib.sha256(_resolved_bytes(resolve, declaration["path"], resolve(declaration["path"]))).hexdigest():
+            _error("R64", manifest, layer_id, "canonical file hash differs from index")
+        if layer_id == "coverage":
+            if (display_document.get("type") != "FeatureCollection" or display_document.get("layer_id") != "coverage" or
+                    len(display_document.get("features", [])) != 1):
+                _error("R61", manifest, layer_id, "coverage display is not a single FeatureCollection feature")
+            display_feature = display_document["features"][0]
+            canonical_feature = _json_pointer(resolve(declaration["path"]), declaration.get("pointer", ""))
+            expected_geometry, dropped = _display_transform_geometry(canonical_feature.get("geometry"))
+            if display_feature.get("geometry") != expected_geometry or not _display_geometry_well_formed(display_feature.get("geometry")):
+                _error("R63", manifest, layer_id, "coverage geometry is not rounded as declared")
+            if display_feature.get("properties") != canonical_feature.get("properties"):
+                _error("R63", manifest, layer_id, "coverage properties differ from canonical coverage")
+            if entry.get("source_feature_count") != 1 or entry.get("dropped_degenerate_parts") != dropped:
+                _error("R63", manifest, layer_id, "coverage display drop count or source count differs from canonical coverage")
+            continue
+        if display_document.get("type") != "FeatureCollection" or display_document.get("layer_id") != layer_id:
+            _error("R61", manifest, layer_id, "display file is not the declared layer FeatureCollection")
+        canonical_document = resolve(declaration["path"])
+        canonical_features = _json_pointer(canonical_document, declaration.get("pointer", ""))["features"]
+        selected = canonical_features
+        if declaration["kind"] == "water" and any("kind" in (feature.get("properties") or {}) for feature in canonical_features):
+            selected = [feature for feature in canonical_features if _display_water(feature)]
+        display_features = display_document.get("features")
+        if entry.get("feature_count") != len(display_features) or len(display_features) != len(selected) or entry.get("source_feature_count") != len(canonical_features):
+            _error("R61", manifest, layer_id, "display feature count differs from canonical selection")
+        by_id = {feature.get("properties", {}).get("id"): feature for feature in display_features}
+        canonical_by_id = {feature.get("properties", {}).get("id"): feature for feature in selected}
+        if set(by_id) != set(canonical_by_id):
+            _error("R61", manifest, layer_id, "display feature IDs differ from canonical selection")
+        evidence_table = display_document.get("evidence_table")
+        if not isinstance(evidence_table, list):
+            _error("R62", manifest, layer_id, "display evidence table is missing")
+        dropped_total = 0
+        for ident, canonical_feature in canonical_by_id.items():
+            display_feature = by_id[ident]
+            canonical_geometry = canonical_feature.get("geometry")
+            display_geometry = display_feature.get("geometry")
+            if (display_geometry or {}).get("type") != (canonical_geometry or {}).get("type"):
+                _error("R63", manifest, layer_id, "display geometry type differs from canonical geometry")
+            try:
+                expected_geometry, dropped = _display_transform_geometry(canonical_geometry)
+            except (TypeError, ValueError, KeyError, IndexError):
+                _error("R63", manifest, layer_id, "canonical geometry cannot be transformed")
+            if display_geometry != expected_geometry:
+                _error("R63", manifest, layer_id, "display coordinates differ from canonical rounding")
+            if display_geometry is not None and not _display_geometry_well_formed(display_geometry):
+                _error("R63", manifest, layer_id, "display geometry is empty or structurally invalid")
+            if canonical_geometry is not None and expected_geometry is None:
+                _error("R63", manifest, layer_id, "display geometry dropped an entire feature")
+            dropped_total += dropped
+            properties = display_feature.get("properties", {})
+            evidence_index = properties.get("evidence")
+            if not isinstance(evidence_index, int) or isinstance(evidence_index, bool) or not 0 <= evidence_index < len(evidence_table):
+                _error("R62", manifest, layer_id, "display evidence reference is invalid")
+            restored = copy.deepcopy(properties)
+            restored["evidence"] = evidence_table[evidence_index]
+            canonical_properties = canonical_feature.get("properties", {})
+            if restored != canonical_properties:
+                _error("R62", manifest, layer_id, "display evidence or properties differ from canonical feature")
+        if entry.get("dropped_degenerate_parts") != dropped_total:
+            _error("R63", manifest, layer_id, "display drop count differs from canonical rounding")
 
 
 def normalize_transport(record):
@@ -411,6 +647,7 @@ def validate_region_data(manifest, resolve):
             raise ValueError("coverage geometry must be Polygon or MultiPolygon")
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         _error("R10", manifest, None, str(exc))
+    _validate_display(manifest, resolve, coverage)
     report = {"region": region_id, "layers": {}, "unrecorded_status_layers": [], "legacy_transport": {}}
     _check_rules(manifest, resolve)
     ids = set()
@@ -427,6 +664,13 @@ def validate_region(manifest_path, v2_root=None):
     if manifest.get("region", {}).get("id") != manifest_path.parent.name:
         raise ContractError("R02", manifest.get("region", {}).get("id", "?"), None, "manifest ID does not match directory")
     paths = [manifest.get("coverage", {}).get("path")] + [layer.get("path") for layer in manifest.get("layers", [])]
+    coverage_display = manifest.get("coverage", {}).get("display")
+    if coverage_display:
+        paths.append(coverage_display.get("path"))
+    paths += [layer.get("display", {}).get("path") for layer in manifest.get("layers", []) if layer.get("display")]
+    if manifest.get("coverage", {}).get("display") or any(layer.get("display") for layer in manifest.get("layers", [])):
+        region_id = manifest.get("region", {}).get("id", "?")
+        paths.append(f"regions/{region_id}/display/index.json")
     if manifest.get("rules"):
         paths.append(manifest["rules"].get("path"))
     for path in paths:
@@ -443,8 +687,12 @@ def validate_region(manifest_path, v2_root=None):
         if v2_root.resolve() not in target.parents and target != v2_root.resolve() or not target.is_file():
             raise ContractError("R03", manifest.get("region", {}).get("id", "?"), None, f"missing status path {path}")
     cache = {}
+    raw_bytes = {}
     def resolve(path):
         if path not in cache:
-            cache[path] = json.loads((v2_root / path).read_text())
+            source = v2_root / path
+            raw_bytes[path] = source.read_bytes()
+            cache[path] = json.loads(raw_bytes[path])
         return cache[path]
+    resolve.raw_bytes = raw_bytes
     return validate_region_data(manifest, resolve)
