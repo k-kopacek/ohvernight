@@ -34,7 +34,7 @@ A1 and A2 were approved by the owner on 2026-10-04 with pull request #6.
 
 A3 was approved by the owner on 2026-10-04 with pull request #7.
 
-**A4 (2026-10-04, coordinator amendment during PR B; approved when the owner merges PR B) — existing negated wording, and the Douglas coverage note (10.5, 17.3, 19 T3, criterion 11).**
+**A4 (2026-10-04, coordinator amendment during PR B; APPROVED by the owner on 2026-10-05 exactly as documented) — existing negated wording, and the Douglas coverage note (10.5, 17.3, 19 T3, criterion 11).**
 
 - *Finding.* Criterion 11 forbids the words verified, legal and permitted in user-facing strings outside manifest statements. Measured at `87da009`, the two pages already ship 15 strings that use those words, every one in negation or as a disclaimer: for example the label `Motorhome suitability unverified`, `Dispersed area · access unverified`, the `Trust.sourceSummary` sentence `Wildlife closures and special orders are not fully verified for this trip.`, `Research suggestions, not verified itineraries.`, `connection unverified` in nearby lists, and the Douglas coverage note. Sections 14.1 and 17.3 and tests T6 and T9 require several of these to stay byte-identical. Read literally, criterion 11 contradicts them. The rule it implements is trust principle 8: nothing is *described as* verified, permitted or legal.
 - *Resolution.*
@@ -46,7 +46,7 @@ A3 was approved by the owner on 2026-10-04 with pull request #7.
 - *Unchanged.* The wording itself; trust principle 8; the D12 strings; the rule that manifest statements are rendered verbatim.
 - *Sections changed by A4:* 10.5, 19 (T9), 20 (criterion 11).
 
-**A5 (2026-10-04, coordinator amendment during PR B; approved when the owner merges PR B) — further presentation fields in `explore.json` (10.2).**
+**A5 (2026-10-04, coordinator amendment during PR B; APPROVED by the owner on 2026-10-05 exactly as documented) — further presentation fields in `explore.json` (10.2).**
 
 - *Finding.* Criterion 10 keeps region IDs, region paths and region-specific text out of `v2/explore/`, and 17.2 keeps the existing storage keys, three of which contain `douglas`. The 10.2 example has nowhere to put those keys, the Aspen landing text, the default trip inputs, or the fact that a region has an `extras.js`.
 - *Resolution.* `explore.json` may also carry, under the same closed schema:
@@ -74,14 +74,14 @@ A3 was approved by the owner on 2026-10-04 with pull request #7.
 - *Other moved functions.* `season`, `windows` and `days` stay pinned byte-identical for fixed inputs (T8).
 - *Sections changed by A6:* 17.3, 19 (T8, T9), 22.
 
-**A7 (2026-10-04, coordinator amendment during PR B; approved when the owner merges PR B) — one legacy region-specific selector stays in `v2/trust.js` (10.5).**
+**A7 (2026-10-04, coordinator amendment during PR B; APPROVED by the owner on 2026-10-05 exactly as documented) — one legacy region-specific selector stays in `v2/trust.js` (10.5).**
 
 - *Finding.* Section 10.5 says the only region-specific JavaScript left is `extras.js`. `Trust.sourceSummary` in `v2/trust.js`, which predates M3, selects the fire monitor record by its Aspen feature ID. Section 17.3 requires that function's wording and behaviour to stay unchanged, and section 10.1 limits changes to `v2/trust.js` to sections 12.5 and 14.
 - *Resolution.* `v2/trust.js` is not changed for this. The selector stays as a known legacy item outside `v2/explore/`; criterion 10 continues to apply to `v2/explore/` in full. The shell passes `Trust.sourceSummary` the fire feature from the loaded display layer, as A3 states. Generalising the function is left to the milestone that reworks restriction monitoring.
 - *Also confirmed, no change of scope.* `definitions` and `describe` are removed from `v2/map-layers.js` as section 18 already requires, leaving `displayWater`. The default region is declared on the host element of `v2/index.html` and read generically by `v2/app.js` (A2).
 - *Sections changed by A7:* 10.5.
 
-**A8 (2026-10-05, coordinator amendment during PR B; PROPOSED — it takes effect only if the owner accepts it as the response to the R-2 observation below) — default-on layers are fetched concurrently and drawn one at a time (12.2 step 4).**
+**A8 (2026-10-05, coordinator amendment during PR B; APPROVED by the owner on 2026-10-05 — see the owner decision at the end of this entry; it is kept on its own merits and is not what resolved R-2) — default-on layers are fetched concurrently and drawn one at a time (12.2 step 4).**
 
 - *Observation (R-2).* At head `f2cbb6d`, in three separate sessions (five runs each, 390×844, 4× CPU, same-session base `3dc0fef`), the Douglas time until all default-on layers are drawn was 1605.7, 1627.1 and 1752.2 ms against a base of 1251.1, 1274.8 and 1356.5 ms. The 16.4 threshold (no slower than base) was missed in all three, which is the condition of trigger R-2 in 8.2. Every other timing threshold passed in all three sessions for both regions; Douglas "map usable" was 517 to 566 ms. Douglas heap was 30.61 MB against the 30.4 MB reported threshold, far below the 66 MB of R-5. The trigger is recorded here for the owner. It opens the question; it does not choose a renderer.
 - *Diagnosis (five instrumented runs, diagnostic only).* Between "map usable" and "all layers drawn" (1321 ms): Leaflet layer construction 503 ms (base 558 ms for the same data, so the renderer is not slower); JSON parse 92 ms (base 134 ms); evidence restoration 4 ms; shell work after each layer 14 ms in total, with one results render and one legend render per layer; fetch wait 428 ms (base 335 ms), because the seven display files are requested strictly one after another and each request waits behind the previous layer's main-thread work; and about 190 ms of scheduling and repaint between layers. The excess over the base page comes from the one-at-a-time loading sequence that 12.2 step 4 prescribes, not from rendering.
@@ -90,14 +90,30 @@ A3 was approved by the owner on 2026-10-04 with pull request #7.
 - *Re-measurement after the change (commit `5e68bb2`, three sessions, same helper).* A8 did not close the observation. Douglas all-layers time was 1724.9, 1692.3 and 1754.9 ms against same-session bases of 1291.9, 1451.2 and 1367.2 ms: missed in all three. Douglas heap stayed at 30.61 MB against 30.4 MB. Every other measure passed in all three sessions for both regions (Douglas "map usable" 570 to 620 ms; Aspen all-layers 1747 to 1854 ms against bases of 2350 to 2567 ms). The measurement serves files locally with no network delay under a 4× CPU throttle, so it is bound by main-thread work; starting requests together cannot shorten it. Any benefit of A8 on a real network, where sequential requests cost one round trip each, is unmeasured.
 - *What the numbers say.* The new shell does about the same Leaflet work as the base page for Douglas, plus its own start-up before layers begin, plus a deliberate pause and repaint between layers. Douglas therefore becomes usable in well under half the base time and finishes its last layer about 20 to 35 percent later. The 16.4 line "time until all default-on layers are drawn ≤ the base commit's time" and the progressive loading of 12.2 pull against each other for a region whose base page was a single load.
 - *Owner decision required.* R-2 stands as observed. The coordinator has not changed a threshold, the renderer or the loading design beyond the isolated A8 commit. The owner decides between: (a) accepting the Douglas result and amending that one 16.4 line (for example to a bounded margin over base, given the gain in time to a usable map), keeping Leaflet; (b) reducing the pauses and repaints between layers so the last layer finishes sooner, at the cost of progressive drawing; (c) reopening the renderer question under 8.2. Separately the owner decides whether to keep A8 for its unmeasured real-network benefit or revert its one commit.
-- *Sections changed by A8 if accepted:* 12.2 step 4.
+- *Owner decision (2026-10-05).* A8 is kept. Requests for default-on layers may begin together once the map is usable; parsing, restoration and drawing stay ordered and progressive; no other loading semantics change. What is and is not established: the local benchmark is dominated by CPU and main-thread work; concurrent fetching showed no measurable local timing improvement; A8 avoids deliberately serialising independent network requests in real use; its benefit under actual network latency remains unmeasured. The R-2 observation was resolved separately by amendment A10, not by A8.
+- *Sections changed by A8:* 12.2 step 4.
 
-**A9 (2026-10-05, coordinator note during PR B; needs the owner's approval, given by merging PR B or withheld) — `v2/styles.css` is deleted.**
+**A9 (2026-10-05, coordinator note during PR B; APPROVED CONDITIONALLY by the owner on 2026-10-05 — the condition and the audit result are at the end of this entry) — `v2/styles.css` is deleted.**
 
 - *Finding.* After the Aspen page moved onto the shared shell, `v2/index.html` no longer links `v2/styles.css` and nothing else in the repository references it. Section 18 lists that file as modified, not deleted, and its list of approved deletions names only `preview.js`, `discovery.js`, `county.css` and `v2/map-data.json`.
 - *What happened.* During review the coordinator told the implementer to remove the unreferenced file. That instruction came from the coordinator, not from the owner, and `AGENTS.md` reserves file deletion for the owner.
 - *Resolution.* The deletion is in PR B and is recorded here so that it is a visible decision. The file is restorable from git history at `87da009`. If the owner does not want it deleted, it is restored in a follow-up commit before merge; nothing depends on its absence.
+- *Owner decision (2026-10-05).* The deletion of `v2/styles.css` is approved only if a reference audit at the final PR head finds no runtime, HTML, JavaScript, test, workflow, documentation requirement or other supported surface that depends on it. No other file may be deleted under this approval.
+- *Audit result (coordinator, at `fc0d77c`, `git grep -n "styles\.css"` over the whole tree).* No file under `v2/` or `.github/` references it. The remaining hits are the root legacy site's own `styles.css` (root `index.html`, root `README.md`, and the root-site row of `system-overview.md`), which is a different file and is untouched, and scope lists in the historical M1 and M2 specifications, which describe those milestones and place no requirement on the current tree. No active consumer exists, so the deletion stands.
 - *Sections changed by A9:* 18.
+
+**A10 (2026-10-05, OWNER decision) — R-2 reviewed and resolved; progressive-loading timing contract and relative heap threshold (8.2, 16.4).**
+
+- *R-2 status: TRIGGERED — REVIEWED — RESOLVED BY OWNER.* Trigger R-2 was legitimately met: the original 16.4 line "time until all default-on layers are drawn ≤ the base commit's time" was missed for Douglas in three sessions before A8 and three after it (figures under A8). That observation stands. Nothing here says the original threshold passed.
+- *Renderer question reopened and resolved: keep Leaflet.* As 8.2 requires, the owner reopened the rendering decision and resolved it: the approved Leaflet architecture with region-scoped, lazily loaded display artifacts is kept. The measurements do not identify Leaflet rendering as the source of the regression; layer construction on the unified shell is level with or faster than on the base Douglas page. The difference comes from the shell's start-up and from deliberate progressive scheduling and repainting between layers, and the shell makes the Douglas map usable substantially earlier.
+- *Timing contract, replacing two lines of 16.4.* Using the existing same-session method (five runs each of base and head at 390×844 with 4× CPU throttle, medians), for each region:
+  1. time to "map usable" ≤ 60% of the same-session base median time until all layers are built;
+  2. time until all default-on layers are drawn ≤ 135% of that same base median.
+  The pair measures the intended trade of progressive loading: much earlier useful interaction, and a bounded delay before every layer is complete. Every other timing, long-task and heaviest-layer-toggle threshold is unchanged, and the three-session requirement stays.
+- *Heap, replacing one line of 16.4.* JS heap after load and garbage collection ≤ 115% of the same-session base heap for the same region, by the same method. The measured Douglas figure of 30.61 MB is accepted. This PR B acceptance threshold and the architecture-reopening trigger R-5 are different controls: R-5 is unchanged at 66 MB or a reproducible real-device reload or crash. No separate heap investigation is made unless the 115% threshold fails.
+- *Raw measurements.* The measurements already committed are neither changed nor discarded.
+- *Triggers.* R-1, R-3 and R-4 are not modified. R-2 is unchanged in wording and refers to the 16.4 timing thresholds as amended here, so it can trigger again if this contract is missed. R-5 is unchanged.
+- *Sections changed by A10:* 8.2 (record only), 16.4.
 
 Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `docs/audits/architecture-audit.md`, `docs/specs/M2-regional-data-contract.md`, `v2/pipeline/docs/data-contract.md`.
 
@@ -325,6 +341,8 @@ Recorded in ADR-006. The rendering decision is reopened, by a specification and 
 | R-5 | Browser memory | JS heap after load and garbage collection exceeds 66 MB (twice the M3 Aspen baseline of 33.4 MB) in three separate sessions of the committed script; or the manual matrix records a reproducible tab reload or crash on a real device while using Explore. |
 
 A trigger opens the question. It does not choose MapLibre.
+
+**Record.** R-2 was triggered during PR B on 2026-10-04 and 2026-10-05, reviewed, and resolved by the owner on 2026-10-05: Leaflet is kept (amendment A10). The triggers above remain in force for later milestones.
 
 ## 9. Human architecture decision
 
@@ -648,11 +666,11 @@ Deterministic thresholds are enforced in CI. Timing thresholds are relative: the
 | Gzipped size of any one display file | ≤ 450,000 | CI |
 | Requests to another region's paths | 0 | CI |
 | Features delivered but never drawn | 0 | CI |
-| Time to "map usable" (step 3 of 12.2) | ≤ 50% of the base commit's time until all layers are built, for the same region (baseline run: 2,669 ms Aspen, 1,478 ms Douglas) | local, reported |
-| Time until all default-on layers are drawn | ≤ the base commit's time for the same region | local, reported |
+| Time to "map usable" (step 3 of 12.2) | ≤ 60% of the same-session base commit median time until all layers are built, for the same region (A10; originally ≤ 50%) | local, reported |
+| Time until all default-on layers are drawn | ≤ 135% of the same-session base commit median for the same region (A10; originally ≤ the base commit's time, which Douglas missed — see R-2) | local, reported |
 | Longest long task during load | ≤ 50% of the base commit's Aspen value, for both regions (baseline run: 1,234 ms Aspen, 538 ms Douglas) | local, reported |
 | Heaviest loaded layer switched on | ≤ 125% of the base commit's value for the same region (baseline run: 139 ms and 181 ms) | local, reported |
-| JS heap after load and GC | Aspen ≤ 33.4 MB; Douglas ≤ 30.4 MB (baseline + 10%) | local, reported |
+| JS heap after load and GC | ≤ 115% of the same-session base heap for the same region (A10; originally Aspen ≤ 33.4 MB and Douglas ≤ 30.4 MB). Distinct from trigger R-5, which stays at 66 MB | local, reported |
 
 ### 16.5 Growth budget for M4–M8
 
