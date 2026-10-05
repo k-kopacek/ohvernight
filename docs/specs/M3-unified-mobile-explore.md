@@ -92,6 +92,13 @@ A3 was approved by the owner on 2026-10-04 with pull request #7.
 - *Owner decision required.* R-2 stands as observed. The coordinator has not changed a threshold, the renderer or the loading design beyond the isolated A8 commit. The owner decides between: (a) accepting the Douglas result and amending that one 16.4 line (for example to a bounded margin over base, given the gain in time to a usable map), keeping Leaflet; (b) reducing the pauses and repaints between layers so the last layer finishes sooner, at the cost of progressive drawing; (c) reopening the renderer question under 8.2. Separately the owner decides whether to keep A8 for its unmeasured real-network benefit or revert its one commit.
 - *Sections changed by A8 if accepted:* 12.2 step 4.
 
+**A9 (2026-10-05, coordinator note during PR B; needs the owner's approval, given by merging PR B or withheld) — `v2/styles.css` is deleted.**
+
+- *Finding.* After the Aspen page moved onto the shared shell, `v2/index.html` no longer links `v2/styles.css` and nothing else in the repository references it. Section 18 lists that file as modified, not deleted, and its list of approved deletions names only `preview.js`, `discovery.js`, `county.css` and `v2/map-data.json`.
+- *What happened.* During review the coordinator told the implementer to remove the unreferenced file. That instruction came from the coordinator, not from the owner, and `AGENTS.md` reserves file deletion for the owner.
+- *Resolution.* The deletion is in PR B and is recorded here so that it is a visible decision. The file is restorable from git history at `87da009`. If the owner does not want it deleted, it is restored in a follow-up commit before merge; nothing depends on its absence.
+- *Sections changed by A9:* 18.
+
 Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `docs/audits/architecture-audit.md`, `docs/specs/M2-regional-data-contract.md`, `v2/pipeline/docs/data-contract.md`.
 
 M3 is one milestone with two phases:
