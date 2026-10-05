@@ -59,7 +59,7 @@ test('T1: region loader resolves an active region, restores evidence and isolate
   assert.equal(calls.some(url=>url.includes(off.display.path)),true);
 });
 
-test('T2: region loader rejects malformed or unavailable regions without fallback',async()=>{
+test('T1: region loader rejects malformed or unavailable regions without fallback',async()=>{
   const manifest=readJson('regions/aspen/region.json');
   const index=readJson('regions/aspen/display/index.json');
   const config=fixtureConfig(manifest);
