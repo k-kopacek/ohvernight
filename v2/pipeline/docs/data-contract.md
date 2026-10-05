@@ -286,7 +286,7 @@ runtime regressions retained as markers.
 | N8 | Aspen MVUM publishes `access_status: designated_open` on 51 features for a past trip. | R27 |
 | N9 | The v2 trip evaluator reads the manifest policy; the 7-day `preview.js` and root 30-day legacy thresholds remain until their later migrations. | Milestone 3 PR A partial; PR B completes v2 |
 | N10 | Douglas recreation `seasonal_operational_status` can be historical. | manifest fields |
-| N11 | Place-list per-record source URLs are not checked against declared sources. | M3 PR B (deferred) |
+| N11 | Place-list per-record source URLs are not checked against declared sources. | Deferred |
 | N12 | Douglas snapshot predates current fetch status for trails and roads. | T5 |
 | N13 | `v2/map-data.json` legacy extract is outside any manifest. | Retired in Milestone 3 PR A |
 | N14 | Per-feature evidence is duplicated for payload size in the canonical files; display delivery deduplicates it for M3 PR B. | M3 PR B (deferred) |
