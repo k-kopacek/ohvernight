@@ -84,3 +84,33 @@ test('A12 label boxes select the same feature and do not intercept outside their
  assert.equal(H.resolveTap({x:40,y:20}).featureId,feature.properties.id);assert.equal(H.resolveTap({x:81,y:20}),null);
  H.setMap({getContainer:()=>({getBoundingClientRect:()=>({left:0,top:0})}),hasLayer:()=>false});assert.equal(H.resolveTap({x:40,y:20}),null);
 });
+
+test('A12 regression samples include shortest, longest, real crossings and eight distinct trails per region',async()=>{
+ const {trailSamples}=await import('./browser/explore-checks.mjs');
+ const crosses=(a,b)=>{
+  const lines=f=>f.geometry.type==='LineString'?[f.geometry.coordinates]:f.geometry.coordinates;
+  const side=(a,b,p)=>(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);
+  for(const x of lines(a))for(const y of lines(b))for(let i=1;i<x.length;i++)for(let j=1;j<y.length;j++)
+   if(side(x[i-1],x[i],y[j-1])*side(x[i-1],x[i],y[j])<0&&side(y[j-1],y[j],x[i-1])*side(y[j-1],y[j],x[i])<0)return true;
+  return false;
+ };
+ for(const [region,pair,shortest,longest] of [['aspen',['usfs-trail-8919662','usfs-trail-8928063'],'usfs-trail-8932151','usfs-trail-8922773'],['douglas-co',['usfs-trail-8913499','usfs-trail-8964041'],'usfs-trail-8925547','usfs-trail-8913499']]){
+  const index=JSON.parse(fs.readFileSync(path.join(root,'regions',region,'display/index.json'))),artifact=index.artifacts.find(a=>a.layer_id==='trails');
+  const features=JSON.parse(fs.readFileSync(path.join(root,artifact.path))).features,samples=trailSamples(features,pair),ids=samples.map(f=>f.properties.id);
+  assert.equal(samples.length,8);assert.equal(new Set(ids).size,8);for(const id of [shortest,longest,...pair])assert.ok(ids.includes(id));
+  assert.equal(crosses(features.find(f=>f.properties.id===pair[0]),features.find(f=>f.properties.id===pair[1])),true,'real source crossing');
+ }
+});
+test('A12 touch selection uses fractional touch coordinates rather than the rounded compatibility click',()=>{
+ const surface=new EventTarget();surface.getBoundingClientRect=()=>({left:0,top:0});surface.closest=()=>null;
+ const active=new Set();let scheduled,chosen;
+ const map={getContainer:()=>surface,createPane(){},getPane:()=>({style:{}}),on(){},off(){},setView(){},getZoom:()=>18,getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1}),hasLayer:g=>active.has(g),latLngToContainerPoint:p=>({x:p[1],y:p[0]}),containerPointToLatLng:p=>({lng:p.x,lat:p.y}),remove(){},removeLayer:g=>active.delete(g)};
+ const context={module:{exports:{}},setTimeout(fn){scheduled=fn;return 1;},clearTimeout(){scheduled=null;}};
+ context.L={map:()=>map,control:{scale:()=>({addTo(){}})},tileLayer:()=>({addTo(){return this;}}),geoJSON(data){const group={addTo(){active.add(this);return this;},eachLayer(fn){data.features.forEach(feature=>fn({feature,getBounds:()=>({getNorthWest:()=>[feature.geometry.coordinates[0][1],10],getSouthEast:()=>[feature.geometry.coordinates[0][1],20]})}));}};return group;}};
+ vm.runInNewContext(source,context);const A=context.module.exports;A.init('map',{center:[0,0],zoom:18});
+ A.addLayer('lines',{features:[['target',100.6],['neighbor',101]].map(([id,y])=>({properties:{id},geometry:{type:'LineString',coordinates:[[10,y],[20,y]]}}))},{});
+ A.onFeature('lines',f=>{chosen=f.properties.id;});
+ const end=new Event('touchend');end.changedTouches=[{clientX:15.5,clientY:100.6}];end.touches=[];surface.dispatchEvent(end);
+ const click=new Event('click');Object.assign(click,{clientX:16,clientY:101,pointerType:'touch',detail:1});surface.dispatchEvent(click);
+ assert.equal(chosen,undefined,'touch selection is deferred');scheduled();assert.equal(chosen,'target','fractional touch wins over rounded click neighbor');A.destroy();
+});

@@ -5,7 +5,7 @@
   const LABEL_LIMIT=32;
   const HIT_TOLERANCE=14;
   const TOUCH_TAP_WINDOW=280;
-  let pendingTap,mouseTapZoom;
+  let pendingTap,mouseTapZoom,lastTouch;
   let selected=null;
   const reduced=()=>scope.matchMedia?.('(prefers-reduced-motion:reduce)').matches===true;
   function segmentDistance(point,a,b){
@@ -101,10 +101,13 @@
     map.on('moveend zoomend',publishView);
     map.on('dblclick',doubleClick);
     const surface=map.getContainer?.();
-    if(surface){const click=event=>{
+    if(surface){const touchEnd=event=>{const touch=event.changedTouches[0];if(touch&&event.touches.length===0){const r=surface.getBoundingClientRect();lastTouch={time:event.timeStamp,point:{x:touch.clientX-r.left,y:touch.clientY-r.top}};}};
+      surface.addEventListener('touchend',touchEnd,{passive:true});mapBindings.push([surface,'touchend',touchEnd,false]);
+      const click=event=>{
       if(event.detail>1||event.target.closest?.('.leaflet-control')||map.dragging?.moved()||(!event.clientX&&!event.clientY))return;
-      const r=surface.getBoundingClientRect(),point={x:event.clientX-r.left,y:event.clientY-r.top};
-      cancelTap();if(event.pointerType==='touch'||event.sourceCapabilities?.firesTouchEvents)pendingTap=setTimeout(()=>selectTap(point),TOUCH_TAP_WINDOW);else {mouseTapZoom=map.getZoom();selectTap(point);}
+      const touch=event.pointerType==='touch'||event.sourceCapabilities?.firesTouchEvents;
+      const r=surface.getBoundingClientRect(),point=touch&&lastTouch?lastTouch.point:{x:event.clientX-r.left,y:event.clientY-r.top};
+      cancelTap();if(touch)pendingTap=setTimeout(()=>selectTap(point),TOUCH_TAP_WINDOW);else {mouseTapZoom=map.getZoom();selectTap(point);}
     };surface.addEventListener('click',click,true);mapBindings.push([surface,'click',click,true]);}
     map.setView([view.center[1],view.center[0]],view.zoom,{animate:false});
     for(const [name,delta] of [['zoomIn',1],['zoomOut',-1]]){
@@ -203,7 +206,7 @@
     for(const [node,name,handler,capture] of mapBindings)node.removeEventListener(name,handler,capture);mapBindings=[];
     for(const [control,handler] of controlBindings)control.removeEventListener('click',handler);
     controlBindings=[];if(map){map.off('moveend zoomend',publishView);map.off('dblclick',doubleClick);map.remove();}
-    map=null;baseLayer=null;mouseTapZoom=undefined;layers.clear();handlers.clear();styles.clear();labelRules.clear();labelled.clear();selected=null;
+    map=null;baseLayer=null;mouseTapZoom=undefined;lastTouch=null;layers.clear();handlers.clear();styles.clear();labelRules.clear();labelled.clear();selected=null;
   }
   const api={init,addLayer,removeLayer,setVisible,setStyle,setPins,onFeature,fit,setBasemap,destroy,setSelected,setLabels};
   if(typeof module!=='undefined')module.exports=api;

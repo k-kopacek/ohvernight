@@ -5,33 +5,43 @@ import {setTimeout as delay} from 'node:timers/promises';
 
 const INIT=`(()=>{
  let app,renderer;window.__rendered=[];window.__handed={};window.__visible={};
- window.__frameLine=f=>{
+ window.__frameLine=(f,zoom=15)=>{
   let best;
   for(const line of f.geometry.type==='LineString'?[f.geometry.coordinates]:f.geometry.coordinates)for(let i=1;i<line.length;i++){
    const a=line[i-1],b=line[i],length=Math.hypot(b[0]-a[0],b[1]-a[1]);if(!best||length>best.length)best={length,a,b};
   }
   const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id);
-  item._map.setView([(best.a[1]+best.b[1])/2,(best.a[0]+best.b[0])/2],15,{animate:false});
+  item._map.setView([(best.a[1]+best.b[1])/2,(best.a[0]+best.b[0])/2],zoom,{animate:false});
  };
- window.__framePolygon=f=>{
+ window.__framePolygon=(f,zoom=15)=>{
+  const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id),map=item._map;
+  const area=l=>{const b=l.getBounds(),a=map.latLngToContainerPoint(b.getNorthWest()),z=map.latLngToContainerPoint(b.getSouthEast());return Math.abs((a.x-z.x)*(a.y-z.y));};
+  const others=window.__rendered.flatMap(g=>Object.values(g._layers)).filter(l=>l!==item&&l._map===map&&/Polygon$/.test(l.feature?.geometry?.type)&&area(l)<=area(item)&&app.region.registry.some(e=>window.__handed[e.id]?.includes(l.feature)));
+  const contains=(p,g)=>{
+   const inside=ring=>{let hit=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[j],b=ring[i];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])hit=!hit;}return hit;};
+   return (g.type==='Polygon'?[g.coordinates]:g.coordinates).some(rings=>inside(rings[0])&&!rings.slice(1).some(inside));
+  };
   const polygons=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
   let best;
   for(const polygon of polygons){const ys=polygon[0].map(p=>p[1]),min=Math.min(...ys),max=Math.max(...ys);
-   for(const fraction of [.5,.25,.75]){const y=min+(max-min)*fraction,xs=[];
+   for(const fraction of [.125,.25,.375,.5,.625,.75,.875]){const y=min+(max-min)*fraction,xs=[];
     for(const ring of polygon)for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[j],b=ring[i];if((a[1]>y)!==(b[1]>y))xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]));}
-    xs.sort((a,b)=>a-b);for(let i=0;i+1<xs.length;i+=2)if(!best||xs[i+1]-xs[i]>best.width)best={width:xs[i+1]-xs[i],x:(xs[i]+xs[i+1])/2,y};
+    xs.sort((a,b)=>a-b);for(let i=0;i+1<xs.length;i+=2)for(const t of [.5,.2,.8]){
+     const x=xs[i]+t*(xs[i+1]-xs[i]),width=xs[i+1]-xs[i];
+     if((!best||width>best.width)&&!others.some(l=>l.getBounds().contains([y,x])&&contains([x,y],l.feature.geometry)))best={width,x,y};
+    }
    }
   }
-  const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id);
-  item._map.setView([best.y,best.x],15,{animate:false});
+  if(!best)throw Error('No unobscured polygon interior '+f.properties.id);
+  map.setView([best.y,best.x],zoom,{animate:false});
  };
  window.__pointForFeature=(f,offset=0)=>{
   const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id),map=item?._map;
   if(!map)throw Error('Feature not rendered '+f.properties.id);
   const project=p=>map.latLngToContainerPoint([p[1],p[0]]),g=f.geometry,c=g.coordinates,points=[];
-  if(/LineString$/.test(g.type))for(const line of g.type==='LineString'?[c]:c)for(let i=1;i<line.length;i++)for(const t of [.25,.5,.75]){
+  if(/LineString$/.test(g.type))for(const line of g.type==='LineString'?[c]:c)for(let i=1;i<line.length;i++)for(const t of [.25,.5,.75])for(const side of offset?[offset,-offset]:[0]){
    const a=project(line[i-1]),b=project(line[i]),d=Math.hypot(b.x-a.x,b.y-a.y)||1;
-   points.push({x:a.x+(b.x-a.x)*t-(b.y-a.y)*offset/d,y:a.y+(b.y-a.y)*t+(b.x-a.x)*offset/d});
+   points.push({x:a.x+(b.x-a.x)*t-(b.y-a.y)*side/d,y:a.y+(b.y-a.y)*t+(b.x-a.x)*side/d});
   }
   else if(/Polygon$/.test(g.type)){
    const rings=(g.type==='Polygon'?c:c.flat()).map(r=>r.map(project));
@@ -44,20 +54,22 @@ const INIT=`(()=>{
    const segments=[];if(/LineString$/.test(h.type))for(const line of h.type==='LineString'?[lc]:lc){let last;for(const coord of line){const p=project(coord);if(last)segments.push([last,p]);last=p;}}
    return {l,type:h.type,a,z,segments,area:area(l)};
   });
-  const step=Math.max(1,Math.floor(points.length/256));
+  const step=Math.max(1,Math.floor(points.length/256)),reasons=[];
+  const labelBoxes=Object.values(map._layers).filter(l=>(l.feature?.properties?.id||l.featureId)!==f.properties.id).map(l=>l.getTooltip?.()?.getElement()?.getBoundingClientRect()).filter(r=>r?.width);
   for(let i=0;i<points.length;i+=step){const p=points[i];
    const e=document.elementFromPoint(p.x,p.y);if(p.y<120||!map.getContainer().contains(e)||e?.closest('.leaflet-control'))continue;
+   if(labelBoxes.some(r=>p.x>=r.left&&p.x<=r.right&&p.y>=r.top&&p.y<=r.bottom)||e.closest('.leaflet-marker-icon'))continue;
    let obscured=false;
    for(const {l,type,a,z,segments,area:otherArea} of others){
     if(p.x<Math.min(a.x,z.x)-14||p.x>Math.max(a.x,z.x)+14||p.y<Math.min(a.y,z.y)-14||p.y>Math.max(a.y,z.y)+14)continue;
     if(/Polygon$/.test(type)){if(/Polygon$/.test(g.type)&&otherArea<=area(item)&&l._containsPoint(map.containerPointToLayerPoint(p))){obscured=true;break;}continue;}
     let distance=type==='Point'?Math.hypot(a.x-p.x,a.y-p.y):Infinity;
     for(const [a,z] of segments){const dx=z.x-a.x,dy=z.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));distance=Math.min(distance,Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy));}
-    if(distance<=(/Polygon$/.test(g.type)||type==='Point'?14:Math.abs(offset)+.5)){obscured=true;break;}
+    if(distance<=(/Polygon$/.test(g.type)||type==='Point'?14:Math.abs(offset)+1e-6)){obscured=true;reasons.push({id:l.feature.properties.id,distance});break;}
    }
    if(!obscured)return {x:p.x,y:p.y};
   }
-  throw Error('No exposed geometry point '+f.properties.id);
+  throw Error('No exposed geometry point '+f.properties.id+' '+JSON.stringify({points:points.slice(0,3),zoom:map.getZoom(),reasons:reasons.slice(0,3)}));
  };
  Object.defineProperty(window,'L',{configurable:true,get(){return renderer},set(value){renderer=value;const original=value.geoJSON;value.geoJSON=function(data,options){const result=original.call(this,data,options);window.__rendered.push(result);return result;}}});
  let adapter;Object.defineProperty(window,'ExploreMap',{configurable:true,get(){return adapter},set(value){adapter=value;for(const method of ['addLayer','setPins']){const original=value[method];value[method]=function(id,data,...args){window.__handed[id]=method==='addLayer'?data.features:data;window.__visible[id]=true;return original.call(this,id,data,...args);};}const original=value.setVisible;value.setVisible=function(id,value){window.__visible[id]=value;return original.call(this,id,value);};}});
@@ -67,6 +79,16 @@ const INIT=`(()=>{
 const AREA=`(()=>{let n=0,free=0;const m=explore.$('map');for(let y=2;y<innerHeight;y+=4)for(let x=2;x<innerWidth;x+=4){n++;const e=document.elementFromPoint(x,y);if(e&&m.contains(e)&&!e.closest('.leaflet-control'))free++;}return 100*free/n})()`;
 const RECT=`e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}}`;
 const visible=`e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden'&&!e.closest('dialog:not([open]),[hidden],[inert]')}`;
+// Fixture lengths are used only to choose regression samples, never in the UI.
+export function trailSamples(features,crossingIds){
+ const length=f=>(f.geometry.type==='LineString'?[f.geometry.coordinates]:f.geometry.coordinates).reduce((sum,line)=>sum+line.slice(1).reduce((n,p,i)=>n+Math.hypot(p[0]-line[i][0],p[1]-line[i][1]),0),0);
+ const ordered=[...features].sort((a,b)=>length(a)-length(b)||a.properties.id.localeCompare(b.properties.id));
+ const ids=new Set([ordered[0].properties.id,ordered.at(-1).properties.id,...crossingIds]);
+ const byId=[...features].sort((a,b)=>a.properties.id.localeCompare(b.properties.id));
+ for(let i=0;ids.size<8&&i<8;i++)ids.add(byId[Math.floor(i*(byId.length-1)/7)].properties.id);
+ for(const f of byId){if(ids.size>=8)break;ids.add(f.properties.id);}
+ return [...ids].map(id=>features.find(f=>f.properties.id===id));
+}
 export async function runExploreChecks(client,origin,signal,root){
  let running=true,current={externalBlocked:0,responses:[],escaped:[],errors:[],consoleErrors:[]},pumpError;
  const interception=async(method,params)=>{try{return await client.command(method,params);}catch(error){if(!error.message.includes('Invalid InterceptionId'))throw error;}};
@@ -246,7 +268,10 @@ export async function runExploreChecks(client,origin,signal,root){
   for(const label of labels){assert.ok(names.includes(label.text),'A11 only carried names');assert.equal(label.interactive,'none','A11 labels never block taps');}
   for(let a=0;a<labels.length;a++)for(let b=a+1;b<labels.length;b++){const x=labels[a].box,y=labels[b].box;assert.ok(x[2]<=y[0]||y[2]<=x[0]||x[3]<=y[1]||y[3]<=x[1],'A11 names do not crowd each other');}result.labelsAt14=labels.map(l=>l.text);
   const labelFixture=await evaluate(`(()=>{
-   const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.geometry&&l.getTooltip?.()?.getElement()&&explore.region.registry.find(e=>e.kind==='trails')&&window.__handed[explore.region.registry.find(e=>e.kind==='trails').id].includes(l.feature));
+   const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>{
+    const r=l.getTooltip?.()?.getElement()?.getBoundingClientRect();if(!r?.width||!l.feature?.geometry||!window.__handed[explore.region.registry.find(e=>e.kind==='trails').id].includes(l.feature))return false;
+    const e=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return l._map.getContainer().contains(e)&&!e.closest('.leaflet-control');
+   });
    if(!item)throw Error('A12 no visible trail label');window.__a12LabelFeature=item.feature;window.__a12LabelMap=item._map;window.__a12LabelView={center:item._map.getCenter(),zoom:item._map.getZoom()};
    const r=item.getTooltip().getElement().getBoundingClientRect();return {id:item.feature.properties.id,point:{x:r.x+r.width/2,y:r.y+r.height/2}};
   })()`);
@@ -255,6 +280,46 @@ export async function runExploreChecks(client,origin,signal,root){
   await mouseTap(await evaluate('__pointForFeature(window.__a12LabelFeature)'));assert.equal(await evaluate('explore.state.selection.featureId'),labelFixture.id,'A12 geometry and label resolve to the same ID');
   await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
   async function tap(point){await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
+  const trailArtifact=index.artifacts.find(a=>a.layer_id===manifest.layers.find(e=>e.kind==='trails').id),trailDoc=JSON.parse(await readFile(resolve(root,'v2',trailArtifact.path)));
+  const sampleIds=trailSamples(trailDoc.features,id==='aspen'?['usfs-trail-8919662','usfs-trail-8928063']:['usfs-trail-8913499','usfs-trail-8964041']).map(f=>f.properties.id);
+  result.a12Trails=[];
+  for(const featureId of sampleIds){
+   for(const offset of [0,6]){
+    await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='trails');window.__a12Trail=explore.region.layers.get(entry.id).data.features.find(f=>f.properties.id===${JSON.stringify(featureId)});explore.sheet.setState('collapsed');__frameLine(window.__a12Trail,18)})()`);
+    await tap(await evaluate('__pointForFeature(window.__a12Trail,'+offset+')'));
+    await poll('explore.state.selection?.featureId==='+JSON.stringify(featureId),'A12 real trail '+featureId+' offset '+offset);
+    await assertSelection('A12 real trail '+featureId+' offset '+offset);assert.equal(await evaluate('!explore.$("detail-view").hidden'),true,'A12 trail opens detail');
+    await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
+   }
+   result.a12Trails.push({featureId,onLine:true,besideLinePx:6});
+  }
+  result.a12LandModes=[];
+  for(const mode of ['plain','search','trail detail','after drawer']){
+   await evaluate(`(()=>{if(!explore.$('detail-view').hidden)explore.$('detail-back').click();if(${JSON.stringify(mode)}==='plain')explore.sheet.setState('collapsed');if(${JSON.stringify(mode)}==='search')explore.$('search').click();if(${JSON.stringify(mode)}==='trail detail')explore.select(window.__a11TrailEntry,window.__a11Trail);if(${JSON.stringify(mode)}==='after drawer'){explore.drawer.open();explore.drawer.close();}__framePolygon(window.__a11Land)})()`);
+   const list=await evaluate('(()=>{const n=[...explore.$("list-view").children].find(n=>!n.hidden);return {index:[...explore.$("list-view").children].indexOf(n),query:n.querySelector("#query,#explore-query")?.value}})()');
+   await tap(await evaluate('__pointForFeature(window.__a11Land)'));await poll('explore.state.selection?.featureId===window.__a11LandId','A12 land '+mode);
+   await assertSelection('A12 land '+mode);assert.equal(await evaluate('explore.sheet.state'),width<768?'half':'expanded','A12 land partial state (tablet parity follows)');
+   assert.deepEqual(await evaluate('[...explore.$("detail-body").querySelectorAll("p,a")].slice(0,'+landTexts.length+').map(e=>e.textContent)'),landTexts,'A12 land exact wording '+mode);
+   await evaluate('explore.$("detail-back").click()');assert.equal(await evaluate('explore.$("list-view").children['+list.index+'].hidden'),false,'A12 Back restores list '+mode);
+   if(list.query!==undefined)assert.equal(await evaluate('explore.$("list-view").children['+list.index+'].querySelector("#query,#explore-query").value'),list.query,'A12 Back keeps filters '+mode);
+   result.a12LandModes.push({mode,featureId:await evaluate('window.__a11LandId')});
+  }
+  await evaluate('explore.sheet.setState("collapsed")');
+  const water=await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='water'&&explore.region.layers.get(e.id).data?.features.some(f=>f.properties.name&&f.geometry)),f=explore.region.layers.get(entry.id).data.features.find(f=>f.properties.name&&f.geometry);window.__a12Water=f;window.__a12WaterEntry=entry;if(/Polygon$/.test(f.geometry.type))__framePolygon(f);else __frameLine(f,18);return {id:f.properties.id,output:ExploreEvidence.feature(explore.manifest,explore.manifest.layers.find(e=>e.id===entry.id),f,entry.title,Date.now())}})()`);
+  await tap(await evaluate('__pointForFeature(window.__a12Water)'));await poll('explore.state.selection?.featureId==='+JSON.stringify(water.id),'A12 named water');
+  assert.equal(await evaluate('explore.$("detail-title").textContent'),water.output.title,'A12 water source name');
+  assert.deepEqual(await evaluate('[...explore.$("detail-body").querySelectorAll("p")].map(e=>e.textContent)'),water.output.lines,'A12 water generic source-backed lines only');
+  assert.deepEqual(await evaluate('[...explore.$("detail-body").querySelectorAll("a")].map(e=>({label:e.textContent,url:e.href}))'),water.output.links,'A12 water source links only');
+  result.a12Water=water.id;await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
+  result.a12LandFeatures=[];
+  const landIds=await evaluate('explore.region.layers.get(explore.region.registry.find(e=>e.kind==="land_management").id).data.features.filter(f=>f.geometry).map(f=>f.properties.id)');
+  for(const featureId of landIds){
+   const wording=await evaluate(`(()=>{const e=explore.region.registry.find(e=>e.kind==='land_management'),f=explore.region.layers.get(e.id).data.features.find(f=>f.properties.id===${JSON.stringify(featureId)});window.__a12Land=f;__framePolygon(f,18);return ExploreLand.detail(explore.manifest,explore.manifest.layers.find(d=>d.id===e.id),f).items.map(x=>x.text)})()`);
+   await tap(await evaluate('__pointForFeature(window.__a12Land)'));await poll('explore.state.selection?.featureId==='+JSON.stringify(featureId),'A12 land feature '+featureId);await assertSelection('A12 land feature '+featureId);
+   assert.deepEqual(await evaluate('[...explore.$("detail-body").querySelectorAll("p,a")].slice(0,'+wording.length+').map(e=>e.textContent)'),wording,'A12 every land feature exact wording');
+   await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');result.a12LandFeatures.push(featureId);
+  }
+  result.checks.push('A12 real trails, land mode independence, Back, label identity and generic water');
   if(width<768){
    const nativeFeaturePoint=await evaluate(`(()=>{explore.select(window.__a11LabelEntry,window.__a11LabelFeature);explore.$('detail-back').click();explore.drawer.open();return __pointForFeature(window.__a11LabelFeature)})()`);
    await tap(nativeFeaturePoint);await poll('explore.state.selection?.featureId===window.__a11LabelFeature.properties.id','A11 native feature with drawer');assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 feature tap dismisses drawer without swallowing selection');await assertSelection('A11 native feature with drawer');await evaluate('explore.$("detail-back").click()');
