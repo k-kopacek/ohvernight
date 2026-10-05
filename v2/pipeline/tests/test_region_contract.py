@@ -89,7 +89,7 @@ class RegionContractTests(unittest.TestCase):
 
     def test_confidence_is_not_consumed_by_browser_code(self):
         pattern = re.compile(r"\.confidence(?![-\w])|\[['\"]confidence['\"]\]")
-        for path in list((V2).glob("*.js")) + list((V2 / "regions").glob("*/*.js")):
+        for path in list((V2).glob("*.js")) + list((V2 / "regions").glob("*/*.js")) + list((V2 / "explore").glob("*.js")):
             self.assertIsNone(pattern.search(path.read_text()), str(path))
 
     def test_validator_is_clock_independent(self):

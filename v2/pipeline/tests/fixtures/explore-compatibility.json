@@ -1,0 +1,428 @@
+{
+  "base": "3dc0fef",
+  "feature": {
+    "properties": {
+      "id": "segment-1",
+      "name": "A & <B>",
+      "trail_number": "42",
+      "activities": {
+        "hiking": {
+          "accpt": "06/01-09/30"
+        },
+        "motorcycling": {
+          "accpt": "12/01-03/14"
+        }
+      }
+    },
+    "geometry": {
+      "type": "MultiLineString",
+      "coordinates": [
+        [
+          [
+            -107,
+            39
+          ],
+          [
+            -106,
+            39
+          ]
+        ],
+        [
+          [
+            -106,
+            39
+          ],
+          [
+            -105.9,
+            39.1
+          ]
+        ]
+      ]
+    }
+  },
+  "places": [
+    {
+      "id": "camp",
+      "kind": "campground",
+      "coordinates": [
+        -106.5,
+        39.01
+      ],
+      "status": "excluded"
+    },
+    {
+      "id": "area",
+      "kind": "dispersed",
+      "coordinates": [
+        -106.5,
+        39.02
+      ],
+      "status": "review"
+    },
+    {
+      "id": "room",
+      "kind": "lodging",
+      "coordinates": [
+        -106.5,
+        39
+      ]
+    }
+  ],
+  "seasonCases": [
+    {
+      "r": {
+        "accpt": "12/01-03/14"
+      },
+      "start": "2026-09-27",
+      "end": "2026-09-28",
+      "expected": "Outside published use dates"
+    },
+    {
+      "r": {
+        "accpt": "12/01-03/14"
+      },
+      "start": "2026-12-31",
+      "end": "2027-01-02",
+      "expected": "Within published use dates — closures unchecked"
+    },
+    {
+      "r": {
+        "managed": "01/01-12/31",
+        "restricted": "09/01-10/01"
+      },
+      "start": "2026-09-27",
+      "end": "2026-09-28",
+      "expected": "Published restriction overlaps trip"
+    },
+    {
+      "r": {
+        "accpt": "01/01-12/31",
+        "restricted": "check order"
+      },
+      "start": "2026-09-27",
+      "end": "2026-09-28",
+      "expected": "Restriction needs review"
+    },
+    {
+      "r": {},
+      "start": "2026-09-27",
+      "end": "2026-09-28",
+      "expected": "Use permission unknown"
+    },
+    {
+      "r": {
+        "managed": "01/01-12/31",
+        "disc": "01/01-12/31"
+      },
+      "start": "2026-09-27",
+      "end": "2026-09-28",
+      "expected": "Published use discouraged — review"
+    },
+    {
+      "r": {
+        "managed": "check dates"
+      },
+      "start": "2026-09-27",
+      "end": "2026-09-28",
+      "expected": "Use dates need review"
+    },
+    {
+      "r": {
+        "accpt": "01/01-12/31"
+      },
+      "start": "2026-02-30",
+      "end": "2026-03-01",
+      "expected": "Choose valid trip dates"
+    }
+  ],
+  "windows": [
+    {
+      "input": "12/01-03/14",
+      "expected": [
+        [
+          1201,
+          314
+        ]
+      ]
+    },
+    {
+      "input": "01/01-12/31",
+      "expected": [
+        [
+          101,
+          1231
+        ]
+      ]
+    },
+    {
+      "input": "13/01-12/31",
+      "expected": null
+    },
+    {
+      "input": "02/29-03/01",
+      "expected": [
+        [
+          229,
+          301
+        ]
+      ]
+    },
+    {
+      "input": "bad",
+      "expected": null
+    },
+    {
+      "input": null,
+      "expected": null
+    },
+    {
+      "input": "04/01-05/01; 09/01-10/01",
+      "expected": [
+        [
+          401,
+          501
+        ],
+        [
+          901,
+          1001
+        ]
+      ]
+    }
+  ],
+  "days": [
+    {
+      "start": "2026-12-31",
+      "end": "2027-01-02",
+      "expected": [
+        1231,
+        101,
+        102
+      ]
+    },
+    {
+      "start": "2026-02-30",
+      "end": "2026-03-01",
+      "expected": null
+    },
+    {
+      "start": "2026-10-01",
+      "end": "2026-09-30",
+      "expected": null
+    }
+  ],
+  "gpx": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><gpx version=\"1.1\" creator=\"ohvernight\" xmlns=\"http://www.topografix.com/GPX/1/1\"><trk><name>A &amp; &lt;B&gt;</name><desc>County-clipped source geometry, not a navigable route or access approval.</desc><trkseg><trkpt lat=\"39\" lon=\"-107\"/><trkpt lat=\"39\" lon=\"-106\"/></trkseg><trkseg><trkpt lat=\"39\" lon=\"-106\"/><trkpt lat=\"39.1\" lon=\"-105.9\"/></trkseg></trk></gpx>",
+  "nearby": [
+    {
+      "place": {
+        "id": "camp",
+        "kind": "campground",
+        "coordinates": [
+          -106.5,
+          39.01
+        ],
+        "status": "excluded"
+      },
+      "miles": 0.6909336972081659
+    },
+    {
+      "place": {
+        "id": "area",
+        "kind": "dispersed",
+        "coordinates": [
+          -106.5,
+          39.02
+        ],
+        "status": "review"
+      },
+      "miles": 1.381867394416823
+    }
+  ],
+  "nearbyTrails": [
+    {
+      "feature": {
+        "properties": {
+          "id": "segment-1",
+          "name": "A & <B>",
+          "trail_number": "42",
+          "activities": {
+            "hiking": {
+              "accpt": "06/01-09/30"
+            },
+            "motorcycling": {
+              "accpt": "12/01-03/14"
+            }
+          }
+        },
+        "geometry": {
+          "type": "MultiLineString",
+          "coordinates": [
+            [
+              [
+                -107,
+                39
+              ],
+              [
+                -106,
+                39
+              ]
+            ],
+            [
+              [
+                -106,
+                39
+              ],
+              [
+                -105.9,
+                39.1
+              ]
+            ]
+          ]
+        }
+      },
+      "miles": 0.6909336972081659
+    }
+  ],
+  "adventure": [
+    {
+      "place": {
+        "id": "area",
+        "kind": "dispersed",
+        "coordinates": [
+          -106.5,
+          39.02
+        ],
+        "status": "review"
+      },
+      "trails": [
+        {
+          "feature": {
+            "properties": {
+              "id": "segment-1",
+              "name": "A & <B>",
+              "trail_number": "42",
+              "activities": {
+                "hiking": {
+                  "accpt": "06/01-09/30"
+                },
+                "motorcycling": {
+                  "accpt": "12/01-03/14"
+                }
+              }
+            },
+            "geometry": {
+              "type": "MultiLineString",
+              "coordinates": [
+                [
+                  [
+                    -107,
+                    39
+                  ],
+                  [
+                    -106,
+                    39
+                  ]
+                ],
+                [
+                  [
+                    -106,
+                    39
+                  ],
+                  [
+                    -105.9,
+                    39.1
+                  ]
+                ]
+              ]
+            }
+          },
+          "miles": 1.381867394416823
+        }
+      ]
+    },
+    {
+      "place": {
+        "id": "camp",
+        "kind": "campground",
+        "coordinates": [
+          -106.5,
+          39.01
+        ],
+        "status": "excluded"
+      },
+      "trails": [
+        {
+          "feature": {
+            "properties": {
+              "id": "segment-1",
+              "name": "A & <B>",
+              "trail_number": "42",
+              "activities": {
+                "hiking": {
+                  "accpt": "06/01-09/30"
+                },
+                "motorcycling": {
+                  "accpt": "12/01-03/14"
+                }
+              }
+            },
+            "geometry": {
+              "type": "MultiLineString",
+              "coordinates": [
+                [
+                  [
+                    -107,
+                    39
+                  ],
+                  [
+                    -106,
+                    39
+                  ]
+                ],
+                [
+                  [
+                    -106,
+                    39
+                  ],
+                  [
+                    -105.9,
+                    39.1
+                  ]
+                ]
+              ]
+            }
+          },
+          "miles": 0.6909336972081659
+        }
+      ]
+    }
+  ],
+  "matches": [
+    {
+      "query": "a",
+      "activity": "hiking",
+      "expected": true
+    },
+    {
+      "query": "42",
+      "activity": "motorcycling",
+      "expected": true
+    },
+    {
+      "query": "missing",
+      "activity": "",
+      "expected": false
+    },
+    {
+      "query": "",
+      "activity": "mountain_biking",
+      "expected": false
+    }
+  ],
+  "browseCounts": {
+    "trails": 102,
+    "camping": 6,
+    "trailheads": 17
+  },
+  "rampartText": "{type:'Feature',geometry:null,properties:{id:'rampart-designated-area',name:'Rampart Range designated dispersed camping',site_type:'DISPERSED_AREA',rec1stop_url:'https://www.recreation.gov/camping/campgrounds/10132201',restrictions:'Numbered designated sites only; fee required. The official listing describes a December 1–April 1 camping closure, with weather-dependent reopening. Check the listing for current rules and availability.',evidence:{retrieved_at:'2026-09-27',source_url:'https://www.recreation.gov/camping/campgrounds/10132201'}}}",
+  "coverage": "County/state trails, complete cross-county routes, precise parcels, live availability, verified difficulty and turn-by-turn navigation are not included. Named water does not confirm recreation access or perennial flow. GPX exports contain clipped source segments, not verified routes. Facility “open” fields may be old and are not treated as current status."
+}
