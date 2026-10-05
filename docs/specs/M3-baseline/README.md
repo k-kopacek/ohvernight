@@ -40,7 +40,16 @@ PR B application per session at 390×844 with 4× CPU throttle. Three original
 sessions and three separate post-A8 sessions are preserved, with raw values
 and every threshold comparison. A separate section adds three A10 sessions,
 using the owner's amended thresholds without rewriting earlier results.
-All five measures pass for both regions in each of the three new A10 sessions.
+All five measures passed for both regions in each of those three pre-A11
+A10 sessions. The appended `a11_mobile_ux_remediation` section preserves
+three later required sessions at `86f1c97` and four diagnostic sessions,
+including all raw rows, limits, ratios, head commits and helper SHA-256.
+Required A11 session 2 missed Douglas `allDefaultLayersMs` at 136.4954% of
+base against 135%; this is NOT a pass. The diagnostic ratios at `5fd5903`,
+`f65dacd`, `bf2f3dc` and `810ff18` are 127.0951%, 124.1308%, 127.9431% and
+122.8470% respectively. These are diagnostic evidence, not acceptance;
+they identified no specific inefficiency in the A11 code and do not replace
+the required sessions. The miss's disposition belongs to the owner.
 The comparison code is `v2/pipeline/tests/browser/measure.mjs`; the historical
 `measure.mjs` above remains byte-identical. It serves base files directly
 from Git and head files from the checkout, blocks non-local requests and
@@ -51,8 +60,21 @@ are recorded in the report.
 node v2/pipeline/tests/browser/measure.mjs > /tmp/ohvernight-performance.json
 ```
 
-The deterministic browser job asserts no timings. The owner's real-device
-matrix and the reviewer's independent same-session comparison remain owed.
+The deterministic browser job asserts no timings. The first iPhone Safari
+pass on 2026-10-05 failed several mobile-UX items; A11 remediation is
+implemented, and a second real-device pass and merge approval remain owed.
+
+A11's phone results sheet has collapsed, half and expanded states moved by
+drag. Search, browse and planner results and feature detail share the sheet
+with Back; a feature tap selects, highlights and fits it. Source-name labels
+appear from zoom 14 and are capped at 32 globally; the drawer and sheet are
+mutually exclusive on phones. Double-tap zooms the map and local zoom-control
+handling prevents page zoom. Automated Chrome checks cover these properties;
+they do not claim a real-device pass. The adapter adds only `setSelected` and
+`setLabels` to its original ten exports. The map stays north-up: rotation
+and compass were not implemented because Leaflet 1.9.4 has no bearing API
+and the evaluated GPL-3.0 `leaflet-rotate` dependency patches Leaflet globally.
+The rotation decision is with the owner.
 
 All deterministic budgets pass. The original Douglas all-default-layer time
 and heap thresholds were missed before and after A8; those results stand.
@@ -69,4 +91,5 @@ and the existing yields. The local benchmark is CPU/main-thread dominated;
 concurrent fetching showed no measurable local timing improvement. A8 avoids
 deliberately serialising independent network requests in real use; its
 benefit under real network latency remains unmeasured. PR B is not merged;
-the real-device matrix is still owed by the owner.
+the second real-device pass and the A11 performance-miss disposition are
+still owed by the owner.

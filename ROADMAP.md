@@ -14,7 +14,7 @@ states the exact scope.
 |---|---|---|
 | M1 | Verification Baseline / Repo Hygiene | **Complete** |
 | M2 | Regional Data Contract + Evidence Semantics | **Complete** |
-| M3 | Unified Mobile-First Explore Architecture | **In progress — PR B awaiting real-device validation and merge approval** |
+| M3 | Unified Mobile-First Explore Architecture | **In progress — A11 implemented; performance disposition, second real-device pass and merge approval owed** |
 | M4 | Functional Recreational Water | Planned |
 | M5 | Land Classification v1 | Planned |
 | M6 | Trails / COTREX | Planned |
@@ -66,20 +66,36 @@ by the owner on 2026-10-05: Leaflet is kept (A10). A8 is approved and kept.
 The local benchmark is CPU/main-thread dominated; concurrent fetching showed
 no measurable local timing improvement. A8 avoids deliberately serialising
 independent network requests in real use; its benefit under real network
-latency remains unmeasured. The owner still owes the real-device matrix and
-merge approval. PR B's heap limit (115% of same-session base) and the
-architecture trigger R-5 (66 MB) are different controls.
+latency remains unmeasured. PR B's heap limit (115% of same-session base)
+and the architecture trigger R-5 (66 MB) are different controls.
+
+The first real-device pass (iPhone Safari, 2026-10-05, both regions) failed
+several mobile-UX items. A11 remediation is implemented: the phone results
+sheet has collapsed, half and expanded states moved by drag; search, browse
+and planner results and feature detail share the sheet with Back; feature
+taps select, highlight and fit; source-name labels appear from zoom 14 and
+are capped; the layer drawer and sheet are mutually exclusive on phones;
+double-tap zooms the map and local zoom-control handling prevents page zoom.
+The adapter adds `setSelected` and `setLabels` to its original ten exports.
+Automated Chrome coverage does not establish a real-device pass.
+
+One of the three required A11 performance sessions missed the Douglas
+all-layers limit: session 2 measured 136.4954% of base against 135%. This is
+not a pass and awaits the owner's disposition. Four diagnostic sessions
+identified no specific inefficiency in the A11 code; they do not replace
+acceptance sessions. A second real-device pass and merge approval are owed.
+
+The map stays north-up. Rotation and compass were not implemented because
+Leaflet 1.9.4 has no bearing API and the evaluated GPL-3.0 `leaflet-rotate`
+dependency patches Leaflet globally; pursuing rotation is the owner's decision.
 
 - Unify the Aspen and Douglas County app structure.
 - Fix mobile map real-estate problems.
 - Resolve land styling and evidence presentation (register item N17).
 - Address the deferred rule-ordering defects that are not freshness-related
   (register item N16).
-- Evaluate optimized Leaflet with lazy GeoJSON against a MapLibre/vector
-  architecture.
-- **Do not pre-commit to MapLibre before this milestone.** The rendering
-  architecture is an open decision that M3 makes; until then the app is
-  Leaflet and no document should present another choice as settled.
+- The rendering architecture evaluation selected optimized Leaflet with lazy
+  GeoJSON; A10 keeps Leaflet, with the existing reopening triggers in force.
 
 ## M4 — Functional Recreational Water
 

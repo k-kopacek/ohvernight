@@ -18,6 +18,27 @@ injects each manifest/config/index/display/place-list/Leaflet failure and
 checks independent layer retries. It pins old URL/storage behaviour, saved
 notes, capability gating and computed land styles/Unknown wording.
 
+A11 adds three phone sheet states (collapsed, half, expanded), live drag and
+snap geometry, content scrolling, Enter/Space cycling and Escape. Search,
+browse and planner results and feature detail stay in the sheet; filtering,
+Back and practical list-scroll restoration are checked. Feature taps select,
+highlight exactly one feature and fit its bounds; trail fields and land
+evidence wording/order remain pinned. The drawer and sheet are mutually
+exclusive on phones, with at least 45% free map while the drawer is open
+(the original 35% floor is retained), swipe dismissal and exposed-map taps.
+Source-name labels appear from zoom 14, with no invented names, overlapping
+labels or interactive label targets, and a global cap of 32. Native CDP
+touch double-tap and mouse double-click zoom the map; rapid zoom-control
+taps apply map zoom steps while `visualViewport.scale` remains 1. Phone
+portrait-to-landscape checks retain usable map space and sheet detail/Back.
+
+The adapter's exact export test includes `setSelected` and `setLabels` in
+addition to the original ten functions. The map stays north-up: rotation
+and compass were not implemented because Leaflet 1.9.4 has no bearing API
+and the evaluated GPL-3.0 `leaflet-rotate` dependency patches Leaflet globally.
+That decision is with the owner. Landscape layout checks do not assert map
+bearing or a compass reset.
+
 Every display feature is handed to the adapter. A manifest-allowed null
 geometry record is counted separately, consumed by a named source-panel
 control and preserved source-health wording; it gets no invented map point.
@@ -58,7 +79,7 @@ how `baseline.json` was measured; it is not adapted for the new page.
 The PR B report lives beside that baseline. Compare versions in one session
 on one machine; historical absolute milliseconds are context only.
 The report preserves the original and post-A8 threshold misses and adds
-three A10 sessions. R-2 was triggered, reviewed and resolved by the owner on
+three pre-A11 A10 sessions. R-2 was triggered, reviewed and resolved by the owner on
 2026-10-05; Leaflet is kept (A10). A8 is approved and kept. The local benchmark
 is CPU/main-thread dominated; concurrent fetching showed no measurable local
 timing improvement. A8 avoids deliberately serialising independent network
@@ -68,6 +89,16 @@ layers and 115% for heap, relative to same-session base. PR B's heap control
 and architecture trigger R-5 (66 MB) are different controls. The measurement
 method and other thresholds are unchanged; PR B is not merged.
 
-The human owner must still test real iOS Safari and Android Chrome, both
-regions: pan, pinch, sheet drag, drawer, trail/land details, landscape and
-throttled reload. Headless Chrome does not satisfy that gate.
+The record now also preserves three required A11 sessions at `86f1c97` and
+four one-session-per-commit diagnostic runs. Required session 2 missed
+Douglas `allDefaultLayersMs`: 136.4954% of base against the 135% limit. This
+is not a pass. The diagnostic runs are labelled diagnostic, not acceptance;
+no specific inefficiency in the A11 code was identified, and the miss's
+disposition belongs to the owner. No session or earlier result is removed.
+
+The first iPhone Safari pass on 2026-10-05 failed several mobile-UX items;
+A11 remediation is implemented. The owner owes a second real-device pass
+on iOS Safari and Android Chrome, both regions: pan, pinch, sheet drag,
+drawer, trail/land details, landscape and
+controlled throttled reload, plus double-tap and rapid zoom-control taps.
+Headless Chrome does not satisfy that gate; merge approval is still owed.

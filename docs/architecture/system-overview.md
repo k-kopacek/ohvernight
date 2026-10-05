@@ -3,8 +3,11 @@
 Repository architecture after M3 PR B implementation (2026-10-05). R-2 was
 triggered, reviewed and resolved by the owner on 2026-10-05: Leaflet is kept
 (A10). The original threshold misses remain recorded. A8 is approved and
-kept. PR B is not merged; the real-device matrix is still owed by the owner,
-and review, CI and human merge approval remain delivery gates.
+kept. The first iPhone Safari pass on 2026-10-05 failed several mobile-UX
+items. A11 remediation is implemented, but one of its three performance
+sessions missed the Douglas all-layers limit; that miss awaits the owner's
+disposition. PR B is not merged; a second real-device pass, review, CI and
+human merge approval remain delivery gates.
 Plans are in the [roadmap](../../ROADMAP.md).
 
 ## Shape of the system
@@ -46,8 +49,11 @@ presentation, storage keys and capabilities; `extras.js` is the only
 region-specific capability code. The legacy fire-monitor selector in
 `v2/trust.js` is deliberately preserved under amendment A7.
 
-`map-adapter.js` alone calls Leaflet, through the ten-function interface of
-[ADR-006](decisions/ADR-006-explore-rendering-architecture.md). The loader
+`map-adapter.js` alone calls Leaflet. Its original ten exports are joined by
+`setSelected(id, featureId | null)` and
+`setLabels(id, {property, minZoom, max} | null)`, as recorded in
+[specification section 8.1](../specs/M3-unified-mobile-explore.md#81-renderer-adapter).
+No Leaflet object leaves the adapter. The loader
 fetches the active manifest, presentation config and display index, then
 coverage and small place lists. Pins and coverage are usable before
 feature layers. Under approved A8, eligible default-on
@@ -63,10 +69,25 @@ independent network requests in real use; its benefit under real network
 latency remains unmeasured. A10's PR B heap threshold (115% of same-session
 base) and the architecture trigger R-5 (66 MB) are different controls.
 
-A collapsed results sheet and non-modal layer drawer preserve phone map
-space. Dates, vehicle and list filters do not hide map geometry. Land
-styling follows spatial precision: generalized management context uses
-restrained dashed boundaries and exact approved wording, with Unknown last.
+On phones the results sheet has collapsed, half and expanded states, moved
+by dragging its handle/header; its content scrolls independently. Search,
+browse and planner results and feature detail live in the same sheet, with
+Back returning to the retained list and filters. Tapping a feature selects,
+highlights and fits it with sheet-aware padding. Opening the layer drawer
+collapses the sheet, and opening the sheet closes the drawer on phones.
+Labels use only source names, appear from zoom 14 and share a 32-label cap.
+Double-tap zooms the map; local zoom-control handling prevents page zoom
+without restricting accessibility zoom globally. These interactions have
+automated Chrome coverage; the second real-device pass is still owed.
+
+The map stays north-up. Rotation and compass were not implemented: Leaflet
+1.9.4 has no bearing API, and the evaluated GPL-3.0 `leaflet-rotate` dependency
+patches Leaflet globally. Pursuing rotation is the owner's decision under
+A11. Phone landscape layout is covered independently of map bearing.
+
+Dates, vehicle and list filters do not hide map geometry. Land styling
+follows spatial precision: generalized management context uses restrained
+dashed boundaries and exact approved wording, with Unknown last.
 
 ## Pipeline and published data
 
@@ -138,13 +159,20 @@ CI checks, and the human approves the reviewed head before merge.
 - `python`: `00_selftest.py`, including R60–R65, rebuild, config and budgets.
 - `node`: syntax checks and `node --test v2/pipeline/tests/*.test.cjs`,
   including base compatibility, region isolation, wording and adapter surface.
-- `browser`: headless Chrome B1–B10 for both regions at four sizes; bounded
+- `browser`: headless Chrome B1–B10 and A11 interaction checks for both regions
+  at four sizes, with landscape checks at the phone sizes; bounded
   DevTools startup/commands, all non-local requests blocked, guarded cleanup.
 
 Browser checks assert geometry, focus, request sets and bytes, not time.
 Separate five-run local timing/heap comparisons use
 `v2/pipeline/tests/browser/measure.mjs`; the historical baseline script is
-unchanged. Real iOS Safari and Android Chrome checks remain a human gate.
+unchanged. The performance record preserves all three required A11 sessions
+and four diagnostic sessions. Required session 2 missed Douglas
+`allDefaultLayersMs` at 136.4954% of base against the 135% limit; it is not a
+pass. No specific A11-code inefficiency was identified in the diagnosis;
+diagnostic runs do not replace acceptance sessions. The miss's disposition
+belongs to the owner. A second real iOS Safari and Android Chrome pass
+remains a human gate.
 Manual `refresh-map.yml` and `ridb-check.yml` upload artifacts without
 committing or deploying; no refresh is scheduled.
 

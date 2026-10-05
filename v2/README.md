@@ -6,8 +6,17 @@ trip entry; `/v2/?region=aspen&view=map` opens the map directly.
 `/v2/regions/douglas-co/` forward with `location.replace` and retain a plain
 link when scripts are off.
 
-The map is the page. A collapsed results sheet and an on-demand layer drawer
-keep map space available on phones. Every layer starts on and loads
+The map is the page. On phones the results sheet has three states —
+collapsed, half and expanded — moved by dragging the handle/header, with
+independently scrolling content. Search, browse and planner results and
+feature detail live in the sheet; Back returns to the retained list and
+filters. Tapping a feature selects, highlights and fits it. The layer drawer
+and the sheet are mutually exclusive on phones: opening one collapses or
+closes the other. Source-name labels appear from zoom 14 with a global cap
+of 32; unnamed features receive no invented label. Double-tap zooms the map,
+and local zoom-control handling prevents page zoom without blocking page
+zoom globally. These changes have automated Chrome coverage; real-device
+retesting is still owed. Every layer starts on and loads
 progressively; dates, vehicle and list filters never remove map features.
 Approved and kept amendment A8 starts eligible default-on requests together,
 then parses and draws one layer per task in order with the existing yields.
@@ -38,6 +47,8 @@ Existing browser storage keys are preserved: `ohvernight-trip-v1`,
 - `index.html` and `app.js` host the shared shell and declare its default region.
 - `explore/` contains shared loading, UI, renderer and capability modules.
   `map-adapter.js` is the only module that calls vendored Leaflet 1.9.4.
+  Its original ten exports plus `setSelected` and `setLabels` are pinned by
+  the exact adapter-surface test; no Leaflet object leaves it.
 - `regions/<id>/region.json` declares data, sources, freshness and limitations;
   `explore.json` declares presentation and capabilities under a closed schema.
 - `regions/<id>/display/` contains reproducible delivery artifacts: selected
@@ -53,6 +64,11 @@ unknown; source management classes do not establish access or camping permission
 Map tiles need a connection. See [DATA-LICENSE.md](DATA-LICENSE.md), the
 [regional contract](pipeline/docs/data-contract.md) and the
 [system overview](../docs/architecture/system-overview.md).
+
+The map is north-up. Rotation and compass were not implemented: Leaflet
+1.9.4 has no bearing API, and the evaluated GPL-3.0 `leaflet-rotate` dependency
+patches Leaflet globally. Whether to pursue rotation remains the owner's
+decision under A11; landscape layout has separate automated coverage.
 
 ## Verify and publish
 
@@ -77,8 +93,14 @@ benchmark is CPU/main-thread dominated; concurrent fetching showed no
 measurable local timing improvement. A8 avoids deliberately serialising
 independent network requests in real use; its benefit under real network
 latency remains unmeasured. The PR B heap threshold (115% of same-session
-base) and architecture trigger R-5 (66 MB) are different controls. PR B is
-not merged; the real-device matrix is still owed by the owner.
+base) and architecture trigger R-5 (66 MB) are different controls. The first
+iPhone Safari pass on 2026-10-05 failed several mobile-UX items; A11
+remediation is implemented. Required A11 performance session 2 missed the
+Douglas all-layers limit at 136.4954% against 135%; this is not a pass and
+awaits the owner's disposition. Four diagnostic sessions identified no
+specific inefficiency in the A11 code and do not replace the required
+sessions. PR B is not merged; a second real-device pass and merge approval
+are still owed by the owner.
 
 GitHub Pages publishes the repository from `main`. A reviewed pull request,
 green CI and explicit human approval are required before merging. The root
