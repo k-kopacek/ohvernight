@@ -1,6 +1,32 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'../..'),source=fs.readFileSync(path.join(root,'explore/map-adapter.js'),'utf8');
 const names=['init','addLayer','removeLayer','setVisible','setStyle','setPins','onFeature','fit','setBasemap','destroy','setSelected','setLabels'];
+function predicates(){const context={};vm.runInNewContext(source.replace('const api={init,','scope.testPredicates={hitGeometry,chooseHit,resolveTap,HIT_TOLERANCE,layers,handlers,setMap:value=>{map=value;}}; const api={init,'),context);return context.testPredicates;}
+const project=([x,y])=>({x,y});
+test('A12 hit tolerance includes the boundary for lines and points, including multipart lines',()=>{
+ const H=predicates(),line={type:'LineString',coordinates:[[0,0],[100,0]]};
+ assert.equal(H.HIT_TOLERANCE,14);assert.equal(H.hitGeometry({x:50,y:14},line,project).priority,1);assert.equal(H.hitGeometry({x:50,y:14.01},line,project),null);
+ assert.equal(H.hitGeometry({x:0,y:14},{type:'Point',coordinates:[0,0]},project).priority,0);
+ assert.equal(H.hitGeometry({x:0,y:14.01},{type:'Point',coordinates:[0,0]},project),null);
+ assert.equal(H.hitGeometry({x:50,y:114},{type:'MultiLineString',coordinates:[line.coordinates,[[0,100],[100,100]]]},project).priority,1);
+});
+test('A12 polygons include their exterior and exclude holes',()=>{
+ const H=predicates(),g={type:'Polygon',coordinates:[[[0,0],[100,0],[100,100],[0,100],[0,0]],[[30,30],[70,30],[70,70],[30,70],[30,30]]]};
+ assert.equal(H.hitGeometry({x:15,y:50},g,project).priority,2);assert.equal(H.hitGeometry({x:50,y:50},g,project),null);
+ assert.equal(H.hitGeometry({x:101,y:50},g,project),null);assert.equal(H.hitGeometry({x:0,y:50},g,project).priority,2);
+});
+test('A12 resolver prioritizes point, closest line, most specific polygon and topmost ties; ignores hidden layers',()=>{
+ const H=predicates(),c=(id,priority,distance=0,area=100,order=1)=>({featureId:id,priority,distance,area,order});
+ assert.equal(H.chooseHit([c('polygon',2),c('line',1),c('pin',0)]).featureId,'pin');
+ assert.equal(H.chooseHit([c('far',1,12),c('near',1,2)]).featureId,'near');
+ assert.equal(H.chooseHit([c('large',2,0,100),c('specific',2,0,10)]).featureId,'specific');
+ assert.equal(H.chooseHit([c('lower',1,2,100,1),c('upper',1,2,100,2)]).featureId,'upper');
+ const feature={properties:{id:'hidden'},geometry:{type:'Point',coordinates:[50,50]}};
+ const group={eachLayer(fn){fn({feature,getLatLng:()=>[50,50]});}};H.layers.set('layer',group);H.handlers.set('layer',()=>{});
+ let visible=false,projections=0;H.setMap({hasLayer:()=>visible,latLngToContainerPoint(p){projections++;return {x:p[1],y:p[0]};}});
+ assert.equal(H.resolveTap({x:50,y:50}),null);assert.equal(projections,0);visible=true;
+ assert.equal(H.resolveTap({x:50,y:50}).featureId,'hidden');assert.equal(H.resolveTap({x:500,y:500}),null);
+});
 test('criterion 17: exact adapter surface; all renderer references stay in the adapter',()=>{
  assert.deepEqual(Object.keys(require('../../explore/map-adapter.js')),names);
  for(const name of fs.readdirSync(path.join(root,'explore')).filter(name=>name.endsWith('.js')&&name!=='map-adapter.js'))
@@ -40,7 +66,7 @@ test('A11 selection emphasizes one feature, clears it, and preserves generalized
 });
 test('A11 labels use carried names only, respect zoom, clear, and share a global cap',()=>{
  const context={module:{exports:{}},document:{createElement:()=>({})}},active=new Set();let zoom=13,publish,scanned=0,bound=0;
- const map={createPane(){},getPane:()=>({style:{}}),on(_,fn){publish=fn;},off(){},setView(){},getZoom:()=>zoom,getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1,contains:()=>true}),latLngToContainerPoint:ll=>({x:ll.lng*220+120,y:ll.lat*60+140}),hasLayer:()=>true,remove(){},removeLayer(){}};
+ const map={createPane(){},getPane:()=>({style:{}}),on(name,fn){if(name.includes('moveend'))publish=fn;},off(){},setView(){},getZoom:()=>zoom,getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1,contains:()=>true}),latLngToContainerPoint:ll=>({x:ll.lng*220+120,y:ll.lat*60+140}),hasLayer:()=>true,remove(){},removeLayer(){}};
  context.L={map:()=>map,control:{scale:()=>({addTo(){}})},tileLayer:()=>({addTo(){return this;}}),geoJSON(data){
   const items=data.features.map(feature=>({feature,on(){return this;},getLatLng:()=>feature.geometry.coordinates,bindTooltip(node,options){bound++;this.label=node.textContent;assert.equal(options.interactive,false);assert.equal(options.permanent,true);return this;},openTooltip(){active.add(this);return this;},unbindTooltip(){active.delete(this);}}));return {eachLayer(fn){scanned++;items.forEach(fn);},addTo(){return this;}};
  }};

@@ -5,6 +5,60 @@ import {setTimeout as delay} from 'node:timers/promises';
 
 const INIT=`(()=>{
  let app,renderer;window.__rendered=[];window.__handed={};window.__visible={};
+ window.__frameLine=f=>{
+  let best;
+  for(const line of f.geometry.type==='LineString'?[f.geometry.coordinates]:f.geometry.coordinates)for(let i=1;i<line.length;i++){
+   const a=line[i-1],b=line[i],length=Math.hypot(b[0]-a[0],b[1]-a[1]);if(!best||length>best.length)best={length,a,b};
+  }
+  const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id);
+  item._map.setView([(best.a[1]+best.b[1])/2,(best.a[0]+best.b[0])/2],15,{animate:false});
+ };
+ window.__framePolygon=f=>{
+  const polygons=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
+  let best;
+  for(const polygon of polygons){const ys=polygon[0].map(p=>p[1]),min=Math.min(...ys),max=Math.max(...ys);
+   for(const fraction of [.5,.25,.75]){const y=min+(max-min)*fraction,xs=[];
+    for(const ring of polygon)for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[j],b=ring[i];if((a[1]>y)!==(b[1]>y))xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]));}
+    xs.sort((a,b)=>a-b);for(let i=0;i+1<xs.length;i+=2)if(!best||xs[i+1]-xs[i]>best.width)best={width:xs[i+1]-xs[i],x:(xs[i]+xs[i+1])/2,y};
+   }
+  }
+  const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id);
+  item._map.setView([best.y,best.x],15,{animate:false});
+ };
+ window.__pointForFeature=(f,offset=0)=>{
+  const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id),map=item?._map;
+  if(!map)throw Error('Feature not rendered '+f.properties.id);
+  const project=p=>map.latLngToContainerPoint([p[1],p[0]]),g=f.geometry,c=g.coordinates,points=[];
+  if(/LineString$/.test(g.type))for(const line of g.type==='LineString'?[c]:c)for(let i=1;i<line.length;i++)for(const t of [.25,.5,.75]){
+   const a=project(line[i-1]),b=project(line[i]),d=Math.hypot(b.x-a.x,b.y-a.y)||1;
+   points.push({x:a.x+(b.x-a.x)*t-(b.y-a.y)*offset/d,y:a.y+(b.y-a.y)*t+(b.x-a.x)*offset/d});
+  }
+  else if(/Polygon$/.test(g.type)){
+   const rings=(g.type==='Polygon'?c:c.flat()).map(r=>r.map(project));
+   const inside=(p,ring)=>{let hit=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[i],b=ring[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)hit=!hit;}return hit;};
+   for(let y=130;y<innerHeight-70;y+=24)for(let x=12;x<innerWidth-12;x+=24){const p={x,y};if(rings.reduce((hit,r)=>inside(p,r)?!hit:hit,false))points.push(p);}
+  }else if(g.type==='Point')points.push(project(c));
+  const area=l=>{const b=l.getBounds?.();if(!b)return 0;const a=map.latLngToContainerPoint(b.getNorthWest()),c=map.latLngToContainerPoint(b.getSouthEast());return Math.abs((c.x-a.x)*(c.y-a.y));};
+  const others=window.__rendered.flatMap(g=>Object.values(g._layers)).filter(l=>l._map===map&&l.feature?.geometry&&l!==item&&app.region.registry.some(e=>window.__handed[e.id]?.includes(l.feature))).map(l=>{
+   const h=l.feature.geometry,lc=h.coordinates,b=l.getBounds?.(),a=b?map.latLngToContainerPoint(b.getNorthWest()):project(lc),z=b?map.latLngToContainerPoint(b.getSouthEast()):a;
+   const segments=[];if(/LineString$/.test(h.type))for(const line of h.type==='LineString'?[lc]:lc){let last;for(const coord of line){const p=project(coord);if(last)segments.push([last,p]);last=p;}}
+   return {l,type:h.type,a,z,segments,area:area(l)};
+  });
+  const step=Math.max(1,Math.floor(points.length/256));
+  for(let i=0;i<points.length;i+=step){const p=points[i];
+   const e=document.elementFromPoint(p.x,p.y);if(p.y<120||!map.getContainer().contains(e)||e?.closest('.leaflet-control'))continue;
+   let obscured=false;
+   for(const {l,type,a,z,segments,area:otherArea} of others){
+    if(p.x<Math.min(a.x,z.x)-14||p.x>Math.max(a.x,z.x)+14||p.y<Math.min(a.y,z.y)-14||p.y>Math.max(a.y,z.y)+14)continue;
+    if(/Polygon$/.test(type)){if(/Polygon$/.test(g.type)&&otherArea<=area(item)&&l._containsPoint(map.containerPointToLayerPoint(p))){obscured=true;break;}continue;}
+    let distance=type==='Point'?Math.hypot(a.x-p.x,a.y-p.y):Infinity;
+    for(const [a,z] of segments){const dx=z.x-a.x,dy=z.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));distance=Math.min(distance,Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy));}
+    if(distance<=(/Polygon$/.test(g.type)||type==='Point'?14:Math.abs(offset)+.5)){obscured=true;break;}
+   }
+   if(!obscured)return {x:p.x,y:p.y};
+  }
+  throw Error('No exposed geometry point '+f.properties.id);
+ };
  Object.defineProperty(window,'L',{configurable:true,get(){return renderer},set(value){renderer=value;const original=value.geoJSON;value.geoJSON=function(data,options){const result=original.call(this,data,options);window.__rendered.push(result);return result;}}});
  let adapter;Object.defineProperty(window,'ExploreMap',{configurable:true,get(){return adapter},set(value){adapter=value;for(const method of ['addLayer','setPins']){const original=value[method];value[method]=function(id,data,...args){window.__handed[id]=method==='addLayer'?data.features:data;window.__visible[id]=true;return original.call(this,id,data,...args);};}const original=value.setVisible;value.setVisible=function(id,value){window.__visible[id]=value;return original.call(this,id,value);};}});
  Object.defineProperty(window,'explore',{configurable:true,get(){return app},set(value){app=value;for(const name of ['mapUsable','defaultLayersLoaded']){let state=value.state[name];Object.defineProperty(value.state,name,{get(){return state},set(next){state=next;if(next)window['__'+name+'Resources']=performance.getEntriesByType('resource').map(x=>x.name);}});}}});
@@ -40,6 +94,7 @@ export async function runExploreChecks(client,origin,signal,root){
  }
  const bytes=async urls=>{let count=0;const paths=new Set();for(const url of new Set(urls)){const u=new URL(url);if(u.origin!==origin)continue;let p=resolve(root,'.'+u.pathname);if(u.pathname.endsWith('/'))p=resolve(p,'index.html');if(!paths.has(p)){paths.add(p);count+=(await readFile(p)).length;}}return count;};
  async function drag(point,dx,dy){await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:point.x,y:point.y}]});for(let i=1;i<=5;i++)await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x+dx*i/5,y:point.y+dy*i/5}]});await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
+ async function mouseTap(point){await client.command('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});await client.command('Input.dispatchMouseEvent',{type:'mouseReleased',...point,button:'left',clickCount:1});}
  async function assertSelection(label,cleared=false){
   const selection=await evaluate(`(()=>{
    const paths=window.__rendered.flatMap(g=>Object.values(g._layers)).filter(l=>l.options.selected).map(l=>l.feature.properties.id);
@@ -154,8 +209,9 @@ export async function runExploreChecks(client,origin,signal,root){
    const entry=explore.region.registry.find(e=>e.kind==='trails'),f=explore.region.layers.get(entry.id).data.features.find(f=>f.properties.name&&f.geometry);
    window.__a11Trail=f;window.__a11TrailEntry=entry;
    const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id);
-   if(!item)throw Error('A11 trail renderer item absent');item.fire('click',{latlng:item.getBounds().getCenter()});
+   if(!item)throw Error('A11 trail renderer item absent');explore.select(entry,f);explore.$('detail-back').click();explore.sheet.setState('collapsed');
   })()`);
+  await evaluate('__frameLine(window.__a11Trail)');await mouseTap(await evaluate('__pointForFeature(window.__a11Trail)'));
   assert.equal(await evaluate('explore.state.selection.featureId===window.__a11Trail.properties.id&&!explore.$("detail-view").hidden'),true,'A11 trail tap selects and opens detail');await assertSelection('A11 exact trail tap');
   assert.equal(await evaluate(`(()=>{const b=ExploreShell.bounds({features:[window.__a11Trail]}),v=explore.state.view.bounds;return v[0][0]<=b[0][0]&&v[0][1]<=b[0][1]&&v[1][0]>=b[1][0]&&v[1][1]>=b[1][1]})()`),true,'A11 full trail bounds fitted');
   const trailText=await evaluate('explore.$("detail-view").textContent'),trailFields=await evaluate('window.__a11Trail.properties');
@@ -163,7 +219,8 @@ export async function runExploreChecks(client,origin,signal,root){
   assert.ok(trailText.includes('Source fetched '+trailFields.evidence.retrieved_at.slice(0,10)));
   assert.ok(trailText.includes(manifest.layers.find(e=>e.kind==='trails').limitations),'A11 trail limitation');assert.doesNotMatch(trailText,/\blength\b|elevation gain/i,'A11 no fabricated trail measures');
   await evaluate('explore.$("detail-back").click()');
-  const landTexts=await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='land_management'),f=explore.region.layers.get(entry.id).data.features[0];window.__a11LandId=f.properties.id;const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===f.properties.id);item.fire('click',{latlng:item.getBounds().getCenter()});return ExploreLand.detail(explore.manifest,explore.manifest.layers.find(e=>e.id===entry.id),f).items.map(x=>x.text)})()`);
+  const landTexts=await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='land_management'),f=explore.region.layers.get(entry.id).data.features[0];window.__a11Land=f;window.__a11LandId=f.properties.id;explore.select(entry,f);explore.$('detail-back').click();explore.sheet.setState('collapsed');__framePolygon(f);return ExploreLand.detail(explore.manifest,explore.manifest.layers.find(e=>e.id===entry.id),f).items.map(x=>x.text)})()`);
+  await mouseTap(await evaluate('__pointForFeature(window.__a11Land)'));
   assert.deepEqual(await evaluate('[...explore.$("detail-body").querySelectorAll("p,a")].slice(0,'+landTexts.length+').map(e=>e.textContent)'),landTexts,'A11 land detail exact wording and order');
   assert.equal(await evaluate('!explore.$("detail-view").hidden&&explore.state.selection?.featureId===window.__a11LandId'),true,'A11 land tap selects');await assertSelection('A11 exact land tap');assert.ok(!['Private','Public'].includes(await evaluate('explore.$("detail-title").textContent')));
   await evaluate('explore.$("detail-back").click();explore.sheet.setExpanded(false)');
@@ -190,7 +247,7 @@ export async function runExploreChecks(client,origin,signal,root){
   for(let a=0;a<labels.length;a++)for(let b=a+1;b<labels.length;b++){const x=labels[a].box,y=labels[b].box;assert.ok(x[2]<=y[0]||y[2]<=x[0]||x[3]<=y[1]||y[3]<=x[1],'A11 names do not crowd each other');}result.labelsAt14=labels.map(l=>l.text);
   async function tap(point){await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
   if(width<768){
-   const nativeFeaturePoint=await evaluate(`(()=>{explore.select(window.__a11LabelEntry,window.__a11LabelFeature);explore.$('detail-back').click();explore.drawer.open();const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.properties?.id===window.__a11LabelFeature.properties.id),p=item._map.latLngToContainerPoint(item.getCenter());return {x:p.x,y:p.y}})()`);
+   const nativeFeaturePoint=await evaluate(`(()=>{explore.select(window.__a11LabelEntry,window.__a11LabelFeature);explore.$('detail-back').click();explore.drawer.open();return __pointForFeature(window.__a11LabelFeature)})()`);
    await tap(nativeFeaturePoint);await poll('explore.state.selection?.featureId===window.__a11LabelFeature.properties.id','A11 native feature with drawer');assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 feature tap dismisses drawer without swallowing selection');await assertSelection('A11 native feature with drawer');await evaluate('explore.$("detail-back").click()');
   }
   await evaluate('explore.sheet.setExpanded(false)');

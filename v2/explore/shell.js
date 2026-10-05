@@ -85,14 +85,14 @@
       if(!entry)return;
       const featureId=feature.properties?.id||feature.id;
       state.selection={layerId:entry.id,featureId};
-      showFeatureDetail(entry,feature);
+      M.setSelected(entry.id,featureId);
       const geometry=feature.geometry||(feature.coordinates?{type:'Point',coordinates:feature.coordinates}:null);
       if(mapAvailable&&geometry){
         visibleLayers.add(entry.id);if(rows.get(entry.id))rows.get(entry.id).check.checked=true;M.setVisible(entry.id,true);
         const phone=!scope.matchMedia('(min-width:768px)').matches;
         M.fit(bounds({features:[{geometry}]}),{topLeft:[phone?24:$('sheet').getBoundingClientRect().width+24,108],bottomRight:[24,phone?Math.round(host.clientHeight*.4)+24:24]});
       }
-      M.setSelected(entry.id,featureId);
+      showFeatureDetail(entry,feature);
     }
     function showDetail(entry,feature){select(entry,feature);}
     function showFeatureDetail(entry,feature){
