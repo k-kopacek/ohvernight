@@ -15,14 +15,14 @@
     destroy();view=initialView;
     if(!scope.L)return false;
     const L=scope.L;
-    map=L.map(container,{zoomControl:false,preferCanvas:true,minZoom:5,maxZoom:19,
+    map=L.map(container,{zoomControl:false,doubleClickZoom:true,preferCanvas:true,minZoom:5,maxZoom:19,
       zoomAnimation:!reduced(),fadeAnimation:!reduced(),markerZoomAnimation:!reduced()});
     map.createPane('context');map.getPane('context').style.zIndex=350;
     map.on('moveend zoomend',publishView);
     map.setView([view.center[1],view.center[0]],view.zoom,{animate:false});
     for(const [name,delta] of [['zoomIn',1],['zoomOut',-1]]){
       const control=view.controls?.[name];if(!control)continue;
-      const handler=()=>map?.setZoom(map.getZoom()+delta,{animate:!reduced()});
+      const handler=event=>{event?.preventDefault();map?.setZoom(map.getZoom()+delta,{animate:false});};
       control.addEventListener('click',handler);controlBindings.push([control,handler]);
     }
     L.control.scale({position:'bottomleft',imperial:true,metric:false}).addTo(map);
