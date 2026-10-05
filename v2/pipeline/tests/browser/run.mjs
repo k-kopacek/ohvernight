@@ -4,24 +4,83 @@ import {spawn} from 'node:child_process';
 import {createServer as createTcpServer} from 'node:net';
 import {extname,join,normalize,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+import {setTimeout as delay} from 'node:timers/promises';
 
 const root=resolve(fileURLToPath(new URL('../../../../',import.meta.url)));
 const chromeCandidates=[process.env.CHROME,'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','google-chrome','chromium'].filter(Boolean);
 const mime={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.geojson':'application/geo+json','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
 const wait=ms=>new Promise(resolvePromise=>setTimeout(resolvePromise,ms));
+export const CHROME_STARTUP_TIMEOUT_MS=60000;
+const CHROME_STOP_GRACE_MS=1500;
 
 async function freePort(){
   const server=createTcpServer();
   await new Promise((resolvePromise,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolvePromise);});
-  const port=server.address().port;server.close();return port;
+  const port=server.address().port;
+  await new Promise((resolvePromise,reject)=>server.close(error=>error?reject(error):resolvePromise()));
+  return port;
 }
-async function waitFor(url){
-  for(let attempt=0;attempt<100;attempt++){
-    try{const response=await fetch(url);if(response.ok)return; }catch{}
-    await wait(50);
+export async function waitFor(url,{
+  timeoutMs=CHROME_STARTUP_TIMEOUT_MS,retryIntervalMs=150,attemptTimeoutMs=1000,
+  chrome={candidate:'unknown',version:'unknown'},
+  processState=()=>({exited:false,exitCode:null,signal:null}),exitSignal,
+}={}){
+  const started=performance.now();
+  const deadline=started+timeoutMs;
+  let attempts=0,lastError='none';
+  const diagnostic=reason=>{
+    const state=processState();
+    return new Error(`${reason} waiting for ${url}; elapsed=${Math.round(performance.now()-started)} ms; attempts=${attempts}; last error/status=${lastError}; Chrome executable=${chrome.candidate}; Chrome version=${chrome.version}; Chrome exited=${state.exited}; exit code=${state.exitCode}; signal=${state.signal}${state.error?`; process error=${state.error.message}`:''}`);
+  };
+  while(performance.now()<deadline){
+    if(processState().exited||exitSignal?.aborted) throw diagnostic('Chrome exited before readiness');
+    attempts++;
+    let ready=false;
+    try{
+      const timeout=AbortSignal.timeout(Math.max(1,Math.ceil(Math.min(attemptTimeoutMs,deadline-performance.now()))));
+      const response=await fetch(url,{signal:exitSignal?AbortSignal.any([timeout,exitSignal]):timeout});
+      lastError=`HTTP ${response.status}`;
+      await response.body?.cancel();
+      ready=response.ok;
+    }catch(error){lastError=`${error.name}: ${error.message}${error.cause?` (${error.cause.message})`:''}`;}
+    if(processState().exited||exitSignal?.aborted) throw diagnostic('Chrome exited before readiness');
+    if(ready) return;
+    const remaining=deadline-performance.now();
+    if(remaining>0) await delay(Math.min(retryIntervalMs,remaining),undefined,{signal:exitSignal}).catch(error=>{
+      if(error.name!=='AbortError') throw error;
+    });
   }
-  throw new Error('Timed out waiting for '+url);
+  throw diagnostic(processState().exited?'Chrome exited before readiness':'Timed out');
+}
+function trackProcess(child){
+  const state={exited:false,exitCode:null,signal:null,error:null,closed:false};
+  const controller=new AbortController();
+  child.once('exit',(code,signal)=>{Object.assign(state,{exited:true,exitCode:code,signal});controller.abort();});
+  child.once('error',error=>{Object.assign(state,{exited:true,error});controller.abort();});
+  const closed=new Promise(resolvePromise=>child.once('close',()=>{state.closed=true;resolvePromise();}));
+  return {state,closed,signal:controller.signal};
+}
+async function settlesWithin(promise,timeoutMs){
+  let timer;
+  try{return await Promise.race([promise.then(()=>true),new Promise(resolvePromise=>{timer=setTimeout(()=>resolvePromise(false),timeoutMs);})]);}
+  finally{clearTimeout(timer);}
+}
+async function closeSocket(socket){
+  if(socket.readyState===WebSocket.CLOSED) return;
+  const closed=new Promise(resolvePromise=>socket.addEventListener('close',resolvePromise,{once:true}));
+  socket.close();
+  await settlesWithin(closed,CHROME_STOP_GRACE_MS);
+}
+async function stopChrome(browser,lifecycle){
+  if(!lifecycle.state.exited) browser.kill('SIGTERM');
+  if(!await settlesWithin(lifecycle.closed,CHROME_STOP_GRACE_MS)) browser.kill('SIGKILL');
+  await lifecycle.closed;
+}
+async function closeServer(server){
+  const closed=new Promise((resolvePromise,reject)=>server.close(error=>error?reject(error):resolvePromise()));
+  server.closeAllConnections?.();
+  await closed;
 }
 function cdpClient(url){
   const socket=new WebSocket(url);let nextId=0;const pending=new Map();const events=[];
@@ -90,17 +149,19 @@ async function inspectPage(client,url,localOrigin){
   return state;
 }
 async function main(){
-  const chrome=await findChrome();
-  const site=await staticServer();
-  const debugPort=await freePort();
-  const profile=await mkdtemp(join(tmpdir(),'ohvernight-browser-'));
-  const browser=spawn(chrome.candidate,[`--headless=new`,`--no-sandbox`,`--disable-gpu`,`--disable-dev-shm-usage`,`--remote-debugging-port=${debugPort}`,`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','ignore']});
+  let site,profile,browser,lifecycle,client;
   try{
-    await waitFor(`http://127.0.0.1:${debugPort}/json/version`);
+    const chrome=await findChrome();
+    site=await staticServer();
+    const debugPort=await freePort();
+    profile=await mkdtemp(join(tmpdir(),'ohvernight-browser-'));
+    browser=spawn(chrome.candidate,[`--headless=new`,`--no-sandbox`,`--disable-gpu`,`--disable-dev-shm-usage`,`--remote-debugging-port=${debugPort}`,`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','ignore']});
+    lifecycle=trackProcess(browser);
+    await waitFor(`http://127.0.0.1:${debugPort}/json/version`,{chrome,processState:()=>lifecycle.state,exitSignal:lifecycle.signal});
     const targets=await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json();
     const target=targets.find(item=>item.type==='page');
     if(!target) throw new Error('Chrome page target missing');
-    const client=cdpClient(target.webSocketDebuggerUrl);
+    client=cdpClient(target.webSocketDebuggerUrl);
     const origin=`http://127.0.0.1:${site.port}`;
     const pages=[await inspectPage(client,`${origin}/v2/index.html`,origin),await inspectPage(client,`${origin}/v2/regions/douglas-co/index.html`,origin)];
     for(const page of pages){
@@ -115,12 +176,16 @@ async function main(){
       throw new Error('Aspen page did not load its manifest policy');
     }
     console.log(JSON.stringify({chrome:chrome.version,server:`127.0.0.1:${site.port}`,pages},null,2));
-    client.socket.close();
   }finally{
-    browser.kill('SIGTERM');
-    if(browser.exitCode===null) await new Promise(resolvePromise=>browser.once('close',resolvePromise));
-    site.server.close();
-    await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});
+    const cleanupErrors=[];
+    const cleanup=async action=>{try{await action();}catch(error){cleanupErrors.push(error);}};
+    if(client) await cleanup(()=>closeSocket(client.socket));
+    if(browser) await cleanup(()=>stopChrome(browser,lifecycle));
+    if(site) await cleanup(()=>closeServer(site.server));
+    if(profile) await cleanup(()=>rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100}));
+    if(cleanupErrors.length){console.error('Browser cleanup failed:',cleanupErrors);process.exitCode=1;}
   }
 }
-main().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
+  main().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
+}
