@@ -21,7 +21,7 @@
  }
  function attach(shell){
   const region=shell.region,config=region.config,caps=config.capabilities;
-  if(!caps.trip_planner)return null;
+  if(!caps.trip_planner)return caps.trail_season_check?scope.ExploreBrowse.attach(shell):null;
   const {element:el,button,$}=shell,M=scope.ExploreMap,E=scope.ExploreEvidence;
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))||fallback;}catch{return fallback;}};
   const stored=read(config.storage_keys.trip,{});

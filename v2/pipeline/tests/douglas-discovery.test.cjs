@@ -1,4 +1,4 @@
-const {test}=require('node:test'),a=require('node:assert/strict'),D=require('../../regions/douglas-co/discovery.js');
+const {test}=require('node:test'),a=require('node:assert/strict'),D=require('../../explore/trail-seasons.js');
 const trail=r=>({properties:{activities:{motorcycling:r}}});
 test('published seasons check every trip day including year wrapping; restrictions win',()=>{
  a.match(D.season(trail({accpt:'12/01-03/14'}),'motorcycling','2026-09-27','2026-09-28'),/Outside/);

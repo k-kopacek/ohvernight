@@ -137,9 +137,9 @@ async function staticServer(){
     try{
       const requestPath=decodeURIComponent((request.url||'/').split('?')[0]);
       const relative=normalize(requestPath).replace(/^([.][.][/\\])+/, '').replace(/^[/\\]+/,'')||'index.html';
-      const file=resolve(root,relative);
+      let file=resolve(root,relative);
       if(file!==root&&!file.startsWith(root+'/')) throw new Error('path outside checkout');
-      const info=await stat(file);if(!info.isFile()) throw new Error('not a file');
+      let info=await stat(file);if(info.isDirectory()){file=join(file,'index.html');info=await stat(file);}if(!info.isFile()) throw new Error('not a file');
       response.writeHead(200,{'content-type':mime[extname(file)]||'application/octet-stream','cache-control':'no-store'});
       response.end(await readFile(file));
     }catch(error){response.writeHead(error.message==='not a file'?404:400);response.end(error.message);}

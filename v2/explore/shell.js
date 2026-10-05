@@ -57,11 +57,12 @@
         if(loaded?.state==='loaded')body.append(element('p',loaded.count+' map features loaded'));
       }
       for(const link of region?.config.official_links||[])appendEvidence(body,{lines:[],links:[{label:link.label,url:E.safeUrl(link.url)}].filter(item=>item.url)});
+      if(active.extras?.coverage)body.append(element('p',active.extras.coverage.text));
       openDialog($('source-dialog'));
     }
     function showDetail(entry,feature){
       const declaration=manifest.layers.find(layer=>layer.id===entry.id),body=$('detail-body');body.replaceChildren();
-      const output=scope.ExploreLand?.tier(declaration)==='G'?scope.ExploreLand.detail(manifest,declaration,feature):E.feature(manifest,declaration,feature,entry.title);
+      const output=scope.ExploreLand?.tier(declaration)==='G'?scope.ExploreLand.detail(manifest,declaration,feature):E.feature(manifest,declaration,feature,entry.title,Date.now());
       $('detail-title').textContent=output.title;appendEvidence(body,output);
       body.append(button('Sources & coverage',showSources));
       options.onDetail?.(active,entry,feature,body);openDialog($('detail-dialog'));
@@ -130,7 +131,7 @@
         if(scope.TrailDiscovery.matches(feature,$('query').value,$('activity').value))box.append(button(feature.properties.name||entry.title,()=>showDetail(entry,feature)));
     }
     $('query').oninput=renderSearch;$('activity').onchange=renderSearch;
-    $('search').onclick=()=>{renderSearch();openDialog($('search-dialog'));};$('sources').onclick=showSources;
+    $('search').onclick=()=>{if(active.capabilities?.search){active.capabilities.search();return;}renderSearch();openDialog($('search-dialog'));};$('sources').onclick=showSources;
     for(const mode of ['satellite','topo'])$(mode).onclick=()=>{M.setBasemap(mode);$('satellite').setAttribute('aria-pressed',String(mode==='satellite'));$('topo').setAttribute('aria-pressed',String(mode==='topo'));};
     $('fit').onclick=()=>{sheet.setExpanded(false);M.fit(bounds(region?.coverage||{features:[]}));};
     async function start(){
@@ -140,6 +141,9 @@
         onManifest:value=>{manifest=value;options.onManifest?.(value);}});
       try{
         region=await loader.loadRegion(options.search??scope.location.search);active.manifest=manifest;
+        if(region.config.capabilities.region_extras){
+          try{await new Promise((resolve,reject)=>{const script=element('script');script.src=(options.basePath?options.basePath.replace(/\/$/,'')+'/':'')+'regions/'+region.regionId+'/extras.js';script.onload=resolve;script.onerror=reject;host.append(script);});active.extras=scope.RegionExtras;}catch{active.extrasFailed=true;}
+        }
         active.capabilities=scope.ExploreCapabilities?.attach(active);
         host.querySelector('.explore-region').textContent=manifest.region.name;
         renderDrawer();renderResults();

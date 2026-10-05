@@ -1,8 +1,13 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const T=require('../../trail-discovery.js'),D=require('../../regions/douglas-co/discovery.js');
+const T=require('../../trail-discovery.js'),D=require('../../explore/trail-seasons.js');
 const root=path.resolve(__dirname,'../..'),read=p=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8'));
 const base=read('pipeline/tests/fixtures/explore-compatibility.json');
 const real=read('pipeline/tests/fixtures/explore-real-compatibility.json');
+test('17.3: saved plan export shape is pinned before moving the writer',()=>{
+ const fixture=read('pipeline/tests/fixtures/explore-plan-export.json'),f=fixture.feature;
+ const B=require('../../explore/browse.js');
+ assert.deepEqual(B.buildPlan(new Map([[f.properties.id,f]]),[f.properties.id],{start:'2026-10-01',end:'2026-10-02',activity:'hiking',vehicle:'Car / SUV'},'fixed notes','2026-10-01T00:00:00.000Z'),fixture.expected);
+});
 test('T9/A6: every real nearby list keeps base IDs, ordering and displayed distances',()=>{
  const a=read('regions/aspen/display/trails.geojson').features,places=read('overnight-options.json').places,
   d=read('regions/douglas-co/display/trails.geojson').features,points=read('regions/douglas-co/display/recreation.geojson').features;
@@ -32,6 +37,8 @@ test('T9: Douglas browse mode counts, Rampart literal and coverage note are pinn
  const data=read('regions/douglas-co/research.json');
  assert.deepEqual({trails:data.layers.trails.features.length,camping:1+D.camping(data.layers.recreation.features).length,
   trailheads:data.layers.recreation.features.filter(f=>f.properties.site_type==='TRAILHEAD').length},base.browseCounts);
- assert.ok(fs.readFileSync(path.join(root,'regions/douglas-co/preview.js'),'utf8').includes('const area='+base.rampartText+';'));
- assert.ok(fs.readFileSync(path.join(root,'regions/douglas-co/index.html'),'utf8').includes(base.coverage));
+ assert.ok(fs.readFileSync(path.join(root,'regions/douglas-co/extras.js'),'utf8').includes('const area='+base.rampartText+';'));
+ assert.ok(fs.readFileSync(path.join(root,'regions/douglas-co/extras.js'),'utf8').includes(base.coverage));
+ const B=require('../../explore/browse.js'),extras=require('../../regions/douglas-co/extras.js');
+ for(const mode of ['trails','camping','trailheads'])assert.equal(B.rows(data.layers.trails.features,data.layers.recreation.features,extras.area,mode,'','').length,base.browseCounts[mode]);
 });

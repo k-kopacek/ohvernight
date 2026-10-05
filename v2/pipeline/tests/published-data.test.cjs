@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const TrailDiscovery = require('../../trail-discovery.js');
-const DouglasDiscovery = require('../../regions/douglas-co/discovery.js');
+const DouglasDiscovery = require('../../explore/trail-seasons.js');
 const trails = JSON.parse(fs.readFileSync(path.join(__dirname, '../../trails.geojson')));
 const douglas = JSON.parse(fs.readFileSync(path.join(__dirname, '../../regions/douglas-co/research.json')));
 

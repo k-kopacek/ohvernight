@@ -36,12 +36,12 @@
     return {lines:[manifest.coverage?.statement,...facts.map(fact=>fact.statement),...(manifest.known_gaps||[])].filter(value=>typeof value==='string'),
       links:facts.flatMap(fact=>(fact.official_urls||[]).map(url=>({label:'View source ↗',url:safeUrl(url)}))).filter(item=>item.url)};
   }
-  function feature(manifest,declaration,record,title){
+  function feature(manifest,declaration,record,title,now){
     const properties=record.properties||record;
     const provenance=properties.evidence||{};
     const lines=[];
     if(provenance.agency)lines.push(provenance.agency);
-    if(provenance.retrieved_at)lines.push('Source fetched '+date(provenance.retrieved_at));
+    if(provenance.retrieved_at)lines.push(declaration.max_age_hours==null?'Source fetched '+date(provenance.retrieved_at):retrievalLine({last_retrieved_at:provenance.retrieved_at},declaration.max_age_hours,now));
     lines.push(declaration.limitations);
     if(declaration.kind==='trails'){
       lines.push('Trail '+(properties.trail_number||'number unavailable')+' · '+(properties.surface||'Surface unknown'),
