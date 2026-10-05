@@ -45,6 +45,9 @@ test('T1: region loader resolves an active region, restores evidence and isolate
   assert.equal(loaded.regionId,'aspen');
   assert.equal(loaded.coverage.type,'FeatureCollection');
   assert.ok(loaded.places.overnight_options);
+  assert.ok(Array.isArray(loaded.places.overnight_options));
+  assert.ok(Array.isArray(loaded.places.ridb_options));
+  assert.ok(Array.isArray(loaded.places.destinations));
   assert.equal(calls.some(url=>url.includes(first.display.path)),false);
   const results=await loaded.loadDefaultLayers();
   assert.deepEqual(results.map(result=>result.state).slice(0,2),['loaded','failed']);
