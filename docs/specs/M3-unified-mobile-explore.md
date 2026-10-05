@@ -12,7 +12,7 @@ Narrow amendments made by the coordinator during PR A review, under the blocker 
 **A1 (2026-10-04) — display geometry after rounding (12.1 step 2, R63).**
 
 - *Finding.* Measured on the committed data during PR A review: rounding valid canonical geometry to six decimals and removing consecutive duplicates leaves 25 parts in 7 features that are no longer well-formed GeoJSON (a line with one position, or a ring with fewer than four), and 4 polygons that self-touch at the rounding scale (Aspen `dispersed_corridors` and `land_ownership`; Douglas `land` and `trails`). No feature collapses entirely. R63 as first written ("coordinates equal the rounded canonical coordinates" and "the geometry is valid") cannot both hold for this data.
-- *Resolution.* A part that rounding reduces to zero length or zero area is dropped from the display geometry; it is below the 0.1 m display precision and draws nothing. A polygon whose exterior ring is dropped is dropped with its holes. A feature is never dropped this way: if every part of a feature would be dropped, the build fails and the case is reported. Each index entry records the number of parts dropped as `dropped_degenerate_parts`. "Valid" in R63 means structurally well-formed, as stated in 12.3. Topological validity is not required of display geometry, because rounding can introduce self-touching at about 0.1 m; canonical geometry stays held to R22.
+- *Resolution.* A part that rounding reduces to zero length or zero area is dropped from the display geometry; it has no length or area at display precision and draws nothing. A polygon whose exterior ring is dropped is dropped with its holes. A feature is never dropped this way: if every part of a feature would be dropped, the build fails and the case is reported. Each index entry records the number of parts dropped as `dropped_degenerate_parts`. "Valid" in R63 means structurally well-formed, as stated in 12.3. Topological validity is not required of display geometry, because rounding can introduce self-touching at about 0.1 m; canonical geometry stays held to R22.
 - *Unchanged.* Six decimals; no other simplification; canonical data; R61 (every selected canonical feature is present); the rule that display geometry is never used for a contract check.
 - *Sections changed by A1:* 12.1 step 2, `index.json` fields in 12.1, R63 in 12.3, criterion 9d.
 
@@ -58,16 +58,21 @@ A3 was approved by the owner on 2026-10-04 with pull request #7.
 - *Rules.* These are presentation only. No field carries a trust statement, a limitation, a source description, a freshness policy or a rule; those stay in the manifest. Every string in `explore.json` obeys the word rule of 10.2 (extended from `title` to all strings), except a base-commit string inventoried under A4. T11 gains a negative test for each new field, including an attempt to declare a script path.
 - *Sections changed by A5:* 10.2, 19 (T11).
 
-**A6 (2026-10-04, coordinator amendment during PR B; approved when the owner merges PR B) — GPX export and proximity read display geometry (17.3, T8, T9).**
+**A6 (2026-10-04; final wording decided by the owner on 2026-10-04) — GPX export and proximity read display geometry (17.3, T8, T9).**
 
-- *Finding.* Section 17.3 lists "GPX output byte-for-byte" for Douglas. At the base commit the GPX writer serialises canonical coordinates at full precision (about 14 decimals). After migration the browser holds only display geometry, rounded to six decimals (12.1), and criterion 19 forbids fetching `research.json`. A GPX file exported from a real trail therefore cannot be byte-identical to the base-commit file. The same applies to raw distances in the nearby lists.
-- *Resolution.*
-  1. The moved `gpx`, `season`, `windows`, `days` and proximity functions are pinned as pure functions: for fixed inputs committed as fixtures, output is byte-identical to the base-commit functions (T8, T9). The functions themselves do not round, reformat or drop anything.
-  2. On real data their input is the display geometry. An exported GPX file carries six-decimal coordinates, a difference of at most about 6 cm from the canonical file, and omits a line part that A1 dropped as degenerate. Track structure, names, metadata, source and retrieval fields are otherwise identical to the base commit.
-  3. For every real feature of both regions, the nearby lists computed from display geometry show the same entries, in the same order, with the same displayed distance text as the base commit computed from canonical geometry. A test checks this for all features; any difference is a stop-and-report finding, not something to absorb.
-  4. No canonical-precision sidecar or export artifact is added; that would widen the display contract for no practical gain at this source's accuracy.
-- *User-visible effect.* Exported GPX coordinates have six decimals instead of about fourteen. Nothing else changes.
-- *Sections changed by A6:* 17.3, 19 (T8, T9).
+- *Finding.* Section 17.3 listed "GPX output byte-for-byte" for Douglas. At the base commit the GPX writer serialises canonical coordinates at full precision. After migration the browser holds only display geometry (12.1), and criterion 19 forbids fetching `research.json`. A GPX file exported from a real trail therefore cannot be byte-identical to the base-commit file. Coordinate precision is not necessarily the only difference: A1 drops geometry parts that rounding makes degenerate, and the Douglas `trails` display file records two such parts, so an affected trail can also differ in structure.
+- *Owner decision.* No second, full-precision copy of geometry is shipped or fetched to preserve historical byte-identical GPX output. GPX export may use the six-decimal display geometry. The requirement that real exported GPX files stay byte-identical to the base-commit Douglas output is retired. Six-decimal geographic coordinates introduce only sub-decimeter coordinate rounding; no more exact maximum is asserted here.
+- *GPX invariants, which replace that requirement.*
+  1. The GPX generation logic is byte-identical for identical fixed geometry inputs.
+  2. GPX coordinates come from the approved six-decimal display geometry.
+  3. Export performs no further simplification, resampling, smoothing, snapping, rerouting or other geometry transformation.
+  4. The geometry used for GPX is exactly the geometry validated under R63 and A1.
+  5. Feature identity, track and route naming, metadata, ordering and GPX structure are unchanged, except where a geometry part was already removed by the approved A1 display transformation.
+  6. If A1 would remove an entire trail feature, display generation already fails, so such a feature can never silently disappear from GPX export.
+  7. A regression test covers at least one real trail affected by an A1 dropped-degenerate-part case, so that the resulting GPX is explicit and pinned.
+- *Nearby lists.* For every real feature in both regions, the migrated nearby lists preserve the same entries, the same order and the same displayed distance as the base commit. If any real case differs, implementation stops and reports; tolerances and expected output are not changed to absorb it. Raw floating-point distance identity is not an acceptance criterion: displayed distance and ranking are the compatibility contract.
+- *Other moved functions.* `season`, `windows` and `days` stay pinned byte-identical for fixed inputs (T8).
+- *Sections changed by A6:* 17.3, 19 (T8, T9), 22.
 
 Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `docs/audits/architecture-audit.md`, `docs/specs/M2-regional-data-contract.md`, `v2/pipeline/docs/data-contract.md`.
 
@@ -653,7 +658,7 @@ Existing keys are read and kept: `ohvernight-trip-v1` for Aspen trip and plan; `
 ### 17.3 Behaviour that must not change
 
 - Aspen: planner, trip evaluation results (golden file), Plan A / backup, adventure pilot results and ordering, trail search results, nearby-trail and nearby-camping lists, source-health wording from `Trust.sourceSummary`.
-- Douglas: browse modes and counts, season-check labels from the moved `season` function, GPX output byte-for-byte for fixed inputs and six-decimal coordinates on real data (A6), saved list and export shape, nearby lists, coverage notes content.
+- Douglas: browse modes and counts, season-check labels from the moved `season` function, GPX output under the invariants of A6, saved list and export shape, nearby lists, coverage notes content.
 - Both: every layer on by default today is on by default; trip inputs never hide map features.
 
 Behaviour that changes on purpose: layout, drawer, progressive loading, land styling (13), feature detail presentation, rule ordering (14), RIDB listings going stale after 168 hours instead of 30 days (D4), the Douglas basemap (D5), and the Douglas entry URL forwarding straight to Explore (D11).
@@ -750,7 +755,7 @@ All tests are offline. Node and Python tests read no clock and write nothing ins
 - **T5 Rule ordering.** Motorhome plus outside-season plus high clearance → excluded, fresh and stale; motorhome within season → caution unchanged; two and three matching rules merge to the most restrictive, with stale and unconfirmed rules; a looser second rule does not loosen; `ruleReview` non-null; `ruleSources` lists all. End to end: two rules, one with a 5-day limit, an 8-night trip → excluded.
 - **T6 Golden compatibility.** `trip-evaluation-golden.json` rows are unchanged for `v2/` when the policy is 720 hours. The root rows are unchanged after 14.3.
 - **T7 Freshness policy.** `evaluate` with policy 720 equals the base-commit result for every golden row; with a missing, `null`, zero or negative policy, supportive results are "Source review is stale" and exclusions persist; no numeric day constant remains in `v2/trip-rules.js` or the Explore code (source-text check).
-- **T8 Trail seasons.** The moved `season`, `windows`, `days` and `gpx` functions return base-commit output for the existing Douglas test inputs.
+- **T8 Trail seasons.** The moved `season`, `windows`, `days` and `gpx` functions return base-commit output for the existing Douglas test inputs. Under A6: a GPX built from a real display feature with no dropped part equals the base GPX of the canonical feature with its coordinates rounded to six decimals; and a real trail with an A1 dropped part has its GPX pinned by fixture.
 - **T9 Compatibility.** Adventure-pilot options and ordering, trail search results and nearby lists for Aspen equal base-commit output for a fixed input set. Douglas browse counts for each mode equal base-commit counts. The Rampart record text equals the base-commit text. The Douglas coverage note equals the base-commit text, and the legacy-negated-wording inventory of A4 holds.
 
 **Python tests.**
@@ -829,7 +834,7 @@ Criteria apply to the PR that delivers the work. **PR A:** 1, 2, 6, 7, 8, 9a–9
 - **Behaviour drift during migration.** Two apps' worth of behaviour is being re-hosted. T6, T8 and T9 pin outputs to base-commit results; anything not pinned can drift unnoticed. Codex must add a pin before moving a behaviour, not after.
 - **Leaflet ceiling.** Option 1 does not scale to a statewide single view. The budget and triggers make the limit explicit, but M6 may reopen the renderer decision.
 - **Derived data.** Display files are a second copy of published geometry. R60–R64 and the rebuild check hold them to the canonical data; if those are weakened, the two can diverge silently.
-- **Coordinate rounding.** Six decimals moves a point by up to about 6 cm. It is display only, and canonical data is unchanged, but a rounded boundary must never be used for a contract check.
+- **Coordinate rounding.** Six-decimal geographic coordinates introduce only sub-decimeter coordinate rounding. It affects display geometry and, under A6, GPX export; and canonical data is unchanged, but a rounded boundary must never be used for a contract check.
 - **Headless measurements are not phones.** Thresholds were derived on a desktop CPU with throttling. The manual matrix is the only real-device evidence.
 - **Browser check in CI.** It depends on the runner image shipping Chrome. If the image changes, the job installs a pinned Chrome rather than being dropped; the status-check name `browser` does not change.
 - **Trust wording moves into shared code.** One mistake now affects every region. T3, T4 and criterion 11 guard it; reviewers should read every user-facing string in `evidence.js` and `land-style.js`.
