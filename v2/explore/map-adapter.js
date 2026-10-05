@@ -47,6 +47,16 @@
   function resolveTap(point){
     const candidates=[],project=p=>map.latLngToContainerPoint([p[1],p[0]]);let order=0;
     const surface=map.getContainer?.()?.getBoundingClientRect();
+    // Tooltips keep pointer-events:none. Only their actual visible boxes count
+    // as a hit, routed to the same source feature as the geometry beneath.
+    if(surface)for(const item of labelled){
+      const id=item.labelLayerId,box=item.getTooltip?.()?.getElement?.()?.getBoundingClientRect();
+      if(!box?.width||!handlers.has(id)||!map.hasLayer(layers.get(id)))continue;
+      if(point.x>=box.left-surface.left&&point.x<=box.right-surface.left&&point.y>=box.top-surface.top&&point.y<=box.bottom-surface.top){
+        const feature=item.feature||item.labelProperties;
+        return {layerId:id,featureId:feature.properties?.id||feature.id,feature};
+      }
+    }
     for(const [id,group] of layers){order++;if(!handlers.has(id)||!map.hasLayer(group))continue;
       group.eachLayer(item=>{
         const feature=item.feature||item.labelProperties,geometry=feature?.geometry||(feature?.coordinates?{type:'Point',coordinates:feature.coordinates}:null);
@@ -167,7 +177,7 @@
         if(occupied.some(other=>box.left<other.right+8&&box.right+8>other.left&&box.top<other.bottom+8&&box.bottom+8>other.top))return;
         const text=document.createElement('span');text.textContent=name;
         item.bindTooltip(text,{permanent:true,interactive:false,direction:'center',className:'explore-map-label'}).openTooltip();
-        occupied.push(box);labelled.add(item);shown++;count++;
+        item.labelLayerId=id;occupied.push(box);labelled.add(item);shown++;count++;
       });
     }
   }

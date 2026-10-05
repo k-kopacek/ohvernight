@@ -245,6 +245,15 @@ export async function runExploreChecks(client,origin,signal,root){
   const names=await evaluate('[...Object.values(window.__handed)].flat().map(f=>f.properties?.name||f.name).filter(Boolean)');
   for(const label of labels){assert.ok(names.includes(label.text),'A11 only carried names');assert.equal(label.interactive,'none','A11 labels never block taps');}
   for(let a=0;a<labels.length;a++)for(let b=a+1;b<labels.length;b++){const x=labels[a].box,y=labels[b].box;assert.ok(x[2]<=y[0]||y[2]<=x[0]||x[3]<=y[1]||y[3]<=x[1],'A11 names do not crowd each other');}result.labelsAt14=labels.map(l=>l.text);
+  const labelFixture=await evaluate(`(()=>{
+   const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature?.geometry&&l.getTooltip?.()?.getElement()&&explore.region.registry.find(e=>e.kind==='trails')&&window.__handed[explore.region.registry.find(e=>e.kind==='trails').id].includes(l.feature));
+   if(!item)throw Error('A12 no visible trail label');window.__a12LabelFeature=item.feature;window.__a12LabelMap=item._map;window.__a12LabelView={center:item._map.getCenter(),zoom:item._map.getZoom()};
+   const r=item.getTooltip().getElement().getBoundingClientRect();return {id:item.feature.properties.id,point:{x:r.x+r.width/2,y:r.y+r.height/2}};
+  })()`);
+  await mouseTap(labelFixture.point);assert.equal(await evaluate('explore.state.selection.featureId'),labelFixture.id,'A12 visible label selects its feature');await assertSelection('A12 label highlight');
+  await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed");window.__a12LabelMap.setView(window.__a12LabelView.center,window.__a12LabelView.zoom,{animate:false});void 0');
+  await mouseTap(await evaluate('__pointForFeature(window.__a12LabelFeature)'));assert.equal(await evaluate('explore.state.selection.featureId'),labelFixture.id,'A12 geometry and label resolve to the same ID');
+  await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
   async function tap(point){await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
   if(width<768){
    const nativeFeaturePoint=await evaluate(`(()=>{explore.select(window.__a11LabelEntry,window.__a11LabelFeature);explore.$('detail-back').click();explore.drawer.open();return __pointForFeature(window.__a11LabelFeature)})()`);

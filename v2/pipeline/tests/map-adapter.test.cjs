@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'../..'),source=fs.readFileSync(path.join(root,'explore/map-adapter.js'),'utf8');
 const names=['init','addLayer','removeLayer','setVisible','setStyle','setPins','onFeature','fit','setBasemap','destroy','setSelected','setLabels'];
-function predicates(){const context={};vm.runInNewContext(source.replace('const api={init,','scope.testPredicates={hitGeometry,chooseHit,resolveTap,HIT_TOLERANCE,layers,handlers,setMap:value=>{map=value;}}; const api={init,'),context);return context.testPredicates;}
+function predicates(){const context={};vm.runInNewContext(source.replace('const api={init,','scope.testPredicates={hitGeometry,chooseHit,resolveTap,HIT_TOLERANCE,layers,handlers,labelled,setMap:value=>{map=value;}}; const api={init,'),context);return context.testPredicates;}
 const project=([x,y])=>({x,y});
 test('A12 hit tolerance includes the boundary for lines and points, including multipart lines',()=>{
  const H=predicates(),line={type:'LineString',coordinates:[[0,0],[100,0]]};
@@ -74,4 +74,13 @@ test('A11 labels use carried names only, respect zoom, clear, and share a global
  const features=Array.from({length:40},(_,i)=>({properties:{id:String(i),name:i===0?null:'Carried '+i},geometry:{type:'Point',coordinates:{lng:i%10,lat:Math.floor(i/10)}}}));
  A.addLayer('names',{features},{});A.setLabels('names',{property:'name',minZoom:14,max:40});assert.equal(active.size,0);assert.equal(scanned,0,'no feature scan below label zoom');assert.equal(bound,0,'no tooltip allocation below label zoom');zoom=14;publish();assert.equal(active.size,32);assert.equal(bound,32,'only capped visible labels allocated');assert.ok([...active].every(item=>item.label===item.feature.properties.name));
  zoom=13;publish();assert.equal(active.size,0);zoom=14;publish();assert.equal(active.size,32);A.setLabels('names',null);assert.equal(active.size,0);A.destroy();
+});
+
+test('A12 label boxes select the same feature and do not intercept outside their own bounds',()=>{
+ const H=predicates(),feature={properties:{id:'labelled'},geometry:{type:'LineString',coordinates:[[0,100],[100,100]]}},group={eachLayer(){}};
+ H.layers.set('line',group);H.handlers.set('line',()=>{});
+ H.labelled.add({feature,labelLayerId:'line',getTooltip:()=>({getElement:()=>({getBoundingClientRect:()=>({left:20,right:80,top:10,bottom:30,width:60})})})});
+ H.setMap({getContainer:()=>({getBoundingClientRect:()=>({left:0,top:0})}),hasLayer:()=>true});
+ assert.equal(H.resolveTap({x:40,y:20}).featureId,feature.properties.id);assert.equal(H.resolveTap({x:81,y:20}),null);
+ H.setMap({getContainer:()=>({getBoundingClientRect:()=>({left:0,top:0})}),hasLayer:()=>false});assert.equal(H.resolveTap({x:40,y:20}),null);
 });
