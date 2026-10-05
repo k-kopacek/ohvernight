@@ -25,7 +25,7 @@
   const {element:el,button,$}=shell,M=scope.ExploreMap,E=scope.ExploreEvidence;
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))||fallback;}catch{return fallback;}};
   const stored=read(config.storage_keys.trip,{});
-  let trip={...config.trip_defaults,...stored.trip},plan={a:null,b:null,...stored.plan},places=[],kind='all',conflicts=true,lastAdventure='';
+  let trip={...config.trip_defaults,...stored.trip},plan={a:null,b:null,...stored.plan},places=[],kind='all',conflicts=true,lastAdventure='',filterOpen=false,healthOpen=false;
   const destinationEntry=region.registry.find(x=>x.kind==='destinations'),resorts=region.places[destinationEntry?.id]||[];
   if(!resorts.some(r=>r.id===trip.resort))trip.resort=config.trip_defaults.resort;
   if(!R.tripDays(trip.arrive,trip.depart)){trip.arrive=config.trip_defaults.arrive;trip.depart=config.trip_defaults.depart;}
@@ -80,12 +80,12 @@
    const failed=region.registry.filter(x=>x.format==='place_list'&&x.kind==='overnight_inventory').some(x=>!Array.isArray(region.places[x.id]));
    const count=places.filter(p=>p.status==='excluded').length;$('summary').textContent=failed?'Listings could not load':places.length+' sourced places · '+count+' trip conflicts';
    if(failed)paragraph(box,'Listings could not load');
-   paragraph(box,'No confirmed vehicle overnights yet.');paragraph(box,count+(count===1?' place conflicts':' places conflict')+' with this trip. Other camping options still need access and permission checks.');
+   const health=el('details'),summary=el('summary','What has been checked?');health.open=healthOpen;health.ontoggle=()=>{healthOpen=health.open;};health.append(summary);
+   paragraph(health,'No confirmed vehicle overnights yet.');paragraph(health,count+(count===1?' place conflicts':' places conflict')+' with this trip. Other camping options still need access and permission checks.');
    box.append(button('Explore a room backup →',()=>{kind='lodging';render();}));
-   const health=el('details'),summary=el('summary','What has been checked?');health.open=true;health.append(summary);
    for(const key of ['fire','closures','inventory'])paragraph(health,sourceSummary(region)[key]);box.append(health);
-   const panel=el('details',undefined,'explore-filters');panel.append(el('summary','Filters'));const filters=el('nav');filters.setAttribute('aria-label','Stay type');for(const [value,label] of [['all','All'],['campground','Campgrounds'],['dispersed','Dispersed'],['lodging','Rooms']]){const node=button(label,()=>{kind=value;render();});node.setAttribute('aria-pressed',String(kind===value));filters.append(node);}panel.append(filters);box.append(panel);
-   const label=el('label'),check=el('input');check.type='checkbox';check.checked=conflicts;check.onchange=()=>{conflicts=check.checked;render();};label.append(check,el('span','Include date / vehicle / stay-limit conflicts'));panel.append(label);
+   const panel=el('details',undefined,'explore-filters');panel.open=filterOpen;panel.ontoggle=()=>{filterOpen=panel.open;};panel.append(el('summary','Filters'));const filters=el('nav');filters.setAttribute('aria-label','Stay type');for(const [value,label] of [['all','All'],['campground','Campgrounds'],['dispersed','Dispersed'],['lodging','Rooms']]){const node=button(label,()=>{kind=value;filterOpen=panel.open;render();});node.setAttribute('aria-pressed',String(kind===value));filters.append(node);}panel.append(filters);box.append(panel);
+   const label=el('label'),check=el('input');check.type='checkbox';check.checked=conflicts;check.onchange=()=>{conflicts=check.checked;filterOpen=panel.open;render();};label.append(check,el('span','Include date / vehicle / stay-limit conflicts'));panel.append(label);
    for(const slot of ['a','b']){const place=places.find(p=>p.id===plan[slot]);if(place){box.append(el('h2',slot==='a'?'PLAN A':'BACKUP'),result(place),button('Remove',()=>{plan[slot]=null;persist();render();}));}}
    const shown=places.filter(p=>(kind==='all'||p.kind===kind)&&(conflicts||p.status!=='excluded')).sort((a,b)=>(a.status==='excluded')-(b.status==='excluded')||miles(a)-miles(b));
    for(const place of shown)box.append(result(place));if(!shown.length&&!failed)paragraph(box,'No places match. Try another stay type or include conflicts.');

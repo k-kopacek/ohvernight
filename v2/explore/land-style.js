@@ -32,7 +32,7 @@
     if(level==='G')return {color:tint,fillColor:tint,fillOpacity:.12,weight:zoom>=14?0:1,opacity:zoom>=14?0:.5,stroke:zoom<14,dashArray:'5 5'};
     if(level==='C')return {color:palette[3],fillColor:palette[3],fillOpacity:.10,weight:1,opacity:.5,dashArray:'7 5'};
     if(level==='P')return {color:tint,fillColor:tint,fillOpacity:.12,weight:1.3,opacity:.6,dashArray:null};
-    return {color:layer.kind==='water'?'#73c5dc':layer.kind==='trails'?'#b4a4ad':'#b1a58a',weight:layer.kind==='water'?1.5:3,opacity:.85,fillOpacity:.10};
+    return {color:layer.kind==='water'?'#73c5dc':layer.kind==='trails'?'#b4a4ad':'#b1a58a',weight:layer.kind==='water'?1.5:2.25,opacity:.85,fillOpacity:.10};
   }
   function legend(layer,features=[],title='',agency=''){
     const level=tier(layer),entries=[];
