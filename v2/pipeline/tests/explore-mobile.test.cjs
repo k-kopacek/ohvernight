@@ -32,13 +32,13 @@ test('A11 sheet gestures, handle activation and Escape preserve inertness and ma
 });
 test('A11 drawer swipe and Escape dismiss non-modally and return focus',()=>{
  const fs=require('node:fs'),vm=require('node:vm');
- class Node extends EventTarget{constructor(){super();this.attrs={};this.style={};this.classList={add(){},remove(){}};}getBoundingClientRect(){return {height:250};}setAttribute(k,v){this.attrs[k]=v;}focus(){this.focused=true;}}
+ class Node extends EventTarget{constructor(){super();this.dataset={};this.attrs={};this.style={};this.classList={add(){},remove(){}};}contains(e){return e===this;}closest(){return null;}getBoundingClientRect(){return {height:250};}setAttribute(k,v){this.attrs[k]=v;}focus(){this.focused=true;}}
  const element=new Node(),opener=new Node(),closeButton=new Node(),header=new Node(),doc=new Node();element.querySelector=()=>header;doc.querySelector=()=>null;
- const context={module:{exports:{}},document:doc,CustomEvent,innerHeight:600,matchMedia:()=>({matches:false})};vm.runInNewContext(fs.readFileSync(require.resolve('../../explore/drawer.js'),'utf8'),context);
+ const context={module:{exports:{}},document:doc,CustomEvent,innerHeight:600,matchMedia:()=>({matches:false})};vm.runInNewContext(fs.readFileSync(require.resolve('../../explore/sheet.js'),'utf8'),context);vm.runInNewContext(fs.readFileSync(require.resolve('../../explore/drawer.js'),'utf8'),context);
  const drawer=context.module.exports.createDrawer(element,opener,closeButton);assert.equal(element.hidden,true);
  drawer.open();assert.equal(element.hidden,false);assert.equal(closeButton.focused,true);assert.equal(opener.attrs['aria-expanded'],'true');
- const pointer=(type,y)=>{const e=new Event(type,{cancelable:true});Object.assign(e,{pointerId:1,clientX:10,clientY:y});Object.defineProperty(e,'target',{value:{closest:()=>null}});header.dispatchEvent(e);};
- pointer('pointerdown',20);pointer('pointerup',80);assert.equal(element.hidden,true);assert.equal(opener.focused,true);
+ const pointer=(type,y)=>{const e=new Event(type,{cancelable:true});Object.assign(e,{pointerId:1,clientX:10,clientY:y});Object.defineProperty(e,'target',{value:header});element.dispatchEvent(e);};
+ pointer('pointerdown',20);pointer('pointermove',80);pointer('pointerup',80);assert.equal(element.hidden,true);assert.equal(opener.focused,true);
  opener.focused=false;drawer.open();drawer.close(false);assert.equal(opener.focused,false,'sheet opening does not steal handle focus');
  drawer.open();const escape=new Event('keydown');escape.key='Escape';doc.dispatchEvent(escape);assert.equal(element.hidden,true);assert.equal(opener.focused,true);
  drawer.destroy();opener.dispatchEvent(new Event('click'));assert.equal(element.hidden,true);
@@ -64,7 +64,16 @@ test('A12 tablet touch drag follows the finger and snaps half; mouse title toggl
  vm.runInNewContext(fs.readFileSync(require.resolve('../../explore/sheet.js'),'utf8'),context);
  const sheet=context.module.exports.createSheet(element,toggle,body);
  function touch(type,y,time){const e=new Event(type,{cancelable:true});Object.defineProperty(e,'target',{value:header});Object.defineProperty(e,'timeStamp',{value:time});e.touches=type==='touchend'?[]:[{clientX:30,clientY:y}];e.changedTouches=[{clientX:30,clientY:y}];element.dispatchEvent(e);return e;}
- touch('touchstart',900,0);touch('touchmove',700,200);assert.equal(parseFloat(element.style.height),264,'intermediate follows finger');touch('touchmove',550,400);touch('touchend',550,420);
+ touch('touchstart',900,0);const cancel=new Event('pointercancel');cancel.pointerType='touch';element.dispatchEvent(cancel);touch('touchmove',700,200);assert.equal(parseFloat(element.style.height),264,'intermediate follows finger');touch('touchmove',550,400);touch('touchend',550,420);
  assert.equal(sheet.state,'half');assert.equal(body.inert,false);assert.equal(element.style.height,'');
  const click=new Event('click');Object.defineProperty(click,'timeStamp',{value:1000});Object.defineProperty(click,'detail',{value:1});toggle.dispatchEvent(click);assert.equal(sheet.state,'collapsed','mouse click toggle remains');sheet.destroy();
 });
+
+ test('A12 shared drawer levels snap expanded to peek, peek to dismissal, and slow drag to the nearest height',()=>{
+ const levels=[{state:'dismissed',height:0},{state:'peek',height:252},{state:'expanded',height:450}];
+ assert.equal(Sheet.snapPanelState(312,'peek',-60,-1,levels),'expanded');
+ assert.equal(Sheet.snapPanelState(390,'expanded',60,1,levels),'peek');
+ assert.equal(Sheet.snapPanelState(192,'peek',60,1,levels),'dismissed');
+ assert.equal(Sheet.snapPanelState(390,'peek',-138,-.2,levels),'expanded');
+ assert.equal(Sheet.snapPanelState(260,'expanded',190,.2,levels),'peek');
+ });

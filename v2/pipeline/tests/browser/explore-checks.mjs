@@ -184,7 +184,18 @@ export async function runExploreChecks(client,origin,signal,root){
 
    await evaluate('explore.drawer.open();explore.sheet.setState("half")');assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 sheet opening closes drawer');
    await evaluate('explore.drawer.open();explore.$("map").dispatchEvent(new MouseEvent("click",{bubbles:true}))');assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 exposed map tap dismisses drawer');
-   await evaluate('explore.drawer.open()');const hp=await evaluate('(()=>{const r=explore.$("drawer").querySelector(".explore-heading h1").getBoundingClientRect();return {x:r.x+20,y:r.y+12}})()');await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hp]});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:hp.x,y:hp.y+40}]});assert.ok(await evaluate('explore.$("drawer").getBoundingClientRect().bottom>innerHeight'),'A11 drawer follows finger before release');await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 drawer swipe dismisses');
+   await evaluate('explore.drawer.open()');const drawerHandle=()=>evaluate('(()=>{const r=explore.$("drawer").querySelector(".explore-heading h1").getBoundingClientRect();return {x:r.x+20,y:r.y+12}})()');
+   const hp=await drawerHandle(),peek=await evaluate('explore.$("drawer").getBoundingClientRect().height');
+   await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hp]});
+   for(let i=1;i<=3;i++){await delay(110,undefined,{signal});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:hp.x,y:hp.y-height*.24*i/3}]});const h=await evaluate('explore.$("drawer").getBoundingClientRect().height');assert.ok(h>peek&&h<height*.75,'A12 drawer slow drag follows finger before release');}
+   await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal(await evaluate('explore.drawer.state'),'expanded','A12 drawer slow drag snaps expanded');
+   await evaluate('explore.$("drawer").querySelector(".explore-drawer-body").scrollTop=120');const before=await evaluate('explore.$("drawer").querySelector(".explore-drawer-body").scrollTop');assert.ok(before>0,'A12 scrollable layer list fixture');
+   const lp=await evaluate('(()=>{const r=explore.$("drawer").querySelector(".explore-drawer-body").getBoundingClientRect();return {x:r.x+2,y:r.y+40}})()');await drag(lp,0,35);assert.equal(await evaluate('explore.drawer.state'),'expanded','A12 layer list scroll does not drag drawer');assert.ok(await evaluate('explore.$("drawer").querySelector(".explore-drawer-body").scrollTop')<before,'A12 layer list scrolls independently');
+   await flick(await drawerHandle(),60);assert.equal(await evaluate('explore.drawer.state'),'peek','A12 drawer downward flick collapses expanded to peek');
+   await flick(await drawerHandle(),-60);assert.equal(await evaluate('explore.drawer.state'),'expanded','A12 drawer upward flick expands');
+   await flick(await drawerHandle(),60);await flick(await drawerHandle(),60);assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11/A12 drawer downward swipe dismisses after collapse');
+   assert.equal(await evaluate('document.activeElement===explore.$("layers")'),true,'A12 drawer swipe focus returns');
+
   }
   if(width>=768){
    await evaluate('explore.sheet.setState("collapsed")');const center=await evaluate('explore.state.view.center');

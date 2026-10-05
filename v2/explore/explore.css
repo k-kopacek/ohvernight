@@ -43,3 +43,10 @@ body{margin:0}.explore-sheet-body label{display:flex;gap:8px;align-items:center}
 .explore-tools,.explore-root button{touch-action:manipulation}
 
 .explore-pin{display:grid;place-items:center}.explore-pin .pin-badge{width:28px;height:28px;min-width:28px;min-height:28px;border:1.5px solid white;font-size:12px;box-shadow:0 1px 3px #0005}.explore-pin.is-selected .pin-badge{box-shadow:0 0 0 2px #24271f,0 0 0 4px white}.explore-result{margin:0;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;padding:10px 4px!important;min-height:64px}.explore-result small{line-height:1.35}.explore-detail-actions p:first-child{font-size:12px;line-height:1.35;margin:4px 0}
+
+/* The handle stays fixed while the layer inventory scrolls independently. */
+.explore-drawer{display:flex;flex-direction:column;height:42dvh;max-height:none;overflow:hidden;padding:0;transition:height .15s}
+.explore-drawer[data-state=expanded]{height:75dvh}.explore-drawer .explore-heading{flex:none;position:relative;top:0;margin:0;padding:12px;height:68px}
+.explore-drawer .explore-heading::before{top:6px}.explore-drawer-body{overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:0 12px 12px;overflow-wrap:anywhere}
+.explore-drawer-body>p{font-size:12px;line-height:1.4;margin:6px 0}
+@media(min-width:768px){.explore-drawer{top:auto;bottom:8px}}
