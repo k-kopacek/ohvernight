@@ -46,6 +46,18 @@ A3 was approved by the owner on 2026-10-04 with pull request #7.
 - *Unchanged.* The wording itself; trust principle 8; the D12 strings; the rule that manifest statements are rendered verbatim.
 - *Sections changed by A4:* 10.5, 19 (T9), 20 (criterion 11).
 
+**A5 (2026-10-04, coordinator amendment during PR B; approved when the owner merges PR B) — further presentation fields in `explore.json` (10.2).**
+
+- *Finding.* Criterion 10 keeps region IDs, region paths and region-specific text out of `v2/explore/`, and 17.2 keeps the existing storage keys, three of which contain `douglas`. The 10.2 example has nowhere to put those keys, the Aspen landing text, the default trip inputs, or the fact that a region has an `extras.js`.
+- *Resolution.* `explore.json` may also carry, under the same closed schema:
+  - `storage_keys`: an object of key names (`trip`, `plan`, `notes`, and any other key the base-commit page used), each matching `^[a-z0-9-]+$`. A test pins the values to the keys listed in 17.2.
+  - `trip_defaults`: the default trip inputs the base-commit page shipped.
+  - `landing`: display strings for a region's landing form, used only when `trip_planner` is on, carried byte-identical from the base-commit page.
+  - `export_names`: file names the base-commit page used for downloads.
+  - capability `region_extras` (boolean): when true the shell loads `regions/<region id>/extras.js`. The path is derived by the shell from the active region ID; the configuration never carries a script path or URL to load.
+- *Rules.* These are presentation only. No field carries a trust statement, a limitation, a source description, a freshness policy or a rule; those stay in the manifest. Every string in `explore.json` obeys the word rule of 10.2 (extended from `title` to all strings), except a base-commit string inventoried under A4. T11 gains a negative test for each new field, including an attempt to declare a script path.
+- *Sections changed by A5:* 10.2, 19 (T11).
+
 Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `docs/audits/architecture-audit.md`, `docs/specs/M2-regional-data-contract.md`, `v2/pipeline/docs/data-contract.md`.
 
 M3 is one milestone with two phases:
