@@ -46,7 +46,10 @@
   }
 
   async function readJson(fetcher,url){
-    const response=await fetcher(url);
+    return parseResponse(await fetcher(url));
+  }
+
+  async function parseResponse(response){
     if(response && typeof response.json==='function'){
       if(response.ok===false) throw new Error('HTTP '+(response.status||0));
       return response.json();
@@ -73,13 +76,16 @@
     if(typeof fetcher!=='function') throw new TypeError('An injected fetch function is required');
     const base=options.basePath||'';
     const makeUrl=path=>joinPath(base,path);
-    async function fetchDisplay(regionId,path,index,layerId){
+    function requestDisplay(regionId,path,index,layerId){
       activePath(regionId,path,'display');
       const artifact=index.artifacts.find(item=>item.path===path);
       if(!artifact) throw new Error('Display artifact is not declared in the index');
       if(layerId && artifact.layer_id!==layerId) throw new Error('Display artifact layer ID does not match its declaration');
       const url=makeUrl(path)+'?v='+String(artifact.sha256||'').slice(0,12);
-      const document=await readJson(fetcher,url);
+      return fetcher(url);
+    }
+    async function fetchDisplay(regionId,path,index,layerId,responsePromise){
+      const document=await parseResponse(await (responsePromise||requestDisplay(regionId,path,index,layerId)));
       if(!document || document.type!=='FeatureCollection') throw new Error('Display file is not a FeatureCollection');
       if(layerId && document.layer_id!==layerId) throw new Error('Display file layer ID does not match its declaration');
       return restoreEvidence(document);
@@ -124,7 +130,7 @@
         try{rules=await readJson(fetcher,makeUrl(activePath(regionId,manifest.rules.path,'rules')));}catch{}
       }
       const state=new Map(entries.map(entry=>[entry.id,{...entry,state:'idle'}]));
-      async function loadLayer(layerId,zoom){
+      async function loadLayer(layerId,zoom,responsePromise){
         const entry=state.get(layerId);
         if(!entry) throw new Error('Unknown layer: '+layerId);
         if(entry.minZoom!==null && zoom!==undefined && Number(zoom)<entry.minZoom) return {id:layerId,state:'deferred',minZoom:entry.minZoom};
@@ -132,7 +138,7 @@
         if(entry.state==='loaded')return {id:layerId,state:'loaded',count:entry.count,data:entry.data};
         entry.state='loading';
         try{
-          entry.data=await fetchDisplay(regionId,entry.displayPath,index,entry.id);
+          entry.data=await fetchDisplay(regionId,entry.displayPath,index,entry.id,responsePromise);
           if(!entry.allowNullGeometry&&entry.data.features.some(feature=>feature.geometry===null))throw new Error('Layer does not allow non-spatial records');
           entry.state='loaded';
           entry.count=entry.data.features.length;
@@ -144,9 +150,28 @@
       }
       async function loadDefaultLayers({zoom,onState,yieldTask=()=>Promise.resolve()}={}){
         const result=[];
-        for(const entry of [...state.values()].filter(item=>item.defaultOn&&item.format==='feature_collection')){
+        const defaults=[...state.values()].filter(item=>item.defaultOn&&item.format==='feature_collection');
+        // Start transport together, but leave parsing/restoration and drawing to
+        // the ordered task loop. Attach rejection handlers immediately so a
+        // later failure cannot become an unhandled rejection while waiting.
+        const pending=new Map();
+        for(const entry of defaults){
+          if(entry.state==='loaded'||!entry.displayPath||
+            (entry.minZoom!==null&&zoom!==undefined&&Number(zoom)<entry.minZoom))continue;
+          entry.state='loading';
+          try{
+            pending.set(entry.id,Promise.resolve(requestDisplay(regionId,entry.displayPath,index,entry.id))
+              .then(response=>({response}),error=>({error})));
+          }catch(error){pending.set(entry.id,Promise.resolve({error}));}
+        }
+        for(const entry of defaults){
           await yieldTask();onState?.({id:entry.id,state:'loading'});
-          const loaded=await loadLayer(entry.id,zoom);result.push(loaded);onState?.(loaded);
+          const request=pending.get(entry.id);
+          const responsePromise=request?.then(value=>{
+            if(value.error)throw value.error;
+            return value.response;
+          });
+          const loaded=await loadLayer(entry.id,zoom,responsePromise);result.push(loaded);onState?.(loaded);
         }
         return result;
       }

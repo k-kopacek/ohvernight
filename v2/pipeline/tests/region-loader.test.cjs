@@ -231,3 +231,41 @@ test('T1: null geometry allowance comes from the manifest flag',async()=>{
  const fixture=fixtureFetch(manifest,config,index),region=await createRegionLoader({fetch:fixture.fetch}).loadRegion('?region=aspen');
  assert.equal((await region.loadLayer(layer.id)).state,'failed');
 });
+
+for(const rejectFirst of [false,true])test('A8: concurrent eligible requests, ordered parse/draw and isolated '+(rejectFirst?'rejection':'reverse responses'),async()=>{
+ const manifest=readJson('regions/aspen/region.json'),index=readJson('regions/aspen/display/index.json');
+ const spatial=manifest.layers.filter(layer=>layer.format==='feature_collection');
+ const eligible=spatial.slice(0,3),gated=spatial[3],off=spatial[4];
+ const config=fixtureConfig(manifest,[...eligible.map(x=>x.id),gated.id]);
+ config.layers.find(x=>x.layer_id===gated.id).min_zoom=14;
+ config.layers.reverse(); // Registry order, rather than JSON array order, governs consumption.
+ const fixture=fixtureFetch(manifest,config,index),requests=[],pending=new Map(),parsed=[],drawn=[];
+ const fetch=url=>{
+  const layer=spatial.find(x=>url.startsWith(x.display.path+'?'));
+  if(!layer)return fixture.fetch(url);
+  requests.push(layer.id);
+  return new Promise((resolve,reject)=>pending.set(layer.id,{reject,resolve:()=>resolve({ok:true,json:async()=>{
+   parsed.push(layer.id);return fixture.docs.get(layer.display.path);
+  }})}));
+ };
+ const region=await createRegionLoader({fetch}).loadRegion('?region=aspen');
+ let yields=0;const completion=region.loadDefaultLayers({zoom:10,yieldTask:async()=>{yields++;},onState:result=>{
+  if(result.state==='loaded'){drawn.push(result.id);assert.equal(result.data.features[0].properties.evidence.constructor,Object);}
+ }});
+ // No response has resolved; all eligible transport requests already exist.
+ assert.deepEqual(requests,eligible.map(x=>x.id));
+ assert.equal(requests.includes(gated.id),false);assert.equal(requests.includes(off.id),false);
+ for(const layer of [...eligible].reverse()){
+  if(rejectFirst&&layer===eligible[0])pending.get(layer.id).reject(new Error('first request failed'));
+  else pending.get(layer.id).resolve();
+ }
+ const results=await completion,expected=eligible.slice(rejectFirst?1:0).map(x=>x.id);
+ assert.deepEqual(parsed,expected);assert.deepEqual(drawn,expected);
+ assert.deepEqual(results.map(x=>x.state),rejectFirst?['failed','loaded','loaded','deferred']:['loaded','loaded','loaded','deferred']);
+ assert.equal(yields,4);assert.equal(region.layers.get(off.id).state,'idle');
+ if(rejectFirst){
+  pending.delete(eligible[0].id);
+  const retry=region.loadLayer(eligible[0].id,10);pending.get(eligible[0].id).resolve();
+  assert.equal((await retry).state,'loaded');
+ }
+});
