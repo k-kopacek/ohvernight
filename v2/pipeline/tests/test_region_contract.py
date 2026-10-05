@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 import re
 import shutil
@@ -127,6 +128,64 @@ class RegionContractTests(unittest.TestCase):
         with self.assertRaises(ContractError) as raised:
             self.valid(manifest, docs)
         self.assertEqual(raised.exception.rule, rule)
+
+    def display_base(self):
+        manifest, docs = self.base()
+        manifest["coverage"]["display"] = {"path": "regions/synthetic/display/coverage.geojson"}
+        manifest["layers"][0]["display"] = {"path": "regions/synthetic/display/water.geojson"}
+        canonical = docs["data.json"]["layers"]["water"]
+        evidence = copy.deepcopy(canonical["features"][0]["properties"]["evidence"])
+        display = {"type": "FeatureCollection", "layer_id": "water", "evidence_table": [evidence], "features": [{
+            "type": "Feature", "geometry": copy.deepcopy(canonical["features"][0]["geometry"]),
+            "properties": {"id": "water-1", "evidence": 0},
+        }]}
+        coverage = docs["coverage.json"]
+        coverage_display = {"type": "FeatureCollection", "layer_id": "coverage", "evidence_table": [], "features": [{
+            "type": "Feature", "geometry": copy.deepcopy(coverage["geometry"]), "properties": copy.deepcopy(coverage["properties"]),
+        }]}
+        def encoded(value):
+            return (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        entries = []
+        for layer_id, path, value, canonical_path in (("water", "regions/synthetic/display/water.geojson", display, "data.json"), ("coverage", "regions/synthetic/display/coverage.geojson", coverage_display, "coverage.json")):
+            data = encoded(value)
+            entries.append({"layer_id": layer_id, "path": path, "feature_count": 1, "source_feature_count": 1,
+                            "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+                            "canonical_sha256": hashlib.sha256(encoded(docs[canonical_path])).hexdigest()})
+        docs["regions/synthetic/display/water.geojson"] = display
+        docs["regions/synthetic/display/coverage.geojson"] = coverage_display
+        docs["regions/synthetic/display/index.json"] = {"region_id": "synthetic", "artifacts": entries}
+        return manifest, docs
+
+    def refresh_display_hash(self, docs, layer_id):
+        value = docs[f"regions/synthetic/display/{layer_id}.geojson"]
+        data = (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        entry = next(item for item in docs["regions/synthetic/display/index.json"]["artifacts"] if item["layer_id"] == layer_id)
+        entry["bytes"] = len(data)
+        entry["sha256"] = hashlib.sha256(data).hexdigest()
+
+    def test_display_contract_rules_R60_to_R64(self):
+        def assert_display_rule(rule, mutate):
+            manifest, docs = self.display_base()
+            self.valid(manifest, docs)
+            mutate(manifest, docs)
+            with self.assertRaises(ContractError) as raised:
+                self.valid(manifest, docs)
+            self.assertEqual(raised.exception.rule, rule)
+        assert_display_rule("R60", lambda m, d: m["layers"][0]["display"].update(path="regions/synthetic/other/water.geojson"))
+        def missing_feature(m, d):
+            d["regions/synthetic/display/water.geojson"]["features"] = []
+            d["regions/synthetic/display/index.json"]["artifacts"][0]["feature_count"] = 0
+            self.refresh_display_hash(d, "water")
+        assert_display_rule("R61", missing_feature)
+        def changed_evidence(m, d):
+            d["regions/synthetic/display/water.geojson"]["evidence_table"][0]["agency"] = "Different"
+            self.refresh_display_hash(d, "water")
+        assert_display_rule("R62", changed_evidence)
+        def changed_coordinate(m, d):
+            d["regions/synthetic/display/water.geojson"]["features"][0]["geometry"]["coordinates"] = [0.5, 0.5]
+            self.refresh_display_hash(d, "water")
+        assert_display_rule("R63", changed_coordinate)
+        assert_display_rule("R64", lambda m, d: d["data.json"]["layers"]["water"]["features"][0]["properties"].update(name="changed"))
 
     def test_R01_manifest_enum_and_shape(self):
         self.assert_rule("R01", lambda m, d: m["region"].update(status="verified"))

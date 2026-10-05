@@ -50,7 +50,8 @@
         "path": {"$ref": "#/$defs/path"}, "pointer": {"type": "string"},
         "kind": {"enum": ["clipping_boundary", "project_defined_extent"]},
         "source_id": {"type": ["string", "null"]},
-        "statement": {"type": "string", "minLength": 1}
+        "statement": {"type": "string", "minLength": 1},
+        "display": {"$ref": "#/$defs/path_ref"}
       }
     },
     "source": {
@@ -81,6 +82,7 @@
         "path": {"$ref": "#/$defs/path"}, "pointer": {"type": "string"},
         "source_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "status_ref": {"$ref": "#/$defs/status_ref"},
+        "display": {"$ref": "#/$defs/path_ref"},
         "max_age_hours": {"type": ["number", "null"], "exclusiveMinimum": 0},
         "geometry_types": {"type": "array", "items": {"enum": ["Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon"]}},
         "allow_null_geometry": {"type": "boolean"},

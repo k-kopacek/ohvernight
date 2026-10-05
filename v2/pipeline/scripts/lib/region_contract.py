@@ -6,6 +6,8 @@ the files it points to, and the evidence semantics without reading the clock.
 from __future__ import annotations
 
 import json
+import copy
+import hashlib
 import math
 import re
 from datetime import datetime, timezone
@@ -59,6 +61,154 @@ def _json_pointer(document, pointer):
         else:
             current = current[token]
     return current
+
+
+def _display_water(feature):
+    properties = feature.get("properties") or {}
+    geometry = feature.get("geometry") or {}
+    name = properties.get("name")
+    return (isinstance(name, str) and bool(name.strip()) and
+            ((properties.get("kind") == "flowline" and geometry.get("type") in {"LineString", "MultiLineString"}) or
+             (properties.get("kind") == "waterbody" and geometry.get("type") in {"Polygon", "MultiPolygon"})))
+
+
+def _display_round_path(points):
+    if not points:
+        return []
+    rounded = [[round(float(point[0]), 6), round(float(point[1]), 6)] for point in points]
+    closed = rounded[0] == rounded[-1]
+    result = [rounded[0]]
+    for point in rounded[1:]:
+        if point != result[-1]:
+            result.append(point)
+    if closed and len(result) > 1 and result[-1] != result[0]:
+        result.append(result[0])
+    return result
+
+
+def _display_round_geometry(geometry):
+    if geometry is None:
+        return None
+    result = dict(geometry)
+    coords = geometry.get("coordinates")
+    geometry_type = geometry.get("type")
+    if geometry_type == "Point":
+        result["coordinates"] = [round(float(coords[0]), 6), round(float(coords[1]), 6)]
+    elif geometry_type == "MultiPoint":
+        result["coordinates"] = [[round(float(point[0]), 6), round(float(point[1]), 6)] for point in coords]
+    elif geometry_type == "LineString":
+        result["coordinates"] = _display_round_path(coords)
+    elif geometry_type == "MultiLineString":
+        result["coordinates"] = [_display_round_path(line) for line in coords]
+    elif geometry_type == "Polygon":
+        result["coordinates"] = [_display_round_path(ring) for ring in coords]
+    elif geometry_type == "MultiPolygon":
+        result["coordinates"] = [[_display_round_path(ring) for ring in polygon] for polygon in coords]
+    return result
+
+
+def _display_json_bytes(value):
+    return (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode("utf-8")
+
+
+def _resolved_bytes(resolve, path, document):
+    raw_bytes = getattr(resolve, "raw_bytes", None)
+    if raw_bytes is not None and path in raw_bytes:
+        return raw_bytes[path]
+    return _display_json_bytes(document)
+
+
+def _display_error(manifest, layer, detail):
+    _error("R60", manifest, layer, detail)
+
+
+def _validate_display(manifest, resolve, coverage):
+    region_id = manifest["region"]["id"]
+    declared = [(layer["id"], layer) for layer in manifest["layers"] if layer.get("display")]
+    if manifest.get("coverage", {}).get("display"):
+        declared.append(("coverage", manifest["coverage"]))
+    if not declared:
+        return
+    index_path = f"regions/{region_id}/display/index.json"
+    try:
+        index = resolve(index_path)
+    except (KeyError, IndexError, TypeError, ValueError, FileNotFoundError):
+        _display_error(manifest, None, "display index does not resolve")
+    if not isinstance(index, dict) or not isinstance(index.get("artifacts"), list):
+        _display_error(manifest, None, "display index is invalid")
+    entries = {entry.get("layer_id"): entry for entry in index["artifacts"] if isinstance(entry, dict)}
+    if set(entries) != {layer_id for layer_id, _ in declared} or len(entries) != len(index["artifacts"]):
+        _display_error(manifest, None, "display index does not list exactly declared artifacts")
+    for layer_id, declaration in declared:
+        if layer_id != "coverage" and declaration.get("format") != "feature_collection":
+            _display_error(manifest, layer_id, "display is allowed only on feature collections")
+        display_ref = declaration["display"]
+        display_path = display_ref.get("path") if isinstance(display_ref, dict) else None
+        expected_prefix = f"regions/{region_id}/display/"
+        if (not isinstance(display_path, str) or not display_path.startswith(expected_prefix) or
+                display_path == expected_prefix or ".." in Path(display_path).parts or display_path.startswith("/")):
+            _display_error(manifest, layer_id, "display path is outside the region display directory")
+        entry = entries.get(layer_id)
+        if not isinstance(entry, dict) or entry.get("path") != display_path:
+            _display_error(manifest, layer_id, "display index path does not match manifest")
+        try:
+            display_document = resolve(display_path)
+        except (KeyError, IndexError, TypeError, ValueError, FileNotFoundError):
+            _display_error(manifest, layer_id, "display file does not resolve")
+        display_bytes = _resolved_bytes(resolve, display_path, display_document)
+        if entry.get("bytes") != len(display_bytes) or entry.get("sha256") != hashlib.sha256(display_bytes).hexdigest():
+            _display_error(manifest, layer_id, "display file hash or byte count differs from index")
+        if entry.get("canonical_sha256") != hashlib.sha256(_resolved_bytes(resolve, declaration["path"], resolve(declaration["path"]))).hexdigest():
+            _error("R64", manifest, layer_id, "canonical file hash differs from index")
+        if layer_id == "coverage":
+            if (display_document.get("type") != "FeatureCollection" or display_document.get("layer_id") != "coverage" or
+                    len(display_document.get("features", [])) != 1):
+                _error("R61", manifest, layer_id, "coverage display is not a single FeatureCollection feature")
+            display_feature = display_document["features"][0]
+            canonical_feature = _json_pointer(resolve(declaration["path"]), declaration.get("pointer", ""))
+            if display_feature.get("geometry") != _display_round_geometry(canonical_feature.get("geometry")):
+                _error("R63", manifest, layer_id, "coverage geometry is not rounded as declared")
+            if display_feature.get("properties") != canonical_feature.get("properties"):
+                _error("R63", manifest, layer_id, "coverage properties differ from canonical coverage")
+            continue
+        if display_document.get("type") != "FeatureCollection" or display_document.get("layer_id") != layer_id:
+            _error("R61", manifest, layer_id, "display file is not the declared layer FeatureCollection")
+        canonical_document = resolve(declaration["path"])
+        canonical_features = _json_pointer(canonical_document, declaration.get("pointer", ""))["features"]
+        selected = canonical_features
+        if declaration["kind"] == "water" and any("kind" in (feature.get("properties") or {}) for feature in canonical_features):
+            selected = [feature for feature in canonical_features if _display_water(feature)]
+        display_features = display_document.get("features")
+        if entry.get("feature_count") != len(display_features) or len(display_features) != len(selected):
+            _error("R61", manifest, layer_id, "display feature count differs from canonical selection")
+        by_id = {feature.get("properties", {}).get("id"): feature for feature in display_features}
+        canonical_by_id = {feature.get("properties", {}).get("id"): feature for feature in selected}
+        if set(by_id) != set(canonical_by_id):
+            _error("R61", manifest, layer_id, "display feature IDs differ from canonical selection")
+        evidence_table = display_document.get("evidence_table")
+        if not isinstance(evidence_table, list):
+            _error("R62", manifest, layer_id, "display evidence table is missing")
+        for ident, canonical_feature in canonical_by_id.items():
+            display_feature = by_id[ident]
+            if (display_feature.get("geometry") or {}).get("type") != (canonical_feature.get("geometry") or {}).get("type"):
+                _error("R63", manifest, layer_id, "display geometry type differs from canonical geometry")
+            if display_feature.get("geometry") != _display_round_geometry(canonical_feature.get("geometry")):
+                try:
+                    parsed = shape(display_feature.get("geometry"))
+                    if parsed.is_empty or not parsed.is_valid:
+                        _error("R63", manifest, layer_id, "display geometry is empty or invalid")
+                except (TypeError, ValueError, KeyError):
+                    _error("R63", manifest, layer_id, "display geometry is not valid")
+                _error("R63", manifest, layer_id, "display coordinates differ from canonical rounding")
+            properties = display_feature.get("properties", {})
+            evidence_index = properties.get("evidence")
+            if not isinstance(evidence_index, int) or isinstance(evidence_index, bool) or not 0 <= evidence_index < len(evidence_table):
+                _error("R62", manifest, layer_id, "display evidence reference is invalid")
+            restored = copy.deepcopy(properties)
+            restored["evidence"] = evidence_table[evidence_index]
+            canonical_properties = canonical_feature.get("properties", {})
+            if restored != canonical_properties:
+                _error("R62", manifest, layer_id, "display evidence or properties differ from canonical feature")
 
 
 def normalize_transport(record):
@@ -411,6 +561,7 @@ def validate_region_data(manifest, resolve):
             raise ValueError("coverage geometry must be Polygon or MultiPolygon")
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         _error("R10", manifest, None, str(exc))
+    _validate_display(manifest, resolve, coverage)
     report = {"region": region_id, "layers": {}, "unrecorded_status_layers": [], "legacy_transport": {}}
     _check_rules(manifest, resolve)
     ids = set()
@@ -427,6 +578,13 @@ def validate_region(manifest_path, v2_root=None):
     if manifest.get("region", {}).get("id") != manifest_path.parent.name:
         raise ContractError("R02", manifest.get("region", {}).get("id", "?"), None, "manifest ID does not match directory")
     paths = [manifest.get("coverage", {}).get("path")] + [layer.get("path") for layer in manifest.get("layers", [])]
+    paths += [manifest.get("coverage", {}).get("display", {}).get("path")]
+    paths += [layer.get("display", {}).get("path") for layer in manifest.get("layers", []) if layer.get("display")]
+    if any(path and path.endswith("/display/index.json") for path in paths):
+        pass
+    else:
+        region_id = manifest.get("region", {}).get("id", "?")
+        paths.append(f"regions/{region_id}/display/index.json")
     if manifest.get("rules"):
         paths.append(manifest["rules"].get("path"))
     for path in paths:
@@ -443,8 +601,12 @@ def validate_region(manifest_path, v2_root=None):
         if v2_root.resolve() not in target.parents and target != v2_root.resolve() or not target.is_file():
             raise ContractError("R03", manifest.get("region", {}).get("id", "?"), None, f"missing status path {path}")
     cache = {}
+    raw_bytes = {}
     def resolve(path):
         if path not in cache:
-            cache[path] = json.loads((v2_root / path).read_text())
+            source = v2_root / path
+            raw_bytes[path] = source.read_bytes()
+            cache[path] = json.loads(raw_bytes[path])
         return cache[path]
+    resolve.raw_bytes = raw_bytes
     return validate_region_data(manifest, resolve)
