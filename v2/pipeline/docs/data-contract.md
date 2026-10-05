@@ -291,17 +291,17 @@ runtime regressions retained as markers.
 | N4 | `evidence.confidence` differs for the same source across regions. | T7 |
 | N5 | Aspen `land_ownership` says ownership although data is limited-scale management context. | kind/R28 |
 | N6 | Staleness ordering hid restrictions in v2 and `Trust.applyRules`; fixed in M2. | T10–T14 |
-| N7 | Rampart designated-dispersed listing, including a paraphrased seasonal closure and date-only retrieval, is hard-coded in `preview.js`. | M7 (deferred) |
+| N7 | Rampart designated-dispersed listing, including a paraphrased seasonal closure and date-only retrieval, is hard-coded in `v2/regions/douglas-co/extras.js` after a verbatim move. | M7 (deferred) |
 | N8 | Aspen MVUM publishes `access_status: designated_open` on 51 features for a past trip. | R27 |
-| N9 | The v2 trip evaluator reads the manifest policy; the 7-day `preview.js` and root 30-day legacy thresholds remain until their later migrations. | Milestone 3 PR A partial; PR B completes v2 |
+| N9 | Freshness thresholds in v2 come from the active region manifest; the root legacy trip evaluator retains its 30-day constant. | Retired for v2 in M3 PR B; root legacy remains |
 | N10 | Douglas recreation `seasonal_operational_status` can be historical. | manifest fields |
 | N11 | Place-list per-record source URLs are not checked against declared sources. | Deferred |
 | N12 | Douglas snapshot predates current fetch status for trails and roads. | T5 |
 | N13 | `v2/map-data.json` legacy extract is outside any manifest. | Retired in Milestone 3 PR A |
-| N14 | Per-feature evidence is duplicated for payload size in the canonical files; display delivery deduplicates it for M3 PR B. | M3 PR B (deferred) |
+| N14 | Per-feature evidence remains duplicated in canonical files. The browser consumes per-layer display evidence tables. | Retired for browser delivery in M3 PR B; canonical data unchanged |
 | N15 | Root legacy site had the same staleness ordering; fixed in M2. | T15 |
 | N16 | Motorhome clearance caution can precede vehicle-season exclusion, and conflicting rules are not applied. | Retired in Milestone 3 PR A |
-| N17 | Land styling exceeds generalized evidence. | spatial precision declaration; Milestone 3 PR B (deferred) |
+| N17 | Land styling exceeded generalized evidence; tier-G presentation and exact wording now follow spatial precision. | Retired in M3 PR B; T4/B10 regression marker |
 | N18 | Water lacks recreational-use semantics; names are not usefulness evidence. | limitations and fact coverage |
 
 All checks are offline and time-independent. Adding or changing a layer,

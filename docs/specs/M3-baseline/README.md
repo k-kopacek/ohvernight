@@ -32,3 +32,33 @@ Set `CHROME=/path/to/chrome` if Chrome is not in a standard location, and
   pages; they are excluded from the same-origin byte counts.
 - The script targets the page structure at `3dc0fef`. It is a record of the
   baseline, not the M3 browser check, which is specified separately.
+
+## PR B comparison
+
+`pr-b-performance.json` records five runs each of base `3dc0fef` and the
+PR B application per session at 390×844 with 4× CPU throttle. Three original
+sessions and three separate post-A8 sessions are preserved, with raw values
+and every threshold comparison. The new comparison code is `v2/pipeline/tests/browser/measure.mjs`; the historical
+`measure.mjs` above remains byte-identical. It serves base files directly
+from Git and head files from the checkout, blocks non-local requests and
+uses the hardened browser-harness cleanup. Its method and threshold results
+are recorded in the report.
+
+```sh
+node v2/pipeline/tests/browser/measure.mjs > /tmp/ohvernight-performance.json
+```
+
+The deterministic browser job asserts no timings. The owner's real-device
+matrix and the reviewer's independent same-session comparison remain owed.
+
+All deterministic budgets pass. All reported Aspen thresholds pass in each
+corrected session. Douglas all-default-layer time and heap miss in all three:
+R-2 is observed and escalated, while heap remains below the R-5 trigger.
+The report preserves the first discarded comparison, whose county status
+selector fired early on a blocked basemap tile, and explains the approved
+readiness correction. The coordinator authorized one isolated proposed A8
+request-sequencing change, pending the owner: eligible fetches start together while parsing,
+restoration and drawing stay ordered, with one layer per task and the
+existing yields. The original R-2 observation remains in the report.
+Douglas all-layer time and heap also miss in the post-A8 sessions; no
+further optimization, renderer change or budget change followed.

@@ -1,36 +1,66 @@
-# PR A browser smoke check
+# Explore browser checks and measurements
 
-`run.mjs` uses only Node's built-in HTTP and WebSocket APIs plus a local Chrome
-DevTools Protocol connection. It starts its own local static server, blocks
-every non-local request, loads both existing v2 pages, and fails on uncaught
-errors, failed same-origin requests, horizontal overflow, or the removed
-legacy download link.
-
-Run from the repository root:
+Run from the repository root with Node 22+ and local Chrome:
 
 ```sh
 node v2/pipeline/tests/browser/run.mjs
 ```
 
-Set `CHROME=/path/to/chrome` when Chrome is not in a standard location. The
-check is intentionally limited to the two existing pages; the unified Explore
-shell is PR B work.
+Set `CHROME=/path/to/chrome` if needed. The dependency-free harness starts a
+local static server, blocks every non-local request, and runs B1–B10 for
+Aspen and Douglas at 320×568, 390×844, 768×1024 and 1440×900. Basemap tiles
+are absent; the app must still work. The CI job name remains `browser`.
 
-Chrome startup polls the local DevTools endpoint for up to 60 seconds, with
-bounded requests and immediate failure if Chrome exits. Startup failures report
-the endpoint, elapsed time, attempts, last error/status, Chrome executable and
-version, and process exit status. Every run closes the DevTools connection,
-reaps Chrome (with a bounded SIGTERM grace period before SIGKILL), closes the
-server connections, and removes its temporary profile.
+`explore-checks.mjs` checks free map area, sheet/drawer bounds, 44-pixel
+controls and pins, overflow, map and sheet drags, keyboard reachability,
+Escape/focus restoration, request isolation and uncompressed bytes. It
+injects each manifest/config/index/display/place-list/Leaflet failure and
+checks independent layer retries. It pins old URL/storage behaviour, saved
+notes, capability gating and computed land styles/Unknown wording.
 
-Importing `run.mjs` does not start the harness. Its exported `waitFor` helper
-accepts deadline, retry interval, request timeout, and process-state overrides
-for the offline `browser-harness.test.cjs` tests included in the standard Node
-test suite. Page assertions and their timing behavior are unchanged.
+Every display feature is handed to the adapter. A manifest-allowed null
+geometry record is counted separately, consumed by a named source-panel
+control and preserved source-health wording; it gets no invented map point.
+Normal page loads retain checks for uncaught exceptions, console errors,
+failed local requests and requests escaping the non-local block.
 
-DevTools commands have a 20-second bound (including connection readiness).
-A closed or failed connection rejects pending commands with their method names
-and rejects later commands immediately. Page inspection stops on a connection
-drop or Chrome exit, reporting Chrome's exit code/signal when it exits, then
-runs the same cleanup. Offline tests exercise dropped connections, unanswered
-commands, and handshake failure using a minimal local WebSocket endpoint.
+Startup polling has a 60-second deadline and bounded HTTP requests.
+DevTools commands have a 20-second bound; disconnects reject pending and
+later commands with diagnostics. Chrome exit interrupts inspection. One
+guarded `finally` closes the socket/server, reaps Chrome and removes its
+temporary profile, then exits naturally. Offline unit tests cover delayed
+readiness, closed ports, hung requests, child exit and DevTools failures.
+Importing `run.mjs` does not launch the harness.
+
+## Timing comparison
+
+```sh
+node v2/pipeline/tests/browser/measure.mjs > /tmp/ohvernight-performance.json
+```
+
+This separate script uses the hardened harness helpers and serves base
+commit `3dc0fef` from `git show` plus the current checkout in one local Chrome
+session. It measures five cold-cache runs of each version for both regions
+at 390×844, device scale 2 and 4× CPU throttle. Every non-local request is
+blocked. It records map-usable/default-layer readiness, the longest observed
+load long task, heaviest-layer on/off latency through the next frame, and JS
+heap after GC. Readiness is polled at 50 ms as in the baseline script.
+Base Aspen requires its enabled landing action and all twelve layer controls; its tile-error
+message uses a separate element. Base Douglas requires eight layer controls
+and seven coverage rows, because blocked tiles can change its status text
+before data loads. Head events are `mapUsable` (12.2 step 3) and
+`defaultLayersLoaded`. Versions run back to back, five per region;
+a 1500 ms settle precedes long-task/heap readings. Raw rows, medians and each
+section-16.4 threshold are reported. No measured threshold is asserted in CI.
+
+The original `docs/specs/M3-baseline/measure.mjs` is an immutable record of
+how `baseline.json` was measured; it is not adapted for the new page.
+The PR B report lives beside that baseline. Compare versions in one session
+on one machine; historical absolute milliseconds are context only.
+The report separates the original three-session R-2 observation from three
+post-A8 sessions. Proposed A8 changes only default request sequencing and
+is pending the owner; the helper, budgets and thresholds are unchanged.
+
+The human owner must still test real iOS Safari and Android Chrome, both
+regions: pan, pinch, sheet drag, drawer, trail/land details, landscape and
+throttled reload. Headless Chrome does not satisfy that gate.

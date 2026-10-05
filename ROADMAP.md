@@ -14,7 +14,7 @@ states the exact scope.
 |---|---|---|
 | M1 | Verification Baseline / Repo Hygiene | **Complete** |
 | M2 | Regional Data Contract + Evidence Semantics | **Complete** |
-| M3 | Unified Mobile-First Explore Architecture | **Next** |
+| M3 | Unified Mobile-First Explore Architecture | **In progress — PR B implemented; R-2 performance decision pending** |
 | M4 | Functional Recreational Water | Planned |
 | M5 | Land Classification v1 | Planned |
 | M6 | Trails / COTREX | Planned |
@@ -56,7 +56,15 @@ Merged in pull request #3.
 - Aspen and Douglas County manifests.
 - Pinned non-conformance register (N1–N18).
 
-## M3 — Unified Mobile-First Explore Architecture — NEXT
+## M3 — Unified Mobile-First Explore Architecture — IN PROGRESS
+
+Status: Phase A selected optimized Leaflet behind a narrow adapter
+([approved specification](docs/specs/M3-unified-mobile-explore.md),
+[ADR-006](docs/architecture/decisions/ADR-006-explore-rendering-architecture.md)).
+PR A is merged; PR B implementation records trigger R-2 from three local
+performance sessions. Proposed A8 addresses request sequencing and is pending
+the owner. Performance acceptance, independent review, GitHub CI,
+real-device checks and the human merge gate also remain pending.
 
 - Unify the Aspen and Douglas County app structure.
 - Fix mobile map real-estate problems.

@@ -47,7 +47,22 @@ Every new or changed layer, source, or feature property requires a corresponding
 
 Each run uses a clean staging directory. Failure of a required source or validation leaves the previous staging output untouched. Optional failure produces an explicit unavailable status and an empty layer, never an old layer relabeled as fresh. After validation, the staging output is promoted or copied to the canonical app-facing bundle. `generated_at` is a processing timestamp; source retrieval and manual verification have separate timestamps.
 
-The existing website still reads its embedded map data. This pipeline does not deploy or modify it. A future integration must load this bundle, preserve its source-status warnings, and reevaluate access if the traveler changes dates or vehicle. The `site_feed` adapter preserves the place-card fields but does not itself implement the site's loader or reviewed-state styling.
+The shared v2 Explore shell reads region-scoped display artifacts, not the
+canonical geometry bundles. It reads small canonical place lists and the
+active manifest's rules separately. Display generation rounds coordinates
+to six decimals, removes only degenerate parts created by rounding, stores
+evidence once per layer, and copies each non-null transport record verbatim
+into the index. R60–R65 and the byte-for-byte rebuild test detect drift.
+Canonical files remain authoritative for contract validation. Display
+geometry never supplies a contract check; the pipeline does not deploy the app.
+
+Each region has a closed-schema `explore.json` with presentation, layer order,
+visibility, zoom gating and capability flags. It carries no trust statements
+or source policy. The loader isolates regions and builds default-on layers
+one task at a time. Proposed A8 (pending the owner) starts eligible default-on
+requests together while preserving ordered parsing/drawing and task yields.
+The browser's review/retrieval ages use manifest hours;
+canonical pipeline support checks are unchanged.
 
 ## Actual dispersed sites
 
@@ -81,6 +96,11 @@ The root JSON schema describes the actual envelope and GeoJSON features. Additio
 
 ## GitHub workflow
 
-Pull requests and pushes to `main` run the offline regression suite through `.github/workflows/ci.yml`. Live refresh is **manual** through Actions, with explicit dates and vehicle. A completed refresh uploads the bundle as a workflow artifact; it does not commit or deploy. Private/raw inputs are ignored. Keep automated scheduled refresh disabled until source coverage and the reviewed inventory are sufficient.
+Pull requests and pushes to `main` run the offline Python and Node suites and
+the `browser` job through `.github/workflows/ci.yml`. The browser harness
+checks geometry, focus, requests and bytes for both regions at four sizes;
+it blocks every non-local request and asserts no timing. See
+[the browser guide](tests/browser/README.md) for the separate five-run timing
+comparison and the human real-device gate. Live refresh is **manual** through Actions, with explicit dates and vehicle. A completed refresh uploads the bundle as a workflow artifact; it does not commit or deploy. Private/raw inputs are ignored. Keep automated scheduled refresh disabled until source coverage and the reviewed inventory are sufficient.
 
 The original pipeline was backed up in the Codex workspace before this revision. No real reviewed sites were invented to populate the map.

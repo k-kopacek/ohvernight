@@ -8,6 +8,14 @@ import {fileURLToPath} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
 import {cdpClient,waitFor,findChrome,freePort,trackProcess,closeSocket,stopChrome,closeServer} from './run.mjs';
 const root=resolve(fileURLToPath(new URL('../../../../',import.meta.url))),cache=new Map();
+// Base Aspen enables its landing action only after renderPipelineLayers completes;
+// tile errors write map-status, not that action or the results-summary.
+// Base county tile errors can overwrite status early, so require the final
+// synchronous initialization outputs: eight layer controls and seven source rows.
+const events={base:{
+ aspen:'!!document.getElementById("landing-explore")&&!document.getElementById("landing-explore").disabled&&document.querySelectorAll("#legend-layers input[type=checkbox]").length===12',
+ 'douglas-co':'document.querySelectorAll("#layer-controls input[type=checkbox]").length===8&&document.querySelectorAll("#coverage-data p").length===7'
+},head:{mapUsable:'!!window.explore?.state.mapUsable',allDefaultLayers:'!!window.explore?.state.defaultLayersLoaded'}};
 const types={'.html':'text/html','.js':'text/javascript','.json':'application/json','.geojson':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'};
 async function content(version,path){
  if(path.includes('..'))throw Error('invalid path');if(path.endsWith('/'))path+='index.html';
@@ -31,19 +39,19 @@ try{
  for(const version of ['base','head'])for(const region of ['aspen','douglas-co'])for(let run=1;run<=5;run++){
   await client.command('Page.navigate',{url:'about:blank'});await client.command('Network.clearBrowserCache');
   const url=origin+'/'+version+(version==='head'?'/v2/?region='+region+'&view=map':region==='aspen'?'/v2/':'/v2/regions/douglas-co/');await client.command('Page.navigate',{url});
-  const usable=await ready(version==='head'?'!!window.explore?.state.mapUsable':region==='aspen'?'!!document.getElementById("landing-explore")&&!document.getElementById("landing-explore").disabled&&!/Loading/.test(document.getElementById("results-summary").textContent)':'!!document.getElementById("status")&&!/Loading/.test(document.getElementById("status").textContent)');
-  const complete=version==='head'?await ready('!!window.explore?.state.defaultLayersLoaded'):usable;
+  const usable=await ready(version==='head'?events.head.mapUsable:events.base[region]);
+  const complete=version==='head'?await ready(events.head.allDefaultLayers):usable;
   if(version==='base'&&region==='aspen')await evaluate('document.getElementById("landing-explore").click()');await delay(1500);
   const longest=await evaluate('Math.max(0,...window.__lt)');
   await client.command('HeapProfiler.collectGarbage');const metrics=Object.fromEntries((await client.command('Performance.getMetrics')).metrics.map(x=>[x.name,x.value]));
-  const select=version==='head'?`document.getElementById('layer-'+explore.region.index.artifacts.filter(x=>x.layer_id!=='coverage').sort((a,b)=>b.bytes-a.bytes)[0].layer_id)`:region==='aspen'?'document.getElementById("layer-water")':'document.querySelector("#layer-controls input[aria-label=\"Named streams\"]")';
+  const select=version==='head'?`document.getElementById('layer-'+explore.region.index.artifacts.filter(x=>x.layer_id!=='coverage').sort((a,b)=>b.bytes-a.bytes)[0].layer_id)`:region==='aspen'?'document.getElementById("layer-water")':`document.querySelector(${JSON.stringify('#layer-controls input[aria-label="Named streams"]')})`;
   const toggle=await evaluate(`(async()=>{const control=${select};let start=performance.now();control.click();await ${frame};const off=performance.now()-start;start=performance.now();control.click();await ${frame};return {off,on:performance.now()-start}})()`);
   const row={version,region,run,mapUsableMs:usable,allDefaultLayersMs:complete,longestLongTaskMs:longest,heavyLayerOnMs:toggle.on,heavyLayerOffMs:toggle.off,heapMB:metrics.JSHeapUsedSize/1e6};rows.push(row);console.error(JSON.stringify(row));
  }
  const median=values=>[...values].sort((a,b)=>a-b)[2],medians={};for(const version of ['base','head']){medians[version]={};for(const region of ['aspen','douglas-co'])medians[version][region]=Object.fromEntries(['mapUsableMs','allDefaultLayersMs','longestLongTaskMs','heavyLayerOnMs','heapMB'].map(key=>[key,median(rows.filter(x=>x.version===version&&x.region===region).map(x=>x[key]))]));}
  const thresholds={};for(const region of ['aspen','douglas-co']){const base=medians.base[region],head=medians.head[region];thresholds[region]={mapUsableMs:base.allDefaultLayersMs*.5,allDefaultLayersMs:base.allDefaultLayersMs,longestLongTaskMs:medians.base.aspen.longestLongTaskMs*.5,heavyLayerOnMs:base.heavyLayerOnMs*1.25,heapMB:region==='aspen'?33.4:30.4};thresholds[region]=Object.fromEntries(Object.entries(thresholds[region]).map(([key,limit])=>[key,{limit,actual:head[key],pass:head[key]<=limit}]));}
  const baseline=JSON.parse(await readFile(join(root,'docs/specs/M3-baseline/baseline.json')));
- const output={baseCommit:'3dc0fef',headCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),chrome:chrome.version,node:process.version,viewport:[390,844],cpuThrottle:4,runs:5,method:'One offline Chrome session; non-local requests blocked; cold cache; readiness observed consistently through CDP; 1500ms settle before long-task and GC measures; heaviest loaded layer selected by display bytes. Base selectors match the committed baseline script.',rows,medians,thresholds,committedBaseline:baseline.filter(x=>x.viewport==='390x844'&&x.cpuThrottle===4)};
+ const output={baseCommit:'3dc0fef',headCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),chrome:chrome.version,node:process.version,viewport:[390,844],cpuThrottle:4,runs:5,events,order:'Back to back: base Aspen five, base county five, head Aspen five, head county five',method:'One offline Chrome session; non-local requests blocked; cold cache; readiness observed consistently through CDP; 1500ms settle before long-task and GC measures; heaviest loaded layer selected by display bytes. Base readiness requires all-layer construction outputs; county status text is excluded because offline tile failure changes it early. Head events are spec 12.2 step 3 and completion state. Historical measurement script unchanged.',rows,medians,thresholds,committedBaseline:baseline.filter(x=>x.viewport==='390x844'&&x.cpuThrottle===4)};
  console.log(JSON.stringify(output,null,2));
 }finally{
  running=false;if(pump)await pump;const errors=[];const cleanup=async fn=>{try{await fn();}catch(error){errors.push(String(error));}};
