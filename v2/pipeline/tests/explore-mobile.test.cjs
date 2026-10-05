@@ -84,3 +84,12 @@ test('A12 panel heights use the visible viewport and top/bottom safe areas',()=>
  assert.equal(context.module.exports.panelViewport({}),780);
  context.visualViewport.height=700;assert.equal(context.module.exports.panelViewport({}),660);
 });
+
+test('A12 short landscape disables height dragging and keeps an open/collapse title action',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');let header;
+ class Node extends EventTarget{constructor(){super();this.dataset={};this.attrs={};this.style={};this.classList={toggle(){},add(){},remove(){}};}setAttribute(k,v){this.attrs[k]=v;}focus(){}contains(e){return e===this;}querySelector(){return header;}getBoundingClientRect(){return {height:64};}}
+ const element=new Node(),toggle=new Node(),body=new Node(),doc=new Node();header=new Node();body.scrollTop=0;doc.querySelector=()=>null;
+ const context={module:{exports:{}},document:doc,CustomEvent,innerHeight:375,matchMedia:q=>({matches:q==='(orientation:landscape) and (max-height:500px)'})};vm.runInNewContext(fs.readFileSync(require.resolve('../../explore/sheet.js'),'utf8'),context);const sheet=context.module.exports.createSheet(element,toggle,body);
+ for(const [type,y] of [['touchstart',300],['touchmove',200],['touchend',200]]){const e=new Event(type,{cancelable:true});Object.defineProperty(e,'target',{value:header});e.touches=type==='touchend'?[]:[{clientX:30,clientY:y}];e.changedTouches=[{clientX:30,clientY:y}];element.dispatchEvent(e);}
+ assert.equal(sheet.state,'collapsed');assert.equal(element.style.height,undefined);const click=new Event('click');click.detail=0;toggle.dispatchEvent(click);assert.equal(sheet.state,'expanded');toggle.dispatchEvent(click);assert.equal(sheet.state,'collapsed');sheet.destroy();
+});

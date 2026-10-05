@@ -90,7 +90,7 @@
       M.setSelected(entry.id,featureId);
       const geometry=feature.geometry||(feature.coordinates?{type:'Point',coordinates:feature.coordinates}:null);
       if(mapAvailable&&geometry){
-        visibleLayers.add(entry.id);if(rows.get(entry.id))rows.get(entry.id).check.checked=true;M.setVisible(entry.id,true);
+        visibleLayers.add(entry.id);const row=rows.get(entry.id);if(row){row.check.checked=true;row.mode.textContent='On';}M.setVisible(entry.id,true);
         const phone=!scope.matchMedia('(min-width:768px)').matches&&!scope.ExploreSheet.shortLandscape();
         const mapRect=$('map').getBoundingClientRect(),panelRect=$('sheet').getBoundingClientRect(),safeBottom=parseFloat(scope.getComputedStyle(host).getPropertyValue('--safe-bottom'))||0;
         const panelWidth=scope.ExploreSheet.shortLandscape()?Math.min(320,host.clientWidth*.4):340;
@@ -142,7 +142,7 @@
         const actions=element('div',undefined,'explore-layer-actions');actions.append(mode,status,retry,button('Show source',showSources));
         const legend=element('div',undefined,'explore-land-legend');
         const agencies=[...new Set(entry.sourceIds.map(id=>manifest.sources[id]?.agency).filter(Boolean))];
-        row.dataset.layerId=entry.id;row.append(label,element('p','Source: '+agencies.join(' · '),'explore-layer-source'),element('p',entry.description,'explore-layer-limitation'),actions,legend);list.append(row);rows.set(entry.id,{row,status,retry,check,legend});renderLandLegend(entry,legend,[]);
+        row.dataset.layerId=entry.id;row.append(label,element('p','Source: '+agencies.join(' · '),'explore-layer-source'),element('p',entry.description,'explore-layer-limitation'),actions,legend);list.append(row);rows.set(entry.id,{row,status,retry,check,legend,mode});renderLandLegend(entry,legend,[]);
         if(entry.format==='place_list'){const list=region.places[entry.id];status.textContent=Array.isArray(list)?(list.length?list.length+' locations loaded':'No features in this dataset'):'Could not load';}
         check.onchange=()=>{
           if(check.checked)visibleLayers.add(entry.id);else visibleLayers.delete(entry.id);
