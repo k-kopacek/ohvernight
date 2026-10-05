@@ -2,13 +2,11 @@
   'use strict';
   const registryApi=(typeof require==='function'?require('./layer-registry.js'):scope.LayerRegistry);
   const REGION_ID=/^[a-z0-9-]+$/;
-  const DEFAULT_REGION=[97,115,112,101,110].map(code=>String.fromCharCode(code)).join('');
-
   class RegionLoaderError extends Error{
     constructor(code,message){super(message);this.name='RegionLoaderError';this.code=code;}
   }
 
-  function resolveRegionId(search,defaultRegion=DEFAULT_REGION){
+  function resolveRegionId(search,defaultRegion){
     let value;
     if(search instanceof URLSearchParams) value=search.get('region');
     else if(typeof search==='string') value=new URLSearchParams(search.replace(/^\?/,'')).get('region');
@@ -42,6 +40,7 @@
       throw new Error('Invalid '+kind+' path');
     }
     const prefix='regions/'+regionId+'/';
+    if(path.startsWith('regions/')&&!path.startsWith(prefix)) throw new Error('Path is outside active region');
     if(kind==='display' && !path.startsWith(prefix+'display/')) throw new Error('Display path is outside active region');
     return path;
   }
@@ -60,9 +59,11 @@
     if(!Array.isArray(document.features)) throw new Error('Display file is not a FeatureCollection');
     return {...document,features:document.features.map(feature=>{
       const properties={...(feature.properties||{})};
-      if(Number.isInteger(properties.evidence) && properties.evidence>=0 && properties.evidence<table.length){
-        properties.evidence=table[properties.evidence];
-      }
+      if(!Object.prototype.hasOwnProperty.call(properties,'evidence')) return {...feature,properties};
+      if(properties.evidence && typeof properties.evidence==='object') return {...feature,properties};
+      if(!Number.isInteger(properties.evidence) || properties.evidence<0 || properties.evidence>=table.length)
+        throw new Error('Display evidence reference is unresolved');
+      properties.evidence=table[properties.evidence];
       return {...feature,properties};
     })};
   }
@@ -84,11 +85,11 @@
       return restoreEvidence(document);
     }
     async function loadRegion(search){
-      const regionId=resolveRegionId(search,options.defaultRegion||DEFAULT_REGION);
+      const regionId=resolveRegionId(search,options.defaultRegion);
       const manifestPath='regions/'+regionId+'/region.json';
       let manifest;
       try{manifest=await readJson(fetcher,makeUrl(manifestPath));}
-      catch(error){throw new RegionLoaderError('REGION_NOT_FOUND','Region manifest could not be loaded: '+error.message);}
+      catch(error){throw new RegionLoaderError('REGION_NOT_AVAILABLE','Region manifest could not be loaded: '+error.message);}
       if(!manifest || manifest.contract_version!==1 || manifest.region?.id!==regionId){
         throw new RegionLoaderError('REGION_NOT_AVAILABLE','Manifest does not describe the requested region');
       }
@@ -111,7 +112,9 @@
         try{
           const document=await readJson(fetcher,makeUrl(activePath(regionId,layer.path,'canonical')));
           const value=pointerGet(document,layer.pointer);
-          places[layer.id]=value===document && /(?:places|options)/.test(layer.id)?(document.places||document):value;
+          const list=value && typeof value==='object' ? value[layer.list_key] : undefined;
+          if(!Array.isArray(list)) throw new Error('Place list is missing: '+layer.list_key);
+          places[layer.id]=list;
         }catch(error){places[layer.id]={state:'failed',error:error.message};}
       }));
       const state=new Map(entries.map(entry=>[entry.id,{...entry,state:'idle'}]));
@@ -138,7 +141,7 @@
       }
       return {regionId,manifest,config,index,coverage,places,registry:entries,layers:state,loadLayer,loadDefaultLayers};
     }
-    return {loadRegion,resolveRegionId:(search)=>resolveRegionId(search,options.defaultRegion||DEFAULT_REGION)};
+    return {loadRegion,resolveRegionId:(search)=>resolveRegionId(search,options.defaultRegion)};
   }
 
   const api={createRegionLoader,resolveRegionId,RegionLoaderError,REGION_ID};

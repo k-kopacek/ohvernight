@@ -31,7 +31,7 @@ function fixtureFetch(manifest,config,index,regionId='aspen',missing=new Set()){
     if(!docs.has(clean)) throw new Error('missing fixture '+clean);
     return docs.get(clean);
   };
-  return {fetch,calls};
+  return {fetch,calls,docs};
 }
 
 test('T1: region loader resolves an active region, restores evidence and isolates lazy layers',async()=>{
@@ -63,7 +63,84 @@ test('T2: region loader rejects malformed or unavailable regions without fallbac
   const {fetch}=fixtureFetch(manifest,config,index);
   const loader=createRegionLoader({fetch});
   assert.throws(()=>resolveRegionId('?region=bad_id'),error=>error.code==='REGION_NOT_FOUND');
-  await assert.rejects(loader.loadRegion('?region=missing'),error=>error instanceof RegionLoaderError&&error.code==='REGION_NOT_FOUND');
+  await assert.rejects(loader.loadRegion('?region=missing'),error=>error instanceof RegionLoaderError&&error.code==='REGION_NOT_AVAILABLE');
   const available=await loader.loadRegion('?region=aspen');
   assert.equal(available.regionId,'aspen');
+});
+
+test('T1: loader rejects malformed IDs, requires an injected default, and scopes real regions',async()=>{
+  assert.throws(()=>resolveRegionId(''),error=>error.code==='REGION_NOT_FOUND');
+  for(const malformed of ['ASPEN','bad_id','bad/id','..',''])
+    assert.throws(()=>resolveRegionId(`?region=${encodeURIComponent(malformed)}`),error=>error.code==='REGION_NOT_FOUND');
+  const aspen=readJson('regions/aspen/region.json');
+  const aspenIndex=readJson('regions/aspen/display/index.json');
+  const injected=fixtureFetch(aspen,fixtureConfig(aspen),aspenIndex,'aspen');
+  const defaulted=createRegionLoader({fetch:injected.fetch,defaultRegion:'aspen'});
+  assert.equal((await defaulted.loadRegion('')).regionId,'aspen');
+  for(const regionId of ['aspen','douglas-co']){
+    const manifest=readJson(`regions/${regionId}/region.json`);
+    const index=readJson(`regions/${regionId}/display/index.json`);
+    const fixture=fixtureFetch(manifest,fixtureConfig(manifest),index,regionId);
+    await createRegionLoader({fetch:fixture.fetch,defaultRegion:regionId}).loadRegion(`?region=${regionId}`);
+    assert.equal(fixture.calls.some(url=>url.includes(`regions/${regionId==='aspen'?'douglas-co':'aspen'}/`)),false);
+    assert.equal(fixture.calls.filter(url=>/display\/[^/]+\.geojson/.test(url)).every(url=>/[?]v=[0-9a-f]{12}$/.test(url)),true);
+  }
+});
+
+test('T1: manifest/config/index and display failures stay isolated while place-list failures are marked',async()=>{
+  const manifest=readJson('regions/aspen/region.json');
+  const index=readJson('regions/aspen/display/index.json');
+  const first=manifest.layers.find(layer=>layer.display);
+  const base=fixtureFetch(manifest,fixtureConfig(manifest,[first.id]),index);
+  const pathOf=url=>url.replace(/^.*?:\/\/[^/]+\//,'').split('?')[0];
+  const expectUnavailable=async(mutator)=>{
+    const calls=[]; const fetch=async url=>{calls.push(url); return mutator(pathOf(url),base.docs.get(pathOf(url)));};
+    await assert.rejects(createRegionLoader({fetch}).loadRegion('?region=aspen'),error=>error.code==='REGION_NOT_AVAILABLE');
+  };
+  await expectUnavailable((path,value)=>path.endsWith('/region.json')?Promise.reject(new Error('missing')):value);
+  await expectUnavailable((path,value)=>path.endsWith('/region.json')?Promise.reject(new SyntaxError('bad json')):value);
+  await expectUnavailable((path,value)=>path.endsWith('/region.json')?{...value,contract_version:2}:value);
+  await expectUnavailable((path,value)=>path.endsWith('/region.json')?{...value,region:{...value.region,id:'other'}}:value);
+  await expectUnavailable((path,value)=>path.endsWith('/explore.json')?Promise.reject(new Error('missing')):value);
+  await expectUnavailable((path,value)=>path.endsWith('/display/index.json')?Promise.reject(new Error('missing')):value);
+  const oneMissing=fixtureFetch(manifest,fixtureConfig(manifest,[first.id]),index,'aspen');
+  const missingDoc=oneMissing.docs.get(first.display.path);
+  oneMissing.docs.delete(first.display.path);
+  const loaded=await createRegionLoader({fetch:oneMissing.fetch}).loadRegion('?region=aspen');
+  const result=await loaded.loadLayer(first.id);
+  assert.equal(result.state,'failed');
+  oneMissing.docs.set(first.display.path,{...missingDoc,type:'FeatureCollection',layer_id:'wrong'});
+  assert.equal((await loaded.loadLayer(first.id)).state,'failed');
+  oneMissing.docs.set(first.display.path,{...missingDoc,type:'NotAFeatureCollection'});
+  assert.equal((await loaded.loadLayer(first.id)).state,'failed');
+  const place=fixtureFetch(manifest,fixtureConfig(manifest),index);
+  place.docs.get('destinations.json').resorts=null;
+  const withFailedPlaces=await createRegionLoader({fetch:place.fetch}).loadRegion('?region=aspen');
+  assert.equal(withFailedPlaces.places.destinations.state,'failed');
+  assert.equal((await withFailedPlaces.loadLayer(first.id)).state,'loaded');
+  const badEvidence=fixtureFetch(manifest,fixtureConfig(manifest),index);
+  const artifact=badEvidence.docs.get(first.display.path);
+  artifact.features[0].properties.evidence=999;
+  const bad=await createRegionLoader({fetch:badEvidence.fetch}).loadRegion('?region=aspen');
+  assert.equal((await bad.loadLayer(first.id)).state,'failed');
+});
+
+test('I1: a manifest cannot make the loader request another region path',async()=>{
+  const manifest=readJson('regions/aspen/region.json');
+  const index=readJson('regions/aspen/display/index.json');
+  const layer=manifest.layers.find(item=>item.format==='place_list');
+  layer.path='regions/douglas-co/research.json';
+  const fixture=fixtureFetch(manifest,fixtureConfig(manifest),index);
+  const loaded=await createRegionLoader({fetch:fixture.fetch}).loadRegion('?region=aspen');
+  assert.equal(loaded.places[layer.id].state,'failed');
+  assert.equal(fixture.calls.some(url=>url.includes('regions/douglas-co/')),false);
+});
+
+test('criterion 10: explore modules contain no region IDs, literal region paths, or char-code defaults',()=>{
+  for(const name of fs.readdirSync(path.join(root,'explore'))){
+    const source=fs.readFileSync(path.join(root,'explore',name),'utf8');
+    assert.doesNotMatch(source,/aspen|douglas/i,name);
+    assert.doesNotMatch(source,/regions\/[a-z0-9-]+\//i,name);
+    assert.doesNotMatch(source,/fromCharCode|\[\s*\d+(?:\s*,\s*\d+)+\s*\]\s*\.map/,name);
+  }
 });

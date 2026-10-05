@@ -174,7 +174,7 @@ try{
  const load=async path=>{const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw Error('Location data unavailable');return r.json();};
  const optional=async path=>{try{return await load(path);}catch{return null;}};
  const loadRidb=async()=>{try{const r=await fetch('./ridb-options.json',{cache:'no-store'});if(!r.ok){ridbLoadMessage=r.status===404?'The campground import file is missing from this website. The API key is checked separately during import.':'Campground data could not load. Try reloading the page.';return null;}return await r.json();}catch{ridbLoadMessage='Campground data could not be read. Try reloading the page.';return null;}};
- [data,inventory,bundle,ridb,registry,coverage,trails,manifest]=await Promise.all([load('./destinations.json'),load('./overnight-options.json'),optional('./map-data-v2.json'),loadRidb(),optional('./pipeline/config/rules-registry.json'),optional('./pipeline/config/aoi.geojson'),optional('./trails.geojson'),load('./regions/aspen/region.json')]);
+ [data,inventory,bundle,ridb,registry,coverage,trails,manifest]=await Promise.all([load('./destinations.json'),load('./overnight-options.json'),optional('./map-data-v2.json'),loadRidb(),optional('./pipeline/config/rules-registry.json'),optional('./pipeline/config/aoi.geojson'),optional('./trails.geojson'),optional('./regions/aspen/region.json')]);
  if(trails?.type!=='FeatureCollection'||!Array.isArray(trails.features))trails=null;
  if(inventory.schema_version!==1||!Array.isArray(inventory.places)||!Array.isArray(data.resorts))throw Error('Invalid location data');
  if(bundle?.schema_version!==2||!bundle.trip||!bundle.layers)bundle=null;

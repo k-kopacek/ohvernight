@@ -2,7 +2,8 @@ const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const fs=require('node:fs');
 const path=require('node:path');
-const {buildLayerRegistry,LayerRegistryError,normalizeTransport}=require('../../explore/layer-registry.js');
+const {buildLayerRegistry,LayerRegistryError}=require('../../explore/layer-registry.js');
+const {normalizeTransport}=require('../../explore/transport.js');
 const root=path.resolve(__dirname,'../..');
 const readJson=relative=>JSON.parse(fs.readFileSync(path.join(root,relative),'utf8'));
 
@@ -16,6 +17,11 @@ test('T2: registry joins every displayed manifest layer to presentation metadata
     for(const layer of registry){
       const source=manifest.layers.find(item=>item.id===layer.id);
       assert.equal(layer.description,source.limitations);
+      assert.equal(layer.kind,source.kind);
+      assert.equal(layer.spatialPrecision,source.spatial_precision);
+      assert.equal(layer.classificationSourceField,source.classification_source_field||null);
+      assert.deepEqual(layer.statusRef,source.status_ref||null);
+      assert.equal(layer.maxAgeHours,source.max_age_hours);
       assert.equal(layer.canonicalPath,source.path);
     }
   }
