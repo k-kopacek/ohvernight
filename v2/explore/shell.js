@@ -29,7 +29,7 @@
     const sheetState=event=>{if(phone()&&event.detail.state!=='collapsed')drawer.close(false);};
     const mapTap=()=>drawer.close();
     $('drawer').addEventListener('drawerstatechange',drawerState);
-    $('sheet').addEventListener('sheetstatechange',sheetState);$('map').addEventListener('click',mapTap);
+    $('sheet').addEventListener('sheetstatechange',sheetState);$('map').addEventListener('click',mapTap);$('map').addEventListener('exploremaptap',mapTap);
     let region,manifest,mapAvailable=false,zoom=options.initialView?.zoom||10;
     const visibleLayers=new Set(),rows=new Map(),state={mapUsable:false,defaultLayersLoaded:false,view:null};
       const active={state,visibleLayers,sheet,drawer,get region(){return region;},showSources,showDetail,select,showList,isListActive,openDialog,$,element,button,drawLayer};
@@ -207,7 +207,7 @@
       }
     }
     active.start=start;active.renderResults=renderResults;active.renderSearch=renderSearch;
-    active.destroy=()=>{$('drawer').removeEventListener('drawerstatechange',drawerState);$('sheet').removeEventListener('sheetstatechange',sheetState);$('map').removeEventListener('click',mapTap);sheet.destroy();drawer.destroy();M.destroy();host.replaceChildren();};
+    active.destroy=()=>{$('drawer').removeEventListener('drawerstatechange',drawerState);$('sheet').removeEventListener('sheetstatechange',sheetState);$('map').removeEventListener('click',mapTap);$('map').removeEventListener('exploremaptap',mapTap);sheet.destroy();drawer.destroy();M.destroy();host.replaceChildren();};
     return active;
   }
   const api={createShell,bounds};if(typeof module!=='undefined')module.exports=api;scope.ExploreShell=api;

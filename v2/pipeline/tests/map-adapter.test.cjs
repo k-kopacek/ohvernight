@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'../..'),source=fs.readFileSync(path.join(root,'explore/map-adapter.js'),'utf8');
 const names=['init','addLayer','removeLayer','setVisible','setStyle','setPins','onFeature','fit','setBasemap','destroy','setSelected','setLabels'];
-function predicates(){const context={};vm.runInNewContext(source.replace('const api={init,','scope.testPredicates={hitGeometry,chooseHit,resolveTap,HIT_TOLERANCE,layers,handlers,labelled,matchingTouch,pinActivation,setMap:value=>{map=value;}}; const api={init,'),context);return context.testPredicates;}
+function predicates(){const context={};vm.runInNewContext(source.replace('const api={init,','scope.testPredicates={hitGeometry,chooseHit,resolveTap,HIT_TOLERANCE,layers,handlers,labelled,matchingTouch,pinActivation,isDoubleTap,setMap:value=>{map=value;}}; const api={init,'),context);return context.testPredicates;}
 const project=([x,y])=>({x,y});
 test('A12 hit tolerance includes the boundary for lines and points, including multipart lines',()=>{
  const H=predicates(),line={type:'LineString',coordinates:[[0,0],[100,0]]};
@@ -110,6 +110,7 @@ test('A12 touch selection uses fractional touch coordinates rather than the roun
  vm.runInNewContext(source,context);const A=context.module.exports;A.init('map',{center:[0,0],zoom:18});
  A.addLayer('lines',{features:[['target',100.6],['neighbor',101]].map(([id,y])=>({properties:{id},geometry:{type:'LineString',coordinates:[[10,y],[20,y]]}}))},{});
  A.onFeature('lines',f=>{chosen=f.properties.id;});
+ const start=new Event('touchstart');start.touches=[{clientX:15.5,clientY:100.6}];surface.dispatchEvent(start);
  const end=new Event('touchend');end.changedTouches=[{clientX:15.5,clientY:100.6}];end.touches=[];surface.dispatchEvent(end);
  const click=new Event('click');Object.assign(click,{clientX:16,clientY:101,pointerType:'touch',detail:1});surface.dispatchEvent(click);
  assert.equal(chosen,undefined,'touch selection is deferred');scheduled();assert.equal(chosen,'target','fractional touch wins over rounded click neighbor');A.destroy();
@@ -141,4 +142,14 @@ test('R4: resolver selects a point beneath another feature label box',()=>{
  H.layers.set('points',{eachLayer(fn){fn({feature:pin,getLatLng:()=>[20,40]});}});H.handlers.set('points',()=>{});
  H.setMap({getContainer:()=>({getBoundingClientRect:()=>({left:0,top:0})}),hasLayer:()=>true,latLngToContainerPoint:p=>({x:p[1],y:p[0]})});
  assert.equal(H.resolveTap({x:40,y:20}).featureId,'pin');
+});
+
+test('A12 double-tap uses touch time and distance, beyond Leaflet 200 ms, with deterministic boundaries',()=>{
+ const H=predicates(),first={time:100,clientX:20,clientY:30};
+ assert.equal(H.isDoubleTap(first,{time:340,clientX:20,clientY:30}),true);
+ assert.equal(H.isDoubleTap(first,{time:380,clientX:50,clientY:30}),true);
+ assert.equal(H.isDoubleTap(first,{time:381,clientX:20,clientY:30}),false);
+ assert.equal(H.isDoubleTap(first,{time:300,clientX:50.01,clientY:30}),false);
+ assert.equal(H.isDoubleTap(first,{time:99,clientX:20,clientY:30}),false);
+ assert.equal(H.isDoubleTap(null,{time:200,clientX:20,clientY:30}),false);
 });

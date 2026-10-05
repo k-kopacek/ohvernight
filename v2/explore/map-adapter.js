@@ -6,7 +6,7 @@
   const HIT_TOLERANCE=14;
   const TOUCH_TAP_WINDOW=280;
   const TOUCH_CLICK_WINDOW=700,TOUCH_RADIUS=30;
-  let pendingTap,mouseTapZoom,lastTouch;
+  let pendingTap,mouseTapZoom,mouseTapPoint,lastTouch,lastTap;
   let selected=null;
   const reduced=()=>scope.matchMedia?.('(prefers-reduced-motion:reduce)').matches===true;
   function segmentDistance(point,a,b){
@@ -85,12 +85,13 @@
     const ll=map.containerPointToLatLng(point);notify(hit.layerId,hit.feature,[ll.lng,ll.lat]);
   }
   function cancelTap(){if(pendingTap)scope.clearTimeout(pendingTap);pendingTap=null;}
+  function isDoubleTap(previous,current){
+    const elapsed=previous?current.time-previous.time:Infinity;
+    return elapsed>=0&&elapsed<=TOUCH_TAP_WINDOW&&Math.hypot(current.clientX-previous.clientX,current.clientY-previous.clientY)<=TOUCH_RADIUS;
+  }
   function doubleClick(event){
-    cancelTap();
-    // An immediate mouse selection may fit a large feature. A double click
-    // still zooms from the view in which the user began the gesture.
-    if(event.originalEvent?.pointerType!=='touch'&&!matchingTouch(event.originalEvent||{},lastTouch)&&mouseTapZoom!==undefined)
-      map.setZoomAround(event.latlng,Math.min(19,mouseTapZoom+1),{animate:false});
+    if(event.originalEvent?.pointerType==='touch'||matchingTouch(event.originalEvent||{},lastTouch))return;
+    cancelTap();map.setZoomAround(mouseTapPoint||event.latlng,Math.min(19,(mouseTapZoom??map.getZoom())+1),{animate:false});
   }
   function publishView(){
     if(!map)return;
@@ -102,26 +103,54 @@
     destroy();view=initialView;
     if(!scope.L)return false;
     const L=scope.L;
-    map=L.map(container,{zoomControl:false,doubleClickZoom:true,preferCanvas:true,minZoom:5,maxZoom:19,
+    map=L.map(container,{zoomControl:false,doubleClickZoom:false,preferCanvas:true,minZoom:5,maxZoom:19,
       zoomAnimation:!reduced(),fadeAnimation:!reduced(),markerZoomAnimation:!reduced()});
     map.createPane('context');map.getPane('context').style.zIndex=350;
     map.on('moveend zoomend',publishView);
     map.on('dblclick',doubleClick);
     const surface=map.getContainer?.();
-    if(surface){const touchEnd=event=>{const touch=event.changedTouches[0];if(touch&&event.touches.length===0){const r=surface.getBoundingClientRect();lastTouch={time:event.timeStamp,clientX:touch.clientX,clientY:touch.clientY,point:{x:touch.clientX-r.left,y:touch.clientY-r.top}};}};
-      surface.addEventListener('touchend',touchEnd,{passive:true});mapBindings.push([surface,'touchend',touchEnd,false]);
+    if(surface){
+      let gesture;
+      const touchStart=event=>{
+        cancelTap();const t=event.touches[0];
+        if(event.touches.length!==1||event.target.closest?.('.leaflet-control')){gesture=null;lastTap=null;return;}
+        gesture={clientX:t.clientX,clientY:t.clientY};
+      };
+      const touchMove=()=>{gesture=null;lastTap=null;cancelTap();};
+      const touchEnd=event=>{
+        const t=event.changedTouches[0];if(!t)return;
+        const r=surface.getBoundingClientRect(),point={x:t.clientX-r.left,y:t.clientY-r.top};
+        lastTouch={time:event.timeStamp,clientX:t.clientX,clientY:t.clientY,point};
+        const clean=!!gesture&&event.touches.length===0&&event.changedTouches.length===1;gesture=null;
+        if(!clean){lastTap=null;return;}
+        // Touchend is authoritative: Safari need not deliver compatibility clicks.
+        // A 280 ms deferral (coordinator decision) prevents a first fit changing
+        // the view before the second tap, and prevents selection on a double tap.
+        if(isDoubleTap(lastTap,lastTouch)){
+          cancelTap();lastTap=null;event.preventDefault();
+          map.setZoomAround(map.containerPointToLatLng(point),Math.min(19,map.getZoom()+1),{animate:false});return;
+        }
+        lastTap=lastTouch;
+        if(scope.CustomEvent)surface.dispatchEvent(new scope.CustomEvent('exploremaptap',{bubbles:true}));
+        pendingTap=scope.setTimeout(()=>{pendingTap=null;selectTap(point);},TOUCH_TAP_WINDOW);
+      };
+      const touchCancel=()=>{gesture=null;lastTap=null;lastTouch=null;cancelTap();};
+      for(const [name,handler] of [['touchstart',touchStart],['touchmove',touchMove],['touchend',touchEnd],['touchcancel',touchCancel]]){
+        surface.addEventListener(name,handler,{capture:true,passive:name!=='touchend'});mapBindings.push([surface,name,handler,true]);
+      }
       const click=event=>{
-      if(event.detail>1||event.target.closest?.('.leaflet-control')||map.dragging?.moved()||(!event.clientX&&!event.clientY))return;
-      const remembered=matchingTouch(event,lastTouch);if(lastTouch&&event.timeStamp-lastTouch.time>TOUCH_CLICK_WINDOW)lastTouch=null;
-      if(event.pointerType==='mouse')lastTouch=null;
-      const touch=event.pointerType==='touch'||!!remembered;
-      const r=surface.getBoundingClientRect(),point=remembered?remembered.point:{x:event.clientX-r.left,y:event.clientY-r.top};
-      cancelTap();if(touch)pendingTap=setTimeout(()=>selectTap(point),TOUCH_TAP_WINDOW);else {mouseTapZoom=map.getZoom();selectTap(point);}
-    };surface.addEventListener('click',click,true);mapBindings.push([surface,'click',click,true]);}
+        if(event.detail>1||event.target.closest?.('.leaflet-control')||map.dragging?.moved()||(!event.clientX&&!event.clientY))return;
+        const remembered=matchingTouch(event,lastTouch);if(lastTouch&&event.timeStamp-lastTouch.time>TOUCH_CLICK_WINDOW)lastTouch=null;
+        if(event.pointerType==='touch'||remembered)return; // Already scheduled from touchend, including plain Safari clicks.
+        lastTouch=null;lastTap=null;cancelTap();const r=surface.getBoundingClientRect(),point={x:event.clientX-r.left,y:event.clientY-r.top};
+        mouseTapZoom=map.getZoom();mouseTapPoint=map.containerPointToLatLng(point);selectTap(point);
+      };
+      surface.addEventListener('click',click,true);mapBindings.push([surface,'click',click,true]);
+    }
     map.setView([view.center[1],view.center[0]],view.zoom,{animate:false});
     for(const [name,delta] of [['zoomIn',1],['zoomOut',-1]]){
       const control=view.controls?.[name];if(!control)continue;
-      const handler=event=>{event?.preventDefault();map?.setZoom(map.getZoom()+delta,{animate:false});};
+      const handler=event=>{event?.preventDefault();cancelTap();lastTap=null;lastTouch=null;map?.setZoom(map.getZoom()+delta,{animate:false});};
       control.addEventListener('click',handler);controlBindings.push([control,handler]);
     }
     L.control.scale({position:'bottomleft',imperial:true,metric:false}).addTo(map);
@@ -162,7 +191,7 @@
     });
   }
   function setSelected(id,featureId){
-    const previous=selected?.id;selected=featureId===null?null:{id,featureId};
+    cancelTap();lastTap=null;const previous=selected?.id;selected=featureId===null?null:{id,featureId};
     if(previous)applySelection(previous);if(selected)applySelection(id);
   }
   function setStyle(id,style){styles.set(id,style);layers.get(id)?.setStyle(style);if(selected?.id===id)applySelection(id);}
@@ -216,7 +245,7 @@
     for(const [node,name,handler,capture] of mapBindings)node.removeEventListener(name,handler,capture);mapBindings=[];
     for(const [control,handler] of controlBindings)control.removeEventListener('click',handler);
     controlBindings=[];if(map){map.off('moveend zoomend',publishView);map.off('dblclick',doubleClick);map.remove();}
-    map=null;baseLayer=null;mouseTapZoom=undefined;lastTouch=null;layers.clear();handlers.clear();styles.clear();labelRules.clear();labelled.clear();selected=null;
+    map=null;baseLayer=null;mouseTapZoom=undefined;mouseTapPoint=null;lastTouch=null;lastTap=null;layers.clear();handlers.clear();styles.clear();labelRules.clear();labelled.clear();selected=null;
   }
   const api={init,addLayer,removeLayer,setVisible,setStyle,setPins,onFeature,fit,setBasemap,destroy,setSelected,setLabels};
   if(typeof module!=='undefined')module.exports=api;
