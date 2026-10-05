@@ -5,6 +5,7 @@ const {describe,displayWater}=require('../../map-layers.js');
 const root=path.resolve(__dirname,'../..');
 const bundle=JSON.parse(fs.readFileSync(path.join(root,'map-data-v2.json')));
 const coverage=JSON.parse(fs.readFileSync(path.join(root,'pipeline/config/aoi.geojson')));
+const vectors=JSON.parse(fs.readFileSync(path.join(root,'pipeline/tests/fixtures/display-water-vectors.json')));
 test('trail pilot is independently loaded and missing trail data is explicit',()=>{
   const trails=JSON.parse(fs.readFileSync(path.join(root,'trails.geojson')));
   const result=describe(null,null,0,0,trails).find(d=>d.id==='trails');
@@ -33,6 +34,12 @@ test('water display removes unnamed clutter without changing screening geometry'
   assert.equal(displayWater(feature('Wetland','area','Polygon')),false);
   assert.equal(displayWater(feature('River','flowline','Polygon')),false);
   assert.equal(displayWater({properties:{name:'Lake',kind:'waterbody'},geometry:null}),false);
+});
+
+test('display-water vectors remain in parity with the Python artifact builder',()=>{
+ for(const vector of vectors){
+   assert.equal(displayWater({properties:{name:vector.name,kind:vector.kind},geometry:vector.geometry}),vector.expected,vector.name);
+ }
 });
 test('missing, empty, and failed sources produce different explanations',()=>{
   const get=b=>describe(b,null,0,0).find(d=>d.id==='roads');
