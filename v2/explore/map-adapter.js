@@ -1,13 +1,14 @@
 (function(scope){
   'use strict';
   let map,baseLayer,view,controlBindings=[];
-  const layers=new Map(),handlers=new Map(),styles=new Map();
+  const layers=new Map(),handlers=new Map(),styles=new Map(),labelRules=new Map(),labelled=new Set();
+  const LABEL_LIMIT=32;
   let selected=null;
   const reduced=()=>scope.matchMedia?.('(prefers-reduced-motion:reduce)').matches===true;
   function publishView(){
     if(!map)return;
     const center=map.getCenter(),bounds=map.getBounds();
-    view.onViewChange?.({zoom:map.getZoom(),center:[center.lng,center.lat],
+    refreshLabels();view.onViewChange?.({zoom:map.getZoom(),center:[center.lng,center.lat],
       bounds:[[bounds.getWest(),bounds.getSouth()],[bounds.getEast(),bounds.getNorth()]]});
   }
   function init(container,initialView){
@@ -42,8 +43,8 @@
       onEachFeature:(feature,item)=>item.on('click',event=>notify(id,feature,[event.latlng.lng,event.latlng.lat]))});
     layers.set(id,layer);styles.set(id,style);layer.addTo(map);
   }
-  function removeLayer(id){const layer=layers.get(id);if(layer&&map)map.removeLayer(layer);layers.delete(id);styles.delete(id);if(selected?.id===id)selected=null;}
-  function setVisible(id,visible){const layer=layers.get(id);if(!map||!layer)return;if(visible)layer.addTo(map);else map.removeLayer(layer);}
+  function removeLayer(id){const layer=layers.get(id);if(layer&&map)map.removeLayer(layer);layers.delete(id);styles.delete(id);labelRules.delete(id);refreshLabels();if(selected?.id===id)selected=null;}
+  function setVisible(id,visible){const layer=layers.get(id);if(!map||!layer)return;if(visible)layer.addTo(map);else map.removeLayer(layer);refreshLabels();}
   function applySelection(id){
     const layer=layers.get(id),style=styles.get(id);if(!layer)return;
     layer.eachLayer(item=>{
@@ -69,10 +70,33 @@
     removeLayer(id);if(!map)return;
     const L=scope.L,group=L.layerGroup();
     for(const pin of pins){
-      const item=marker([pin.coordinates[1],pin.coordinates[0]],pin);item.featureId=pin.id;
+      const item=marker([pin.coordinates[1],pin.coordinates[0]],pin);item.featureId=pin.id;item.labelProperties=pin;
       item.on('click',()=>notify(id,pin,pin.coordinates.slice()));item.addTo(group);
     }
     layers.set(id,group);group.addTo(map);
+  }
+  function refreshLabels(){
+    for(const item of labelled)item.unbindTooltip();labelled.clear();if(!map)return;
+    const occupied=[],bounds=map.getBounds();let count=0;
+    for(const [id,rule] of labelRules){
+      const layer=layers.get(id);if(!layer||!map.hasLayer(layer)||map.getZoom()<rule.minZoom)continue;
+      let shown=0;layer.eachLayer(item=>{
+        if(shown>=rule.max||count>=LABEL_LIMIT)return;
+        const properties=item.feature?.properties||item.labelProperties,name=properties?.[rule.property];
+        if(typeof name!=='string'||!name.trim())return;
+        const position=item.getLatLng?.()||item.getCenter?.();if(!position||!bounds.contains(position))return;
+        const point=map.latLngToContainerPoint(position);if(point.y<120)return;
+        const box={left:point.x-90,right:point.x+90,top:point.y-12,bottom:point.y+12};
+        if(occupied.some(other=>box.left<other.right+8&&box.right+8>other.left&&box.top<other.bottom+8&&box.bottom+8>other.top))return;
+        const text=document.createElement('span');text.textContent=name;
+        item.bindTooltip(text,{permanent:true,interactive:false,direction:'center',className:'explore-map-label'}).openTooltip();
+        occupied.push(box);labelled.add(item);shown++;count++;
+      });
+    }
+  }
+  function setLabels(id,rule){
+    if(rule)labelRules.set(id,{property:rule.property,minZoom:rule.minZoom,max:Math.max(0,Math.min(LABEL_LIMIT,Math.floor(rule.max)))});
+    else labelRules.delete(id);refreshLabels();
   }
   function onFeature(id,handler){handlers.set(id,handler);}
   function fit(bounds,padding=[24,24]){
@@ -90,9 +114,9 @@
   function destroy(){
     for(const [control,handler] of controlBindings)control.removeEventListener('click',handler);
     controlBindings=[];if(map){map.off('moveend zoomend',publishView);map.remove();}
-    map=null;baseLayer=null;layers.clear();handlers.clear();styles.clear();selected=null;
+    map=null;baseLayer=null;layers.clear();handlers.clear();styles.clear();labelRules.clear();labelled.clear();selected=null;
   }
-  const api={init,addLayer,removeLayer,setVisible,setStyle,setPins,onFeature,fit,setBasemap,destroy,setSelected};
+  const api={init,addLayer,removeLayer,setVisible,setStyle,setPins,onFeature,fit,setBasemap,destroy,setSelected,setLabels};
   if(typeof module!=='undefined')module.exports=api;
   scope.ExploreMap=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

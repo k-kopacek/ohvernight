@@ -37,3 +37,5 @@ body{margin:0}.explore-sheet-body label{display:flex;gap:8px;align-items:center}
 .explore-sheet.is-dragging .explore-sheet-body{visibility:visible}
 
 .explore-detail-heading{display:flex;align-items:center;gap:8px;position:sticky;top:0;background:var(--paper);z-index:2;min-height:44px}.explore-detail-heading h2{flex:1;margin:4px 0}.explore-detail-heading button{flex:none}
+
+.explore-map-label{pointer-events:none!important;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:0;background:#fafbf6de;color:#24271f;box-shadow:none;padding:2px 5px;font:11px/1.3 system-ui,sans-serif}.explore-map-label::before{display:none}

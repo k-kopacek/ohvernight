@@ -115,7 +115,7 @@
       const entry=region.layers.get(result.id),row=rows.get(result.id);
       if(row){row.status.textContent=result.state==='loaded'?(result.count?result.count+' map features loaded':'No features in this dataset'):result.state==='failed'?'Could not load':result.state==='loading'?'Loading':'';row.retry.hidden=result.state!=='failed';}
       if(result.state==='loaded'){
-        if(mapAvailable){M.addLayer(entry.id,result.data,styleFor(entry));M.onFeature(entry.id,feature=>showDetail(entry,feature));M.setVisible(entry.id,visibleLayers.has(entry.id));}
+        if(mapAvailable){M.addLayer(entry.id,result.data,styleFor(entry));if(['trails','recreation_sites'].includes(entry.kind))M.setLabels(entry.id,{property:'name',minZoom:14,max:24});M.onFeature(entry.id,feature=>showDetail(entry,feature));M.setVisible(entry.id,visibleLayers.has(entry.id));}
         options.onLayer?.(active,entry,result.data);renderResults();
         renderLandLegend(entry,row?.legend,result.data.features);
       }
@@ -189,7 +189,7 @@
         host.querySelector('.explore-region').textContent=manifest.region.name;
         renderDrawer();renderResults();
         if(mapAvailable){M.addLayer('coverage',region.coverage,{color:'#fff',weight:1,opacity:.5,dashArray:'6 5',fill:false});M.fit(bounds(region.coverage));for(const entry of region.registry.filter(item=>item.format==='place_list')){
-          const pins=active.capabilities?.pins?.(entry)||region.places[entry.id];if(Array.isArray(pins)){M.setPins(entry.id,pins);M.onFeature(entry.id,pin=>showDetail(entry,pin));M.setVisible(entry.id,visibleLayers.has(entry.id));}
+          const pins=active.capabilities?.pins?.(entry)||region.places[entry.id];if(Array.isArray(pins)){M.setPins(entry.id,pins);M.setLabels(entry.id,{property:'name',minZoom:14,max:8});M.onFeature(entry.id,pin=>showDetail(entry,pin));M.setVisible(entry.id,visibleLayers.has(entry.id));}
         }}
         $('search').hidden=!region.config.capabilities.trail_search;
         for(const [id,label] of Object.entries(scope.TrailDiscovery?.activities||{})){const option=element('option',label);option.value=id;$('activity').append(option);}
