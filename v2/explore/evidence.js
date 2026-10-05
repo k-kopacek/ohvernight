@@ -41,10 +41,13 @@
     const provenance=properties.evidence||{};
     const lines=[];
     if(provenance.agency)lines.push(provenance.agency);
-    if(provenance.retrieved_at)lines.push(declaration.max_age_hours==null?'Source fetched '+date(provenance.retrieved_at):retrievalLine({last_retrieved_at:provenance.retrieved_at},declaration.max_age_hours,now));
+    if(provenance.retrieved_at)lines.push(declaration.max_age_hours==null?'Source fetched '+date(provenance.retrieved_at):retrievalLine({last_retrieved_at:provenance.retrieved_at},declaration.max_age_hours,now).replace(/^Fetched /,'Source fetched '));
     lines.push(declaration.limitations);
     if(declaration.kind==='trails'){
-      lines.push('Trail '+(properties.trail_number||'number unavailable')+' · '+(properties.surface||'Surface unknown'),
+      if(properties.trail_number)lines.push('Trail '+properties.trail_number);
+      if(properties.surface)lines.push(properties.surface);
+      if(properties.allowed_terra_use)lines.push('Published uses: '+properties.allowed_terra_use);
+      lines.push(
         'Only the portion inside our research boundary is shown. Check current agency notices before travel.',
         'Published activity dates','These are source records, not a check for your trip dates. Blank records mean unknown.');
       const discovery=typeof require==='function'?require('../trail-discovery.js'):scope.TrailDiscovery;

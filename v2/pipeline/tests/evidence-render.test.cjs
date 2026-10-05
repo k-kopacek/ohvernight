@@ -38,3 +38,19 @@ test('T3 and criterion 11: all Explore source files avoid consuming the deprecat
   assert.doesNotMatch(fs.readFileSync(path.join(root,'explore',name),'utf8'),/\.confidence(?![-\w])|\[['"]confidence['"]\]/,name);
  assert.doesNotMatch(fs.readFileSync(path.join(root,'explore/evidence.js'),'utf8'),/verified|legal|permitted|open to/i);
 });
+
+test('A11 trail detail carries only published fields, source dates and verbatim limitations',()=>{
+ for(const id of ['aspen','douglas-co']){
+  const m=read(`regions/${id}/region.json`),layer=m.layers.find(l=>l.kind==='trails');
+  const doc=read(layer.display.path),f=doc.features.find(f=>f.properties.name);
+  const feature={...f,properties:{...f.properties,evidence:doc.evidence_table[f.properties.evidence]}};
+  const output=E.feature(m,layer,feature,'Trails',now),p=feature.properties;
+  assert.equal(output.title,p.name);assert.ok(output.lines.includes(layer.limitations));
+  assert.ok(output.lines.some(s=>s.startsWith('Source fetched '+p.evidence.retrieved_at.slice(0,10))));
+  if(p.trail_number)assert.ok(output.lines.includes('Trail '+p.trail_number));
+  if(p.surface)assert.ok(output.lines.includes(p.surface));
+  if(p.allowed_terra_use)assert.ok(output.lines.includes('Published uses: '+p.allowed_terra_use));
+  assert.doesNotMatch(JSON.stringify(output),/\blength\b|\belevation\b/i);
+  assert.equal(Object.hasOwn(p,'length'),false);assert.equal(Object.hasOwn(p,'elevation_gain'),false);
+ }
+});
