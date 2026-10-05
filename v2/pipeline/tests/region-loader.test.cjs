@@ -19,6 +19,7 @@ function fixtureFetch(manifest,config,index,regionId='aspen',missing=new Set()){
   docs.set(`regions/${regionId}/explore.json`,config);
   docs.set(`regions/${regionId}/display/index.json`,index);
   docs.set(manifest.coverage.display.path,readJson(manifest.coverage.display.path));
+  if(manifest.rules?.path)docs.set(manifest.rules.path,readJson(manifest.rules.path));
   for(const layer of manifest.layers){
     if(layer.format==='place_list') docs.set(layer.path,readJson(layer.path));
   }
@@ -97,6 +98,7 @@ test('T1: loader rejects malformed IDs, requires an injected default, and scopes
     const expected=[`regions/${regionId}/region.json`,`regions/${regionId}/explore.json`,
       `regions/${regionId}/display/index.json`,
       ...manifest.layers.filter(layer=>layer.format==='place_list').map(layer=>layer.path),
+      ...(manifest.rules?.path?[manifest.rules.path]:[]),
       ...index.artifacts.map(artifact=>artifact.path+'?v='+artifact.sha256.slice(0,12))];
     assert.deepEqual([...fixture.calls].sort(),expected.sort());
   }

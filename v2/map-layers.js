@@ -5,12 +5,12 @@
     {id:'resorts',title:'Mountains',description:'Aspen / Snowmass destinations.',color:'#263024',kind:'pins'},
     {id:'land',key:'land_ownership',feed:'01_fetch_land_ownership',title:'Land management',description:'Broad agency boundaries; not precise public/private parcels.',color:'#88a075'},
     {id:'wilderness',key:'wilderness',feed:'01_fetch_land_ownership',title:'Wilderness',description:'Protected wilderness boundaries. Check agency rules before planning access.',color:'#b5a0de'},
-    {id:'water',key:'hydrology',feed:'03_fetch_hydrology',title:'Named water',description:'Named waterbodies and waterways. Seasonal flow, recreation access and activity suitability are not verified.',color:'#73c5dc'},
+    {id:'water',key:'hydrology',feed:'03_fetch_hydrology',title:'Named water',description:'',color:'#73c5dc'},
     {id:'trails',title:'Forest trails',description:'Aspen-area USFS trail segments. Tap for published uses; current conditions and closures are unconfirmed.',color:'#f6a9ed',kind:'line'},
     {id:'roads',key:'mvum_roads',feed:'02_fetch_mvum_roads',title:'Forest vehicle roads',description:'Mapped routes. A line does not mean the road is open or suitable for your vehicle.',color:'#ead294',kind:'line'},
     {id:'candidates',key:'dispersed_corridors',feed:'07_build_dispersed_corridors',title:'Areas to research',description:'Computer-screened areas near roads. Campsites and camping permission are unconfirmed.',color:'#e9a965',kind:'dashed'},
     {id:'restrictions',keys:['wildlife_sensitivity','fire_restriction_stage'],title:'Restrictions',description:'Mapped notices only. Missing shading does not mean there are no restrictions.',color:'#d6604d'},
-    {id:'leads',key:'leads',feed:'08_ingest_leads',title:'Community leads',description:'Unverified reports for further research.',color:'#dfa5c9'},
+    {id:'leads',key:'leads',feed:'08_ingest_leads',title:'Community leads',description:'',color:'#dfa5c9'},
     {id:'reviewed',key:'reviewed_sites',feed:'09_reviewed_sites',title:'Reviewed sites',description:'Sites with individual review records. Read each record before relying on it.',color:'#86c9b2'},
     {id:'coverage',title:'Research boundary',description:'Current study area. Detailed coverage outside this outline has not been loaded.',color:'#ffffff',kind:'dashed'}
   ];

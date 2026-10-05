@@ -108,7 +108,7 @@
       if(!coveragePath || !declaredPaths.has(coveragePath)) throw new RegionLoaderError('REGION_NOT_AVAILABLE','Coverage display artifact is missing');
       let coverage;
       try{coverage=await fetchDisplay(regionId,coveragePath,index,'coverage');}catch(error){throw new RegionLoaderError('REGION_NOT_AVAILABLE','Coverage display could not be loaded: '+error.message);}
-      const places={};
+      const places={},placeDocuments={};
       await Promise.all(manifest.layers.filter(layer=>layer.format==='place_list').map(async layer=>{
         try{
           const document=await readJson(fetcher,makeUrl(activePath(regionId,layer.path,'canonical')));
@@ -116,8 +116,13 @@
           const list=value && typeof value==='object' ? value[layer.list_key] : undefined;
           if(!Array.isArray(list)) throw new Error('Place list is missing: '+layer.list_key);
           places[layer.id]=list;
+          placeDocuments[layer.id]=document;
         }catch(error){places[layer.id]={state:'failed',error:error.message};}
       }));
+      let rules=null;
+      if(manifest.rules?.path){
+        try{rules=await readJson(fetcher,makeUrl(activePath(regionId,manifest.rules.path,'rules')));}catch{}
+      }
       const state=new Map(entries.map(entry=>[entry.id,{...entry,state:'idle'}]));
       async function loadLayer(layerId,zoom){
         const entry=state.get(layerId);
@@ -144,7 +149,7 @@
         }
         return result;
       }
-      return {regionId,manifest,config,index,coverage,places,registry:entries,layers:state,loadLayer,loadDefaultLayers};
+      return {regionId,manifest,config,index,coverage,places,placeDocuments,rules,registry:entries,layers:state,loadLayer,loadDefaultLayers};
     }
     return {loadRegion,resolveRegionId:(search)=>resolveRegionId(search,options.defaultRegion)};
   }

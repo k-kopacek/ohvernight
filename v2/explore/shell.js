@@ -28,7 +28,7 @@
     const drawer=scope.ExploreDrawer.createDrawer($('drawer'),$('layers'),$('drawer-close'));
     let region,manifest,mapAvailable=false,zoom=options.initialView?.zoom||10;
     const visibleLayers=new Set(),rows=new Map(),state={mapUsable:false,defaultLayersLoaded:false,view:null};
-    const active={state,visibleLayers,sheet,drawer,get region(){return region;},showSources,showDetail,openDialog,$,element,button,drawLayer};
+      const active={state,visibleLayers,sheet,drawer,get region(){return region;},showSources,showDetail,openDialog,$,element,button,drawLayer};
     function banner(text){$('banner').hidden=false;$('banner').querySelector('span').textContent=text;}
     $('banner').querySelector('button').onclick=()=>{$('banner').hidden=true;};
     const dialogOpeners=new Map();
@@ -65,6 +65,7 @@
       $('detail-title').textContent=output.title;appendEvidence(body,output);
       body.append(button('Sources & coverage',showSources));
       options.onDetail?.(active,entry,feature,body);openDialog($('detail-dialog'));
+      active.capabilities?.detail(entry,feature,body);
     }
     function styleFor(entry){
       if(scope.ExploreLand)return feature=>scope.ExploreLand.style(entry,zoom,feature);
@@ -112,6 +113,7 @@
       }
     }
     function renderResults(){
+      if(active.capabilities){active.capabilities.render();return;}
       if(options.renderResults){options.renderResults(active);return;}
       const body=$('sheet-body');body.replaceChildren();
       const lists=Object.entries(region.places),failed=lists.some(([,list])=>!Array.isArray(list));
@@ -124,7 +126,7 @@
     }
     function renderSearch(){
       const box=$('search-results');box.replaceChildren();
-      for(const entry of region.registry.filter(item=>item.kind==='trails'))for(const feature of region.layers.get(entry.id).data?.features||[])
+      for(const entry of region.registry.filter(item=>item.kind==='trails'))for(const feature of [...(region.layers.get(entry.id).data?.features||[])].sort((a,b)=>(a.properties.name||'').localeCompare(b.properties.name||'')))
         if(scope.TrailDiscovery.matches(feature,$('query').value,$('activity').value))box.append(button(feature.properties.name||entry.title,()=>showDetail(entry,feature)));
     }
     $('query').oninput=renderSearch;$('activity').onchange=renderSearch;
@@ -138,10 +140,11 @@
         onManifest:value=>{manifest=value;options.onManifest?.(value);}});
       try{
         region=await loader.loadRegion(options.search??scope.location.search);active.manifest=manifest;
+        active.capabilities=scope.ExploreCapabilities?.attach(active);
         host.querySelector('.explore-region').textContent=manifest.region.name;
         renderDrawer();renderResults();
         if(mapAvailable){M.fit(bounds(region.coverage));for(const entry of region.registry.filter(item=>item.format==='place_list')){
-          const pins=region.places[entry.id];if(Array.isArray(pins)){M.setPins(entry.id,pins);M.onFeature(entry.id,pin=>showDetail(entry,pin));}
+          const pins=region.places[entry.id];if(Array.isArray(pins)){M.setPins(entry.id,pins);M.onFeature(entry.id,pin=>showDetail(entry,pin));M.setVisible(entry.id,visibleLayers.has(entry.id));}
         }}
         $('search').hidden=!region.config.capabilities.trail_search;
         for(const [id,label] of Object.entries(scope.TrailDiscovery?.activities||{})){const option=element('option',label);option.value=id;$('activity').append(option);}
