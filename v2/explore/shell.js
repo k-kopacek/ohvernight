@@ -14,6 +14,8 @@
   function createShell(host,options){
     const M=scope.ExploreMap,E=scope.ExploreEvidence;
     host.classList.add('explore-root');
+    const viewport=scope.visualViewport,viewportChanged=()=>{if(viewport?.scale&&viewport.scale!==1)return;host.style.setProperty('--viewport-height',(viewport?.height||scope.innerHeight)+'px');host.style.setProperty('--viewport-top',(viewport?.offsetTop||0)+'px');};
+    viewportChanged();for(const name of ['resize','orientationchange'])scope.addEventListener(name,viewportChanged);for(const name of ['resize','scroll'])viewport?.addEventListener(name,viewportChanged);
     host.innerHTML=`<div id="explore-map" class="explore-map" aria-label="Interactive map"></div>
       <header class="explore-topbar"><span class="explore-region"></span><nav aria-label="Explore"><button id="explore-layers" type="button" aria-expanded="false">Layers</button><button id="explore-search" type="button">Search</button></nav></header>
       <nav class="explore-tools" aria-label="Map controls"><button id="explore-satellite" type="button" aria-pressed="true">Satellite</button><button id="explore-topo" type="button" aria-pressed="false">Topo</button><button id="explore-fit" type="button">Fit area</button><button id="explore-zoom-in" type="button" aria-label="Zoom in">+</button><button id="explore-zoom-out" type="button" aria-label="Zoom out">−</button></nav>
@@ -24,7 +26,7 @@
     const $=id=>host.querySelector('#explore-'+id);
     const sheet=scope.ExploreSheet.createSheet($('sheet'),$('sheet-toggle'),$('sheet-body'));
     const drawer=scope.ExploreDrawer.createDrawer($('drawer'),$('layers'),$('drawer-close'));
-    const phone=()=>!scope.matchMedia('(min-width:768px)').matches;
+    const phone=()=>!scope.matchMedia('(min-width:768px)').matches||scope.ExploreSheet.shortLandscape();
     const drawerState=event=>{if(phone()&&event.detail.open)sheet.setState('collapsed');};
     const sheetState=event=>{if(phone()&&event.detail.state!=='collapsed')drawer.close(false);};
     const mapTap=()=>drawer.close();
@@ -89,8 +91,10 @@
       const geometry=feature.geometry||(feature.coordinates?{type:'Point',coordinates:feature.coordinates}:null);
       if(mapAvailable&&geometry){
         visibleLayers.add(entry.id);if(rows.get(entry.id))rows.get(entry.id).check.checked=true;M.setVisible(entry.id,true);
-        const phone=!scope.matchMedia('(min-width:768px)').matches;
-        M.fit(bounds({features:[{geometry}]}),{topLeft:[phone?24:$('sheet').getBoundingClientRect().width+24,108],bottomRight:[24,phone?Math.round(host.clientHeight*.4)+24:24]});
+        const phone=!scope.matchMedia('(min-width:768px)').matches&&!scope.ExploreSheet.shortLandscape();
+        const mapRect=$('map').getBoundingClientRect(),panelRect=$('sheet').getBoundingClientRect(),safeBottom=parseFloat(scope.getComputedStyle(host).getPropertyValue('--safe-bottom'))||0;
+        const panelWidth=scope.ExploreSheet.shortLandscape()?Math.min(320,host.clientWidth*.4):340;
+        M.fit(bounds({features:[{geometry}]}),{topLeft:[phone?24:panelRect.left-mapRect.left+panelWidth+24,$('zoom-in').getBoundingClientRect().bottom-mapRect.top+8],bottomRight:[24,phone?Math.round(scope.ExploreSheet.panelViewport(host)*.4)+safeBottom+24:safeBottom+24]});
       }
       showFeatureDetail(entry,feature);
     }
@@ -207,7 +211,7 @@
       }
     }
     active.start=start;active.renderResults=renderResults;active.renderSearch=renderSearch;
-    active.destroy=()=>{$('drawer').removeEventListener('drawerstatechange',drawerState);$('sheet').removeEventListener('sheetstatechange',sheetState);$('map').removeEventListener('click',mapTap);$('map').removeEventListener('exploremaptap',mapTap);sheet.destroy();drawer.destroy();M.destroy();host.replaceChildren();};
+    active.destroy=()=>{for(const name of ['resize','orientationchange'])scope.removeEventListener(name,viewportChanged);for(const name of ['resize','scroll'])viewport?.removeEventListener(name,viewportChanged);$('drawer').removeEventListener('drawerstatechange',drawerState);$('sheet').removeEventListener('sheetstatechange',sheetState);$('map').removeEventListener('click',mapTap);$('map').removeEventListener('exploremaptap',mapTap);sheet.destroy();drawer.destroy();M.destroy();host.replaceChildren();};
     return active;
   }
   const api={createShell,bounds};if(typeof module!=='undefined')module.exports=api;scope.ExploreShell=api;

@@ -6,7 +6,7 @@
   const HIT_TOLERANCE=14;
   const TOUCH_TAP_WINDOW=280;
   const TOUCH_CLICK_WINDOW=700,TOUCH_RADIUS=30;
-  let pendingTap,mouseTapZoom,mouseTapPoint,lastTouch,lastTap;
+  let pendingTap,mouseTapZoom,mouseTapPoint,lastTouch,lastTap,resizeFrame;
   let selected=null;
   const reduced=()=>scope.matchMedia?.('(prefers-reduced-motion:reduce)').matches===true;
   function segmentDistance(point,a,b){
@@ -108,6 +108,8 @@
     map.createPane('context');map.getPane('context').style.zIndex=350;
     map.on('moveend zoomend',publishView);
     map.on('dblclick',doubleClick);
+    const refreshSize=()=>{if(resizeFrame!==undefined)return;resizeFrame=scope.requestAnimationFrame(()=>{resizeFrame=undefined;if(map){map.invalidateSize({pan:false});publishView();}});};
+    for(const node of [scope,scope.visualViewport])if(node?.addEventListener){for(const name of node===scope?['resize','orientationchange']:['resize']){node.addEventListener(name,refreshSize);mapBindings.push([node,name,refreshSize,false]);}}
     const surface=map.getContainer?.();
     if(surface){
       let gesture;
@@ -241,7 +243,7 @@
       attribution:'Imagery / map: <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map">USGS The National Map</a>'}).addTo(map);
   }
   function destroy(){
-    cancelTap();
+    cancelTap();if(resizeFrame!==undefined)scope.cancelAnimationFrame(resizeFrame);resizeFrame=undefined;
     for(const [node,name,handler,capture] of mapBindings)node.removeEventListener(name,handler,capture);mapBindings=[];
     for(const [control,handler] of controlBindings)control.removeEventListener('click',handler);
     controlBindings=[];if(map){map.off('moveend zoomend',publishView);map.off('dblclick',doubleClick);map.remove();}

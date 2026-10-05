@@ -153,3 +153,13 @@ test('A12 double-tap uses touch time and distance, beyond Leaflet 200 ms, with d
  assert.equal(H.isDoubleTap(first,{time:99,clientX:20,clientY:30}),false);
  assert.equal(H.isDoubleTap(null,{time:200,clientX:20,clientY:30}),false);
 });
+
+test('A12 viewport and orientation changes coalesce renderer resize and clean up listeners/frame',()=>{
+ const listeners=new Map();let frame,scheduled=0,invalidations=0,cancelled;
+ const context={module:{exports:{}},addEventListener:(name,fn)=>listeners.set('window.'+name,fn),removeEventListener:name=>listeners.delete('window.'+name),visualViewport:{addEventListener:(name,fn)=>listeners.set('viewport.'+name,fn),removeEventListener:name=>listeners.delete('viewport.'+name)},requestAnimationFrame(fn){frame=fn;scheduled++;return 7;},cancelAnimationFrame(id){cancelled=id;}};
+ const map={createPane(){},getPane:()=>({style:{}}),on(){},off(){},setView(){},getZoom:()=>10,getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1}),invalidateSize(options){invalidations++;assert.equal(options.pan,false);},remove(){},removeLayer(){}};
+ context.L={map:()=>map,control:{scale:()=>({addTo(){}})},tileLayer:()=>({addTo(){return this;}})};
+ vm.runInNewContext(source,context);const A=context.module.exports;A.init('map',{center:[0,0],zoom:10});
+ assert.equal(listeners.size,3);listeners.get('window.resize')();listeners.get('viewport.resize')();listeners.get('window.orientationchange')();assert.equal(scheduled,1);frame();assert.equal(invalidations,1);
+ listeners.get('viewport.resize')();A.destroy();assert.equal(cancelled,7);assert.equal(listeners.size,0);
+});

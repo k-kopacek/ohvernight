@@ -15,8 +15,8 @@
     const key=event=>{if(event.key==='Escape'&&!element.hidden&&!document.querySelector('dialog[open]')){event.stopPropagation();close();}};
     const toggle=()=>element.hidden?open():close(),headerClick=event=>{if(!event.target.closest('button,a'))gestures.activate(event,()=>setState(state==='peek'?'expanded':'peek'));};
     gestures=scope.ExploreSheet.createPanelGesture(element,header,body,{state:()=>state,setState,
-      levels:()=>[{state:'dismissed',height:0},{state:'peek',height:scope.innerHeight*.42},{state:'expanded',height:scope.innerHeight*.75}],
-      enabled:event=>!scope.matchMedia?.('(min-width:768px)').matches||event.type.startsWith('touch'),ignore:target=>target===closeButton});
+      levels:()=>[{state:'dismissed',height:0},{state:'peek',height:scope.ExploreSheet.panelViewport(element)*.42},{state:'expanded',height:scope.ExploreSheet.panelViewport(element)*.75}],
+      enabled:event=>!scope.ExploreSheet.shortLandscape()&&(!scope.matchMedia?.('(min-width:768px)').matches||event.type.startsWith('touch')),ignore:target=>target===closeButton});
     opener.addEventListener('click',toggle);closeButton.addEventListener('click',close);header.addEventListener('click',headerClick);document.addEventListener('keydown',key);element.hidden=true;
     return {open,close,setState,get state(){return state;},destroy(){opener.removeEventListener('click',toggle);closeButton.removeEventListener('click',close);header.removeEventListener('click',headerClick);document.removeEventListener('keydown',key);gestures.destroy();}};
   }

@@ -77,3 +77,10 @@ test('A12 tablet touch drag follows the finger and snaps half; mouse title toggl
  assert.equal(Sheet.snapPanelState(390,'peek',-138,-.2,levels),'expanded');
  assert.equal(Sheet.snapPanelState(260,'expanded',190,.2,levels),'peek');
  });
+
+test('A12 panel heights use the visible viewport and top/bottom safe areas',()=>{
+ const fs=require('node:fs'),vm=require('node:vm'),context={module:{exports:{}},innerHeight:900,visualViewport:{height:820},getComputedStyle:()=>({getPropertyValue:name=>name==='--safe-top'?'30px':'10px'})};
+ vm.runInNewContext(fs.readFileSync(require.resolve('../../explore/sheet.js'),'utf8'),context);
+ assert.equal(context.module.exports.panelViewport({}),780);
+ context.visualViewport.height=700;assert.equal(context.module.exports.panelViewport({}),660);
+});
