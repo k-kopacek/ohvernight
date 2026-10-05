@@ -63,40 +63,70 @@ def _dedupe_path(points: list[Any]) -> list[Any]:
     return result
 
 
-def _round_coordinates(value: Any, depth: int = 0) -> Any:
-    if not isinstance(value, list):
-        return value
-    if value and isinstance(value[0], (int, float)):
-        return _round_point(value)
-    rounded = [_round_coordinates(item, depth + 1) for item in value]
-    # At this depth each child is a coordinate path for LineString/Polygon
-    # rings. The geometry type is applied by _round_geometry below.
-    return rounded
+def _rounded_path(points: list[Any], minimum: int) -> tuple[list[Any] | None, int]:
+    rounded = _dedupe_path([_round_point(point) for point in points])
+    if len(rounded) < minimum:
+        return None, 1
+    return rounded, 0
 
 
-def _round_geometry(geometry: dict[str, Any] | None) -> dict[str, Any] | None:
+def _transform_geometry(geometry: dict[str, Any] | None) -> tuple[dict[str, Any] | None, int]:
     if geometry is None:
-        return None
-    result = copy.deepcopy(geometry)
+        return None, 0
+    geometry_type = geometry.get('type')
     coords = geometry.get('coordinates')
-    if geometry.get('type') == 'Point':
+    result = copy.deepcopy(geometry)
+    dropped = 0
+    if geometry_type == 'Point':
         result['coordinates'] = _round_point(coords)
-    elif geometry.get('type') == 'MultiPoint':
+    elif geometry_type == 'MultiPoint':
         result['coordinates'] = [_round_point(point) for point in coords]
-    elif geometry.get('type') == 'LineString':
-        result['coordinates'] = _dedupe_path([_round_point(point) for point in coords])
-    elif geometry.get('type') == 'MultiLineString':
-        result['coordinates'] = [_dedupe_path([_round_point(point) for point in line]) for line in coords]
-    elif geometry.get('type') == 'Polygon':
-        result['coordinates'] = [_dedupe_path([_round_point(point) for point in ring]) for ring in coords]
-    elif geometry.get('type') == 'MultiPolygon':
-        result['coordinates'] = [
-            [_dedupe_path([_round_point(point) for point in ring]) for ring in polygon]
-            for polygon in coords
-        ]
+    elif geometry_type == 'LineString':
+        path, dropped = _rounded_path(coords, 2)
+        if path is None:
+            return None, dropped
+        result['coordinates'] = path
+    elif geometry_type == 'MultiLineString':
+        lines, dropped = [], 0
+        for line in coords:
+            path, count = _rounded_path(line, 2)
+            dropped += count
+            if path is not None:
+                lines.append(path)
+        if not lines:
+            raise ValueError('every MultiLineString part collapses after display rounding')
+        result['coordinates'] = lines
+    elif geometry_type == 'Polygon':
+        rings, dropped = [], 0
+        for index, ring in enumerate(coords):
+            path, count = _rounded_path(ring, 4)
+            dropped += count
+            if index == 0 and path is None:
+                return None, dropped
+            if path is not None:
+                rings.append(path)
+        result['coordinates'] = rings
+    elif geometry_type == 'MultiPolygon':
+        polygons, dropped = [], 0
+        for polygon in coords:
+            rings = []
+            exterior, count = _rounded_path(polygon[0], 4)
+            dropped += count
+            if exterior is None:
+                continue
+            rings.append(exterior)
+            for hole in polygon[1:]:
+                path, count = _rounded_path(hole, 4)
+                dropped += count
+                if path is not None:
+                    rings.append(path)
+            polygons.append(rings)
+        if not polygons:
+            raise ValueError('every MultiPolygon part collapses after display rounding')
+        result['coordinates'] = polygons
     else:
-        result['coordinates'] = _round_coordinates(coords)
-    return result
+        raise ValueError(f'unsupported geometry type: {geometry_type}')
+    return result, dropped
 
 
 def _canonical_json(value: Any) -> str:
@@ -116,9 +146,11 @@ def _source_feature_collection(manifest: dict[str, Any], layer: dict[str, Any], 
     return value, path
 
 
-def _display_feature(feature: dict[str, Any], evidence_indexes: dict[str, int], evidence_table: list[Any]) -> dict[str, Any]:
+def _display_feature(feature: dict[str, Any], evidence_indexes: dict[str, int], evidence_table: list[Any]) -> tuple[dict[str, Any], int]:
     result = copy.deepcopy(feature)
-    result['geometry'] = _round_geometry(feature.get('geometry'))
+    result['geometry'], dropped = _transform_geometry(feature.get('geometry'))
+    if feature.get('geometry') is not None and result['geometry'] is None:
+        raise ValueError(f"feature {feature.get('properties', {}).get('id')} collapses after display rounding")
     properties = copy.deepcopy(feature.get('properties') or {})
     evidence = properties.get('evidence')
     key = _canonical_json(evidence)
@@ -127,7 +159,7 @@ def _display_feature(feature: dict[str, Any], evidence_indexes: dict[str, int], 
         evidence_table.append(copy.deepcopy(evidence))
     properties['evidence'] = evidence_indexes[key]
     result['properties'] = properties
-    return result
+    return result, dropped
 
 
 def build_layer(manifest: dict[str, Any], layer: dict[str, Any], root: Path = ROOT) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -138,17 +170,24 @@ def build_layer(manifest: dict[str, Any], layer: dict[str, Any], root: Path = RO
         selected = [feature for feature in source_features if display_water(feature)]
     evidence_indexes: dict[str, int] = {}
     evidence_table: list[Any] = []
+    display_features = []
+    dropped_parts = 0
+    for feature in selected:
+        display_feature, dropped = _display_feature(feature, evidence_indexes, evidence_table)
+        display_features.append(display_feature)
+        dropped_parts += dropped
     output = {
         'type': 'FeatureCollection',
         'layer_id': layer['id'],
         'evidence_table': evidence_table,
-        'features': [_display_feature(feature, evidence_indexes, evidence_table) for feature in selected],
+        'features': display_features,
     }
     return output, {
         'layer_id': layer['id'],
         'path': f"regions/{manifest['region']['id']}/display/{layer['id']}.geojson",
         'feature_count': len(selected),
         'source_feature_count': len(source_features),
+        'dropped_degenerate_parts': dropped_parts,
         'canonical_path': layer['path'],
         'canonical_sha256': hashlib.sha256(canonical_path.read_bytes()).hexdigest(),
     }
@@ -159,13 +198,16 @@ def build_coverage(manifest: dict[str, Any], root: Path = ROOT) -> tuple[dict[st
     canonical_path = root / coverage['path']
     document = _read_json(canonical_path)
     feature = _pointer(document, coverage.get('pointer', ''))
+    geometry, dropped_parts = _transform_geometry(feature.get('geometry'))
+    if geometry is None:
+        raise ValueError('coverage collapses after display rounding')
     output = {
         'type': 'FeatureCollection',
         'layer_id': 'coverage',
         'evidence_table': [],
         'features': [{
             'type': 'Feature',
-            'geometry': _round_geometry(feature.get('geometry')),
+            'geometry': geometry,
             'properties': copy.deepcopy(feature.get('properties') or {}),
         }],
     }
@@ -174,6 +216,7 @@ def build_coverage(manifest: dict[str, Any], root: Path = ROOT) -> tuple[dict[st
         'path': f"regions/{manifest['region']['id']}/display/coverage.geojson",
         'feature_count': 1,
         'source_feature_count': 1,
+        'dropped_degenerate_parts': dropped_parts,
         'canonical_path': coverage['path'],
         'canonical_sha256': hashlib.sha256(canonical_path.read_bytes()).hexdigest(),
     }

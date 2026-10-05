@@ -11,7 +11,8 @@ from pathlib import Path
 V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
-from lib.region_contract import ContractError, normalize_transport, validate_region, validate_region_data
+from lib.region_contract import (ContractError, _display_transform_geometry,
+                                 normalize_transport, validate_region, validate_region_data)
 
 
 class RegionContractTests(unittest.TestCase):
@@ -123,14 +124,18 @@ class RegionContractTests(unittest.TestCase):
             self.valid(manifest, docs)
         self.assertEqual(raised.exception.rule, rule)
 
-    def display_base(self):
+    def display_base(self, geometry=None, geometry_types=None):
         manifest, docs = self.base()
+        if geometry is not None:
+            docs["data.json"]["layers"]["water"]["features"][0]["geometry"] = copy.deepcopy(geometry)
+            manifest["layers"][0]["geometry_types"] = geometry_types or [geometry["type"]]
         manifest["coverage"]["display"] = {"path": "regions/synthetic/display/coverage.geojson"}
         manifest["layers"][0]["display"] = {"path": "regions/synthetic/display/water.geojson"}
         canonical = docs["data.json"]["layers"]["water"]
         evidence = copy.deepcopy(canonical["features"][0]["properties"]["evidence"])
+        display_geometry, dropped = _display_transform_geometry(canonical["features"][0]["geometry"])
         display = {"type": "FeatureCollection", "layer_id": "water", "evidence_table": [evidence], "features": [{
-            "type": "Feature", "geometry": copy.deepcopy(canonical["features"][0]["geometry"]),
+            "type": "Feature", "geometry": display_geometry,
             "properties": {"id": "water-1", "evidence": 0},
         }]}
         coverage = docs["coverage.json"]
@@ -143,6 +148,7 @@ class RegionContractTests(unittest.TestCase):
         for layer_id, path, value, canonical_path in (("water", "regions/synthetic/display/water.geojson", display, "data.json"), ("coverage", "regions/synthetic/display/coverage.geojson", coverage_display, "coverage.json")):
             data = encoded(value)
             entries.append({"layer_id": layer_id, "path": path, "feature_count": 1, "source_feature_count": 1,
+                            "dropped_degenerate_parts": dropped if layer_id == "water" else 0,
                             "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
                             "canonical_sha256": hashlib.sha256(encoded(docs[canonical_path])).hexdigest()})
         docs["regions/synthetic/display/water.geojson"] = display
@@ -179,8 +185,51 @@ class RegionContractTests(unittest.TestCase):
             d["regions/synthetic/display/water.geojson"]["features"][0]["geometry"]["coordinates"] = [0.5, 0.5]
             self.refresh_display_hash(d, "water")
         assert_display_rule("R63", changed_coordinate)
+        def malformed_ring(m, d):
+            m["layers"][0]["geometry_types"] = ["Polygon"]
+            d["data.json"]["layers"]["water"]["features"][0]["geometry"] = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [0, 0]]]}
+            d["regions/synthetic/display/water.geojson"]["features"][0]["geometry"] = copy.deepcopy(d["data.json"]["layers"]["water"]["features"][0]["geometry"])
+            entry = d["regions/synthetic/display/index.json"]["artifacts"][0]
+            entry["canonical_sha256"] = hashlib.sha256((json.dumps(d["data.json"], ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode()).hexdigest()
+            self.refresh_display_hash(d, "water")
+        assert_display_rule("R63", malformed_ring)
+        def malformed_line(m, d):
+            m["layers"][0]["geometry_types"] = ["LineString"]
+            d["data.json"]["layers"]["water"]["features"][0]["geometry"] = {"type": "LineString", "coordinates": [[0, 0]]}
+            d["regions/synthetic/display/water.geojson"]["features"][0]["geometry"] = {"type": "LineString", "coordinates": [[0, 0]]}
+            entry = d["regions/synthetic/display/index.json"]["artifacts"][0]
+            entry["canonical_sha256"] = hashlib.sha256((json.dumps(d["data.json"], ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode()).hexdigest()
+            self.refresh_display_hash(d, "water")
+        assert_display_rule("R63", malformed_line)
+        assert_display_rule("R63", lambda m, d: d["regions/synthetic/display/index.json"]["artifacts"][0].update(dropped_degenerate_parts=1))
+        manifest, docs = self.display_base(
+            {"type": "MultiLineString", "coordinates": [[[0, 0], [0.0000001, 0.0000001]], [[0, 0], [1, 1]]]},
+            ["MultiLineString"],
+        )
+        self.assertEqual(docs["regions/synthetic/display/index.json"]["artifacts"][0]["dropped_degenerate_parts"], 1)
+        self.valid(manifest, docs)
         assert_display_rule("R64", lambda m, d: d["data.json"]["layers"]["water"]["features"][0]["properties"].update(name="changed"))
 
+    def test_validate_region_without_display_artifacts(self):
+        manifest, docs = self.base()
+        self.valid(manifest, docs)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            region_dir = root / "regions" / "synthetic"
+            region_dir.mkdir(parents=True)
+            (region_dir / "region.json").write_text(json.dumps(manifest))
+            (root / "coverage.json").write_text(json.dumps(docs["coverage.json"]))
+            (root / "data.json").write_text(json.dumps(docs["data.json"]))
+            validate_region(region_dir / "region.json", root)
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = self.load("regions/aspen/region.json")
+            manifest["coverage"].pop("display", None)
+            for layer in manifest["layers"]:
+                layer.pop("display", None)
+            path = Path(tmp) / "aspen" / "region.json"
+            path.parent.mkdir()
+            path.write_text(json.dumps(manifest))
+            validate_region(path, V2)
     def test_R01_manifest_enum_and_shape(self):
         self.assert_rule("R01", lambda m, d: m["region"].update(status="verified"))
         self.assert_rule("R01", lambda m, d: m["fact_coverage"]["ownership"].update(state="complete"))
