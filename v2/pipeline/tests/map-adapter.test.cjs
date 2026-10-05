@@ -154,6 +154,28 @@ test('A12 double-tap uses touch time and distance, beyond Leaflet 200 ms, with d
  assert.equal(H.isDoubleTap(null,{time:200,clientX:20,clientY:30}),false);
 });
 
+test('review fix 1: controlled release cadence at 279/280 ms zooms once; 281 ms and later select twice',()=>{
+ for(const gap of [279,280,281,500])for(const jitter of [0,3]){
+  const surface=new EventTarget();surface.getBoundingClientRect=()=>({left:0,top:0});surface.closest=()=>null;
+  const active=new Set(),timers=new Map(),selections=[];let clock=0,nextTimer=0,zoom=18,zoomCalls=0;
+  const map={getContainer:()=>surface,createPane(){},getPane:()=>({style:{}}),on(){},off(){},setView(){},getZoom:()=>zoom,setZoomAround(point,value){zoom=value;zoomCalls++;},getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1}),hasLayer:g=>active.has(g),latLngToContainerPoint:p=>({x:p.lng??p[1],y:p.lat??p[0]}),containerPointToLatLng:p=>({lng:p.x,lat:p.y}),remove(){},removeLayer:g=>active.delete(g)};
+  const context={module:{exports:{}},setTimeout(fn,ms){const id=++nextTimer;timers.set(id,{fn,due:clock+ms});return id;},clearTimeout(id){timers.delete(id);}};
+  context.L={map:()=>map,control:{scale:()=>({addTo(){}})},tileLayer:()=>({addTo(){return this;}}),geoJSON(data){return {addTo(){active.add(this);return this;},eachLayer(fn){data.features.forEach(feature=>fn({feature,getBounds:()=>({getNorthWest:()=>[100,10],getSouthEast:()=>[100,40]})}));}};}};
+  vm.runInNewContext(source,context);const A=context.module.exports;A.init('map',{center:[0,0],zoom:18});A.addLayer('lines',{features:[{properties:{id:'target'},geometry:{type:'LineString',coordinates:[[10,100],[40,100]]}}]},{});A.onFeature('lines',f=>selections.push(f.properties.id));
+  function advance(time){let next;while((next=[...timers].sort((a,b)=>a[1].due-b[1].due)[0])&&next[1].due<=time){clock=next[1].due;timers.delete(next[0]);next[1].fn();}clock=time;}
+  function touch(type,time,dx=0){advance(time);const e=new Event(type,{cancelable:true});Object.defineProperty(e,'timeStamp',{value:time});const p={clientX:15.5+dx,clientY:100};e.touches=type==='touchend'?[]:[p];e.changedTouches=[p];surface.dispatchEvent(e);}
+  touch('touchstart',0);if(jitter)touch('touchmove',5,jitter);touch('touchend',10,jitter);
+  assert.equal(selections.length,0);assert.equal(timers.size,1);
+  const release=10+gap;
+  // Inside the window, contact starts before the pending selection deadline.
+  // Outside it, let the first single-tap timer run before the second contact.
+  touch('touchstart',gap<=280?release-10:release);if(jitter)touch('touchmove',release,jitter);touch('touchend',release,jitter);
+  if(gap<=280){assert.equal(zoom,19);assert.equal(zoomCalls,1);assert.deepEqual(selections,[]);assert.equal(timers.size,0);}
+  else{assert.equal(zoom,18);assert.equal(zoomCalls,0);assert.deepEqual(selections,['target']);assert.equal(timers.size,1);}
+  advance(release+1000);assert.deepEqual(selections,gap<=280?[]:['target','target']);assert.equal(zoomCalls,gap<=280?1:0);assert.equal(timers.size,0);A.destroy();
+ }
+});
+
 test('D1: tap slop uses total displacement from the start, including its exact boundary',()=>{
  const H=predicates(),start={clientX:20,clientY:30};assert.equal(H.TAP_MOVEMENT_SLOP,10);
  for(const [dx,dy] of [[3,0],[6,0],[10,0],[6,8]])assert.equal(H.withinTapSlop(start,{clientX:20+dx,clientY:30+dy}),true);

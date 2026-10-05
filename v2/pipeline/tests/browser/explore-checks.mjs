@@ -134,12 +134,15 @@ export async function runExploreChecks(client,origin,signal,root){
   for(const pin of selection.pins)assert.equal(pin.pressed,'true',label+' pin pressed');
   if(cleared)assert.equal(selection.id,undefined,label+' shell cleared');
  }
- let gestureSequence=0;
  async function flick(point,dy){
-  const timestamp=4102444800+(gestureSequence++);
-  await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point],timestamp});
-  await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x,y:point.y+dy}],timestamp:timestamp+.04});
-  await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[],timestamp:timestamp+.08});
+  // Scheduling-independent native flick cadence; velocity boundaries are unit-tested in Node.
+  await evaluate(`(()=>{const types=['touchstart','touchmove','touchend'],points=[${JSON.stringify(point)},${JSON.stringify({x:point.x,y:point.y+dy})},${JSON.stringify({x:point.x,y:point.y+dy})}];let base;window.__flickEventCount=0;window.__flickStamp=event=>{const i=window.__flickEventCount,p=(event.touches.length?event.touches:event.changedTouches)[0];if(i>=3||event.type!==types[i]||event.touches.length>1||!p||Math.abs(p.clientX-points[i].x)>.01||Math.abs(p.clientY-points[i].y)>.01)return;if(i===0)base=event.timeStamp;Object.defineProperty(event,'timeStamp',{value:base+i*40});window.__flickEventCount++;};for(const type of types)window.addEventListener(type,window.__flickStamp,true)})()`);
+  try{
+   await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
+   await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x,y:point.y+dy}]});
+   await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+   assert.equal(await evaluate('window.__flickEventCount'),3,'flick stamps only its three native events');
+  }finally{await evaluate(`(()=>{for(const type of ['touchstart','touchmove','touchend'])window.removeEventListener(type,window.__flickStamp,true);delete window.__flickStamp;delete window.__flickEventCount})()`);}
  }
  const results=[];
  try{
@@ -332,9 +335,11 @@ export async function runExploreChecks(client,origin,signal,root){
    result.a12Trails.push({featureId,onLine:true,besideLinePx:6});
   }
   await evaluate(`(()=>{const e=explore.region.registry.find(e=>e.kind==='trails');window.__safariFeature=explore.region.layers.get(e.id).data.features.find(f=>f.properties.id===${JSON.stringify(sampleIds[0])});__frameLine(window.__safariFeature,18)})()`);
-  const safariPoint=await evaluate('__pointForFeature(window.__safariFeature)');await tap(safariPoint);
-  await evaluate(`(()=>{const e=document.elementFromPoint(${safariPoint.x},${safariPoint.y});e.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:${Math.round(safariPoint.x)},clientY:${Math.round(safariPoint.y)}}))})()`);
-  assert.equal(await evaluate('explore.state.selection'),null,'R2 Safari plain compatibility click remains deferred');
+  const safariPoint=await evaluate('__pointForFeature(window.__safariFeature)');
+  // Capture deferral in the native release task, before its timer can run.
+  await evaluate(`explore.$('map').addEventListener('touchend',event=>{const p=event.changedTouches[0];event.target.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:Math.round(p.clientX),clientY:Math.round(p.clientY)}));window.__safariDeferred={executed:true,selection:explore.state.selection};},{once:true})`);
+  await tap(safariPoint);
+  assert.deepEqual(await evaluate('window.__safariDeferred'),{executed:true,selection:null},'R2 Safari plain compatibility click remains deferred');
   await poll('explore.state.selection?.featureId==='+JSON.stringify(sampleIds[0]),'R2 plain click uses fractional touch position');await assertSelection('R2 Safari-compatible touch selection');
   await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
   if(id==='douglas-co'){
@@ -388,7 +393,7 @@ export async function runExploreChecks(client,origin,signal,root){
   await evaluate('explore.sheet.setExpanded(false)');const mouseZoom=await evaluate('explore.state.view.zoom');for(const [type,count] of [['mousePressed',1],['mouseReleased',1],['mousePressed',2],['mouseReleased',2]])await client.command('Input.dispatchMouseEvent',{type,x:doublePoint.x,y:doublePoint.y,button:'left',clickCount:count});await poll('explore.state.view.zoom>'+mouseZoom,'A11 double-click zoom');
   await evaluate(`(()=>{if(!explore.$('detail-view').hidden)explore.$('detail-back').click();explore.sheet.setState('collapsed');__framePolygon(window.__a11Land);window.__blockCompatibilityClicks=true;window.addEventListener('click',e=>{if(window.__blockCompatibilityClicks&&explore.$('map').contains(e.target))e.stopImmediatePropagation();},true);void 0})()`);
   const sourcePoint=await evaluate('__pointForFeature(window.__a11Land)'),sourceZoom=await evaluate('explore.state.view.zoom');
-  await tap(sourcePoint);await delay(220,undefined,{signal});await tap(sourcePoint);await poll('explore.state.view.zoom==='+Math.min(19,sourceZoom+1),'A12 touchend double-tap beyond Leaflet click window');
+  await tap(sourcePoint);await tap(sourcePoint);await poll('explore.state.view.zoom==='+Math.min(19,sourceZoom+1),'A12 touchend double-tap without compatibility clicks');
   await delay(330,undefined,{signal});assert.equal(await evaluate('explore.state.selection'),null,'A12 double-tap over a selectable polygon never selects');assert.equal(await evaluate('explore.$("detail-view").hidden'),true,'A12 double-tap does not open detail');assert.equal(await evaluate('visualViewport.scale'),1,'A12 click-free touch double-tap preserves page scale');
   for(let i=0;i<2;i++){
    await evaluate('__framePolygon(window.__a11Land)');await tap(await evaluate('__pointForFeature(window.__a11Land)'));await poll('explore.state.selection?.featureId===window.__a11LandId','A12 slow single tap without compatibility click');await assertSelection('A12 click-free single tap');await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');await delay(330,undefined,{signal});
@@ -397,7 +402,7 @@ export async function runExploreChecks(client,origin,signal,root){
   for(const dx of [3,6]){
    await evaluate('__frameLine(window.__safariFeature,18)');await jitterTap(await evaluate('__pointForFeature(window.__safariFeature)'),dx);await poll('explore.state.selection?.featureId===window.__safariFeature.properties.id','D1 native '+dx+' px jitter selects');await assertSelection('D1 '+dx+' px jitter highlight');assert.equal(await evaluate('visualViewport.scale'),1,'D1 jitter preserves page scale');await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
   }
-  await evaluate('__framePolygon(window.__a11Land)');const jitterPoint=await evaluate('__pointForFeature(window.__a11Land)'),jitterZoom=await evaluate('explore.state.view.zoom');await jitterTap(jitterPoint,3);await delay(220,undefined,{signal});await jitterTap(jitterPoint,3);await poll('explore.state.view.zoom==='+Math.min(19,jitterZoom+1),'D1 jittery native double-tap zooms once');await delay(330,undefined,{signal});assert.equal(await evaluate('explore.state.selection'),null,'D1 jittery double-tap never selects');assert.equal(await evaluate('explore.$("detail-view").hidden'),true,'D1 jittery double-tap opens no detail');assert.equal(await evaluate('visualViewport.scale'),1,'D1 jittery double-tap keeps page scale 1');
+  await evaluate('__framePolygon(window.__a11Land)');const jitterPoint=await evaluate('__pointForFeature(window.__a11Land)'),jitterZoom=await evaluate('explore.state.view.zoom');await jitterTap(jitterPoint,3);await jitterTap(jitterPoint,3);await poll('explore.state.view.zoom==='+Math.min(19,jitterZoom+1),'D1 jittery native double-tap zooms once');await delay(330,undefined,{signal});assert.equal(await evaluate('explore.state.selection'),null,'D1 jittery double-tap never selects');assert.equal(await evaluate('explore.$("detail-view").hidden'),true,'D1 jittery double-tap opens no detail');assert.equal(await evaluate('visualViewport.scale'),1,'D1 jittery double-tap keeps page scale 1');
   await evaluate('__framePolygon(window.__a11Land)');const centerBefore25=await evaluate('explore.state.view.center');await jitterTap(await evaluate('__pointForFeature(window.__a11Land)'),25);await poll('JSON.stringify(explore.state.view.center)!=='+JSON.stringify(JSON.stringify(centerBefore25)),'D1 25 px movement pans map');await delay(330,undefined,{signal});assert.equal(await evaluate('explore.state.selection'),null,'D1 25 px movement is a pan, not selection');result.checks.push('D1 native 3/6 px jitter selection, 25 px pan and jittery double-tap');
   await evaluate('__framePolygon(window.__a11Land)');const panPoint=await evaluate('__pointForFeature(window.__a11Land)');const beforePan=await evaluate('explore.state.view.center');await drag(panPoint,35,25);await poll('JSON.stringify(explore.state.view.center)!=='+JSON.stringify(JSON.stringify(beforePan)),'A12 pan still works after double-tap');await delay(330,undefined,{signal});assert.equal(await evaluate('explore.state.selection'),null,'A12 native pan never selects');
   const pinchCenter={x:Math.round(width*.65),y:Math.round(height*.35)},pinchZoom=await evaluate('explore.state.view.zoom'),pinch=[{x:pinchCenter.x-20,y:pinchCenter.y},{x:pinchCenter.x+20,y:pinchCenter.y}];await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:pinch});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:pinch.map((p,i)=>({...p,x:p.x+(i?30:-30)}))});await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await delay(330,undefined,{signal});await poll('explore.state.view.zoom>'+pinchZoom,'A12 native pinch changes map zoom');assert.equal(await evaluate('explore.state.selection'),null,'A12 native pinch never selects');assert.equal(await evaluate('visualViewport.scale'),1,'A12 native pinch zooms map, not page');

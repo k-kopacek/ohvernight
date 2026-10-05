@@ -52,6 +52,22 @@ test('A11 slow drags choose nearest state; short flicks advance one; long drags 
  assert.equal(Sheet.snapState(430,'expanded',20,.1,600),'expanded');
 });
 
+test('review fix 1: shared gestures use controlled 160/100 ms and velocity boundaries',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');
+ function stateAfterRelease(time){
+  let header;class Node extends EventTarget{constructor(){super();this.dataset={};this.attrs={};this.style={};this.classList={toggle(){},add(){},remove(){}};}contains(e){return e===this;}closest(){return null;}setAttribute(k,v){this.attrs[k]=v;}querySelector(){return header;}getBoundingClientRect(){return {height:this.style.height?parseFloat(this.style.height):64};}}
+  const element=new Node(),toggle=new Node(),body=new Node(),doc=new Node();header=new Node();body.scrollTop=0;doc.querySelector=()=>null;
+  const context={module:{exports:{}},document:doc,CustomEvent,innerHeight:600,matchMedia:()=>({matches:false})};vm.runInNewContext(fs.readFileSync(require.resolve('../../explore/sheet.js'),'utf8'),context);const sheet=context.module.exports.createSheet(element,toggle,body);
+  for(const [type,y,timestamp] of [['touchstart',400,0],['touchmove',364,70],['touchend',364,time]]){const e=new Event(type,{cancelable:true});Object.defineProperty(e,'target',{value:header});Object.defineProperty(e,'timeStamp',{value:timestamp});e.touches=type==='touchend'?[]:[{clientX:30,clientY:y}];e.changedTouches=[{clientX:30,clientY:y}];element.dispatchEvent(e);}
+  const state=sheet.state;sheet.destroy();return state;
+ }
+ assert.equal(stateAfterRelease(159),'collapsed','under 160 ms uses whole-gesture velocity');
+ assert.equal(stateAfterRelease(160),'half','at 160 ms uses recent segment velocity');
+ assert.equal(stateAfterRelease(170),'half','recent segment remains eligible at exactly 100 ms');
+ assert.equal(stateAfterRelease(171),'collapsed','after 100 ms the segment velocity expires');
+ assert.equal(Sheet.snapState(100,'collapsed',-36,-.45,600),'collapsed');assert.equal(Sheet.snapState(100,'collapsed',-36,-.4501,600),'half');
+});
+
 test('A12 tablet touch drag follows the finger and snaps half; mouse title toggle stays available',()=>{
  const fs=require('node:fs'),vm=require('node:vm');let header;
  class Node extends EventTarget{
