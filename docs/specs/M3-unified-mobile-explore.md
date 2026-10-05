@@ -74,6 +74,13 @@ A3 was approved by the owner on 2026-10-04 with pull request #7.
 - *Other moved functions.* `season`, `windows` and `days` stay pinned byte-identical for fixed inputs (T8).
 - *Sections changed by A6:* 17.3, 19 (T8, T9), 22.
 
+**A7 (2026-10-04, coordinator amendment during PR B; approved when the owner merges PR B) — one legacy region-specific selector stays in `v2/trust.js` (10.5).**
+
+- *Finding.* Section 10.5 says the only region-specific JavaScript left is `extras.js`. `Trust.sourceSummary` in `v2/trust.js`, which predates M3, selects the fire monitor record by its Aspen feature ID. Section 17.3 requires that function's wording and behaviour to stay unchanged, and section 10.1 limits changes to `v2/trust.js` to sections 12.5 and 14.
+- *Resolution.* `v2/trust.js` is not changed for this. The selector stays as a known legacy item outside `v2/explore/`; criterion 10 continues to apply to `v2/explore/` in full. The shell passes `Trust.sourceSummary` the fire feature from the loaded display layer, as A3 states. Generalising the function is left to the milestone that reworks restriction monitoring.
+- *Also confirmed, no change of scope.* `definitions` and `describe` are removed from `v2/map-layers.js` as section 18 already requires, leaving `displayWater`. The default region is declared on the host element of `v2/index.html` and read generically by `v2/app.js` (A2).
+- *Sections changed by A7:* 10.5.
+
 Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `docs/audits/architecture-audit.md`, `docs/specs/M2-regional-data-contract.md`, `v2/pipeline/docs/data-contract.md`.
 
 M3 is one milestone with two phases:
