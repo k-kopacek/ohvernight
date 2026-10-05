@@ -11,7 +11,7 @@
     let state='collapsed',gesture,suppressClick=0;
     const header=element.querySelector('.explore-sheet-header'),phone=()=>!scope.matchMedia?.('(min-width:768px)').matches;
     function setState(value){
-      if(!states.includes(value))return;if(!phone()&&value==='half')value='expanded';
+      if(!states.includes(value))return;
       state=value;element.dataset.state=value;element.classList.toggle('expanded',value!=='collapsed');body.inert=value==='collapsed';
       toggle.setAttribute('aria-expanded',String(value!=='collapsed'));
       toggle.textContent=value==='collapsed'?'Results · Expand':'Results · '+(value==='half'?'Expand':'Collapse');
@@ -21,7 +21,7 @@
     const click=event=>{if(event.detail!==0&&event.timeStamp<=suppressClick){suppressClick=0;return;}cycle();};
     const key=event=>{if(event.key==='Escape'&&state!=='collapsed'&&!document.querySelector('dialog[open],.explore-drawer:not([hidden])')){setState('collapsed');toggle.focus();}};
     function begin(event,point){
-      if(!phone()||event.button>0)return;
+      if((!phone()&&!event.type.startsWith('touch'))||event.button>0)return;
       const onHeader=header.contains(event.target);
       if(!onHeader&&(state==='collapsed'||body.scrollTop>0||event.target.closest('button,a,input,select,textarea')))return;
       suppressClick=0;gesture={x:point.clientX,y:point.clientY,height:element.getBoundingClientRect().height,start:state,onHeader,time:event.timeStamp,lastY:point.clientY,lastTime:event.timeStamp,velocity:0,dragging:false};

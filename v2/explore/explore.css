@@ -32,7 +32,7 @@ body{margin:0}.explore-sheet-body label{display:flex;gap:8px;align-items:center}
 
 .explore-drawer .explore-heading{touch-action:none}.explore-drawer>p{font-size:12px;line-height:1.4;margin:6px 0}.explore-drawer .explore-heading::before{content:"";position:absolute;top:-6px;left:calc(50% - 16px);width:32px;height:4px;border-radius:4px;background:#b8bdb1}
 
-.explore-sheet.is-dragging,.explore-drawer.is-dragging{transition:none!important}.explore-detail-actions{display:flex;flex-wrap:wrap;gap:4px}.explore-detail-actions p{flex-basis:100%}@media(min-width:768px){.explore-sheet[data-state=half],.explore-sheet[data-state=expanded]{height:75dvh;width:340px}}
+.explore-sheet.is-dragging,.explore-drawer.is-dragging{transition:none!important}.explore-detail-actions{display:flex;flex-wrap:wrap;gap:4px}.explore-detail-actions p{flex-basis:100%}@media(min-width:768px){.explore-sheet[data-state=half]{height:40dvh;width:340px}.explore-sheet[data-state=expanded]{height:75dvh;width:340px}}
 
 .explore-sheet.is-dragging .explore-sheet-body{visibility:visible}
 

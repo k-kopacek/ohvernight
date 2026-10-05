@@ -41,6 +41,8 @@
     }
     return null;
   }
+  // Stable order: point, label, line, polygon; distance; smaller polygon area;
+  // topmost layer order; then source feature ID. Coincident source lines keep one hit.
   function chooseHit(candidates){
     return candidates.sort((a,b)=>a.priority-b.priority||a.distance-b.distance||
       (a.priority===2?a.area-b.area:0)||b.order-a.order||String(a.featureId).localeCompare(String(b.featureId)))[0]||null;

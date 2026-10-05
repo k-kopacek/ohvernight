@@ -51,3 +51,20 @@ test('A11 slow drags choose nearest state; short flicks advance one; long drags 
  assert.equal(Sheet.snapState(210,'half',30,1,600),'collapsed');
  assert.equal(Sheet.snapState(430,'expanded',20,.1,600),'expanded');
 });
+
+test('A12 tablet touch drag follows the finger and snaps half; mouse title toggle stays available',()=>{
+ const fs=require('node:fs'),vm=require('node:vm');let header;
+ class Node extends EventTarget{
+  constructor(){super();this.dataset={};this.attrs={};this.style={};this.classList={toggle(){},add(){},remove(){}};}
+  setAttribute(k,v){this.attrs[k]=v;}focus(){}contains(e){return e===this;}querySelector(){return header;}
+  getBoundingClientRect(){return {height:this.style.height?parseFloat(this.style.height):this.dataset.state==='half'?409.6:this.dataset.state==='expanded'?768:64};}
+ }
+ const element=new Node(),toggle=new Node(),body=new Node(),doc=new Node();header=new Node();body.scrollTop=0;doc.querySelector=()=>null;
+ const context={module:{exports:{}},document:doc,CustomEvent,innerHeight:1024,matchMedia:q=>({matches:q==='(min-width:768px)'})};
+ vm.runInNewContext(fs.readFileSync(require.resolve('../../explore/sheet.js'),'utf8'),context);
+ const sheet=context.module.exports.createSheet(element,toggle,body);
+ function touch(type,y,time){const e=new Event(type,{cancelable:true});Object.defineProperty(e,'target',{value:header});Object.defineProperty(e,'timeStamp',{value:time});e.touches=type==='touchend'?[]:[{clientX:30,clientY:y}];e.changedTouches=[{clientX:30,clientY:y}];element.dispatchEvent(e);return e;}
+ touch('touchstart',900,0);touch('touchmove',700,200);assert.equal(parseFloat(element.style.height),264,'intermediate follows finger');touch('touchmove',550,400);touch('touchend',550,420);
+ assert.equal(sheet.state,'half');assert.equal(body.inert,false);assert.equal(element.style.height,'');
+ const click=new Event('click');Object.defineProperty(click,'timeStamp',{value:1000});Object.defineProperty(click,'detail',{value:1});toggle.dispatchEvent(click);assert.equal(sheet.state,'collapsed','mouse click toggle remains');sheet.destroy();
+});

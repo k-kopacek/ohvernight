@@ -186,6 +186,17 @@ export async function runExploreChecks(client,origin,signal,root){
    await evaluate('explore.drawer.open();explore.$("map").dispatchEvent(new MouseEvent("click",{bubbles:true}))');assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 exposed map tap dismisses drawer');
    await evaluate('explore.drawer.open()');const hp=await evaluate('(()=>{const r=explore.$("drawer").querySelector(".explore-heading h1").getBoundingClientRect();return {x:r.x+20,y:r.y+12}})()');await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hp]});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:hp.x,y:hp.y+40}]});assert.ok(await evaluate('explore.$("drawer").getBoundingClientRect().bottom>innerHeight'),'A11 drawer follows finger before release');await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal(await evaluate('explore.$("drawer").hidden'),true,'A11 drawer swipe dismisses');
   }
+  if(width>=768){
+   await evaluate('explore.sheet.setState("collapsed")');const center=await evaluate('explore.state.view.center');
+   const handle=()=>evaluate('(()=>{const r=explore.$("sheet-toggle").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+24}})()');
+   for(const [dy,state] of [[-60,'half'],[-60,'expanded'],[60,'half'],[60,'collapsed']]){await flick(await handle(),dy);assert.equal(await evaluate('explore.sheet.state'),state,'A12 tablet native flick snap');}
+   const p=await handle();await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[p]});
+   await delay(110,undefined,{signal});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:p.x,y:p.y-height*.15}]});
+   const intermediate=await evaluate('explore.$("sheet").getBoundingClientRect().height');assert.ok(intermediate>64&&intermediate<height*.4,'A12 tablet follows finger before release');
+   await delay(110,undefined,{signal});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:p.x,y:p.y-height*.3}]});
+   await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal(await evaluate('explore.sheet.state'),'half','A12 tablet slow drag snaps partial');
+   assert.deepEqual(await evaluate('explore.state.view.center'),center,'A12 tablet sheet never pans map');await evaluate('explore.sheet.setState("collapsed")');
+  }
   const point=await evaluate(`(()=>{const m=explore.$('map');for(let y=150;y<innerHeight-120;y+=20)for(let x=80;x<innerWidth-80;x+=20){const e=document.elementFromPoint(x,y);if(m.contains(e)&&!e.closest('.leaflet-control'))return {x,y};}throw Error('no free map point')})()`);
   const center=await evaluate('explore.state.view.center');await drag(point,35,25);await poll('JSON.stringify(explore.state.view.center)!=='+JSON.stringify(JSON.stringify(center)),'map drag');
   await evaluate('explore.sheet.setExpanded(true)');const after=await evaluate('explore.state.view.center'),inside=await evaluate('(()=>{const r=explore.$("sheet-body").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+80}})()');await drag(inside,0,-40);await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');assert.deepEqual(await evaluate('explore.state.view.center'),after,'B4 sheet drag does not pan');result.checks.push('B4');
@@ -265,7 +276,7 @@ export async function runExploreChecks(client,origin,signal,root){
   await evaluate('window.__assistivePin=document.querySelector(".leaflet-marker-icon.is-selected");explore.$("detail-back").click();window.__assistivePin.click()');
   assert.equal(await evaluate('explore.state.selection?.featureId'),await evaluate('window.__a11PinId'),'R3 programmatic zero-coordinate pin activation');await assertSelection('R3 assistive pin highlight');
 
-  if(width>=768)assert.equal(await evaluate('explore.$("sheet").getBoundingClientRect().height'),height*.75,'A11 selection keeps full side panel');
+  if(width>=768){assert.equal(await evaluate('explore.sheet.state'),'half','A12 selection opens tablet partial state (supersedes K3)');assert.ok(Math.abs(await evaluate('explore.$("sheet").getBoundingClientRect().height')-height*.4)<=1/64,'A12 partial side panel uses 40% height, within CSS pixel quantization');}
   await evaluate('explore.$("detail-back").click()');await assertSelection('A11 Back clears pin',true);await evaluate('explore.sheet.setExpanded(false)');
   await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='trails'),f=explore.region.layers.get(entry.id).data.features.filter(f=>f.properties.name&&f.geometry).sort((a,b)=>{const size=f=>{const b=ExploreShell.bounds({features:[f]});return (b[1][0]-b[0][0])*(b[1][1]-b[0][1])};return size(a)-size(b)})[0];window.__a11LabelFeature=f;window.__a11LabelEntry=entry;explore.select(entry,f);explore.$('detail-back').click();explore.sheet.setExpanded(false);while(explore.state.view.zoom>13)explore.$('zoom-out').click()})()`);
   assert.equal(await evaluate('document.querySelectorAll(".explore-map-label").length'),0,'A11 no names below label zoom');
@@ -307,12 +318,26 @@ export async function runExploreChecks(client,origin,signal,root){
   assert.equal(await evaluate('explore.state.selection'),null,'R2 Safari plain compatibility click remains deferred');
   await poll('explore.state.selection?.featureId==='+JSON.stringify(sampleIds[0]),'R2 plain click uses fractional touch position');await assertSelection('R2 Safari-compatible touch selection');
   await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
+  if(id==='douglas-co'){
+   for(const featureId of ['usfs-trail-8925194','usfs-trail-8952194']){
+    await evaluate(`(()=>{explore.$('search').click();const activity=document.getElementById('activity'),query=document.getElementById('query');activity.value='';activity.dispatchEvent(new Event('input'));const e=explore.region.registry.find(e=>e.kind==='trails'),f=explore.region.layers.get(e.id).data.features.find(f=>f.properties.id===${JSON.stringify(featureId)});window.__overlapFeature=f;query.value=f.properties.name;query.dispatchEvent(new Event('input'));document.querySelector('[data-feature="'+f.properties.id+'"]').click()})()`);
+    assert.equal(await evaluate('explore.state.selection?.featureId'),featureId,'A12 coincident source trail reachable through search');await assertSelection('A12 shadowed own ID');
+    assert.equal(await evaluate('explore.$("detail-title").textContent'),await evaluate('window.__overlapFeature.properties.name'),'A12 shadowed own detail');
+    assert.equal(await evaluate(`(()=>{const b=ExploreShell.bounds({features:[window.__overlapFeature]}),v=explore.state.view.bounds;return v[0][0]<=b[0][0]&&v[0][1]<=b[0][1]&&v[1][0]>=b[1][0]&&v[1][1]>=b[1][1]})()`),true,'A12 shadowed own geometry fit');
+    await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
+   }
+   let previous;
+   for(let i=0;i<2;i++){
+    const p=await evaluate(`(()=>{const e=explore.region.registry.find(e=>e.kind==='trails'),f=explore.region.layers.get(e.id).data.features.find(f=>f.properties.id==='usfs-trail-8925194');__frameLine(f,18);const item=window.__rendered.flatMap(g=>Object.values(g._layers)).find(l=>l.feature===f);const r=item._map.getContainer().getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+    await tap(p);await poll('!!explore.state.selection','A12 coincident geometry tap');const selected=await evaluate('explore.state.selection.featureId');if(previous)assert.equal(selected,previous,'A12 coincident geometry deterministic single hit');previous=selected;await assertSelection('A12 coincident single highlight');await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
+   }
+  }
   result.a12LandModes=[];
   for(const mode of ['plain','search','trail detail','after drawer']){
    await evaluate(`(()=>{if(!explore.$('detail-view').hidden)explore.$('detail-back').click();if(${JSON.stringify(mode)}==='plain')explore.sheet.setState('collapsed');if(${JSON.stringify(mode)}==='search')explore.$('search').click();if(${JSON.stringify(mode)}==='trail detail')explore.select(window.__a11TrailEntry,window.__a11Trail);if(${JSON.stringify(mode)}==='after drawer'){explore.drawer.open();explore.drawer.close();}__framePolygon(window.__a11Land)})()`);
    const list=await evaluate('(()=>{const n=[...explore.$("list-view").children].find(n=>!n.hidden);return {index:[...explore.$("list-view").children].indexOf(n),query:n.querySelector("#query,#explore-query")?.value}})()');
    await tap(await evaluate('__pointForFeature(window.__a11Land)'));await poll('explore.state.selection?.featureId===window.__a11LandId','A12 land '+mode);
-   await assertSelection('A12 land '+mode);assert.equal(await evaluate('explore.sheet.state'),width<768?'half':'expanded','A12 land partial state (tablet parity follows)');
+   await assertSelection('A12 land '+mode);assert.equal(await evaluate('explore.sheet.state'),'half','A12 land partial state on phones and tablets');
    assert.deepEqual(await evaluate('[...explore.$("detail-body").querySelectorAll("p,a")].slice(0,'+landTexts.length+').map(e=>e.textContent)'),landTexts,'A12 land exact wording '+mode);
    await evaluate('explore.$("detail-back").click()');assert.equal(await evaluate('explore.$("list-view").children['+list.index+'].hidden'),false,'A12 Back restores list '+mode);
    if(list.query!==undefined)assert.equal(await evaluate('explore.$("list-view").children['+list.index+'].querySelector("#query,#explore-query").value'),list.query,'A12 Back keeps filters '+mode);
