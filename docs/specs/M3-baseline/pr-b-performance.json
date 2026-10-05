@@ -5204,5 +5204,3436 @@
     ],
     "misses": [],
     "result": "All five measures pass for both regions in all three new A10 sessions."
+  },
+  "a11_mobile_ux_remediation": {
+    "label": "A11 mobile-UX remediation: three required sessions and four diagnostic sessions; NOT a pass",
+    "measured_at": "2026-10-05",
+    "application_commit": "86f1c970b9a866cd28d8e326be8fd133bad1b4a0",
+    "independently_reviewed_implementation_commit": "d0d734431f4b42d29070a103db768f8d99f3d82d",
+    "base_commit": "3dc0fef",
+    "measurement_helper": "v2/pipeline/tests/browser/measure.mjs",
+    "measurement_helper_sha256": "b3ededb9045f55db10b24cbfb68fdfcef46167eb50d28963b7a24b0b5ad08390",
+    "source_record_sha256": "f950cc9d20c5b78bb18a28f82446eeb09aeebdec7bedee6cb5b77012f92d9c91",
+    "threshold_contract": "A10 unchanged: map usable <=60% and all default layers <=135% of same-session base all-default-layers time; heap <=115% of same-session base heap for that region; all other thresholds and method unchanged.",
+    "required_sessions": [
+      {
+        "baseCommit": "3dc0fef",
+        "headCommit": "86f1c970b9a866cd28d8e326be8fd133bad1b4a0",
+        "chrome": "Google Chrome 154.0.8037.95",
+        "node": "v24.21.0",
+        "viewport": [
+          390,
+          844
+        ],
+        "cpuThrottle": 4,
+        "runs": 5,
+        "events": {
+          "base": {
+            "aspen": "!!document.getElementById(\"landing-explore\")&&!document.getElementById(\"landing-explore\").disabled&&document.querySelectorAll(\"#legend-layers input[type=checkbox]\").length===12",
+            "douglas-co": "document.querySelectorAll(\"#layer-controls input[type=checkbox]\").length===8&&document.querySelectorAll(\"#coverage-data p\").length===7"
+          },
+          "head": {
+            "mapUsable": "!!window.explore?.state.mapUsable",
+            "allDefaultLayers": "!!window.explore?.state.defaultLayersLoaded"
+          }
+        },
+        "order": "Back to back: base Aspen five, base county five, head Aspen five, head county five",
+        "method": "One offline Chrome session; non-local requests blocked; cold cache; readiness observed consistently through CDP; 1500ms settle before long-task and GC measures; heaviest loaded layer selected by display bytes. Base readiness requires all-layer construction outputs; county status text is excluded because offline tile failure changes it early. Head events are spec 12.2 step 3 and completion state. Historical measurement script unchanged.",
+        "rows": [
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 3384.300000011921,
+            "allDefaultLayersMs": 3384.300000011921,
+            "longestLongTaskMs": 1339,
+            "heavyLayerOnMs": 256.79999999701977,
+            "heavyLayerOffMs": 136.40000000596046,
+            "heapMB": 32.4031
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 2835.7999999970198,
+            "allDefaultLayersMs": 2835.7999999970198,
+            "longestLongTaskMs": 1581,
+            "heavyLayerOnMs": 270.70000000298023,
+            "heavyLayerOffMs": 122.5,
+            "heapMB": 32.424872
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 2627.800000011921,
+            "allDefaultLayersMs": 2627.800000011921,
+            "longestLongTaskMs": 1361,
+            "heavyLayerOnMs": 223.09999999403954,
+            "heavyLayerOffMs": 134,
+            "heapMB": 32.414316
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 2289.7000000029802,
+            "allDefaultLayersMs": 2289.7000000029802,
+            "longestLongTaskMs": 1146,
+            "heavyLayerOnMs": 270.8999999910593,
+            "heavyLayerOffMs": 128.90000000596046,
+            "heapMB": 32.408988
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 2329.2999999970198,
+            "allDefaultLayersMs": 2329.2999999970198,
+            "longestLongTaskMs": 1168,
+            "heavyLayerOnMs": 266.3999999910593,
+            "heavyLayerOffMs": 130.79999999701977,
+            "heapMB": 32.423116
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 1531.300000011921,
+            "allDefaultLayersMs": 1531.300000011921,
+            "longestLongTaskMs": 507,
+            "heavyLayerOnMs": 244.6000000089407,
+            "heavyLayerOffMs": 87,
+            "heapMB": 26.73872
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 1332.4000000059605,
+            "allDefaultLayersMs": 1332.4000000059605,
+            "longestLongTaskMs": 524,
+            "heavyLayerOnMs": 261.09999999403954,
+            "heavyLayerOffMs": 87.90000000596046,
+            "heapMB": 26.731108
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 1346.7000000029802,
+            "allDefaultLayersMs": 1346.7000000029802,
+            "longestLongTaskMs": 549,
+            "heavyLayerOnMs": 250.20000000298023,
+            "heavyLayerOffMs": 85.6000000089407,
+            "heapMB": 26.733572
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 1391.2999999970198,
+            "allDefaultLayersMs": 1391.2999999970198,
+            "longestLongTaskMs": 547,
+            "heavyLayerOnMs": 246.40000000596046,
+            "heavyLayerOffMs": 88.3999999910593,
+            "heapMB": 26.730308
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 1379.7000000029802,
+            "allDefaultLayersMs": 1379.7000000029802,
+            "longestLongTaskMs": 560,
+            "heavyLayerOnMs": 231.20000000298023,
+            "heavyLayerOffMs": 96.79999999701977,
+            "heapMB": 26.730536
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 666.2999999970198,
+            "allDefaultLayersMs": 1939.3999999910593,
+            "longestLongTaskMs": 224,
+            "heavyLayerOnMs": 170.90000000596046,
+            "heavyLayerOffMs": 66.59999999403954,
+            "heapMB": 26.091656
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 674,
+            "allDefaultLayersMs": 1827.0999999940395,
+            "longestLongTaskMs": 163,
+            "heavyLayerOnMs": 164.5,
+            "heavyLayerOffMs": 53.19999998807907,
+            "heapMB": 26.096104
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 669.2999999970198,
+            "allDefaultLayersMs": 1812.2999999970198,
+            "longestLongTaskMs": 166,
+            "heavyLayerOnMs": 157.09999999403954,
+            "heavyLayerOffMs": 53.1000000089407,
+            "heapMB": 26.102248
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 623.5,
+            "allDefaultLayersMs": 1763.5,
+            "longestLongTaskMs": 157,
+            "heavyLayerOnMs": 164.19999998807907,
+            "heavyLayerOffMs": 54.20000000298023,
+            "heapMB": 26.069452
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 556.1000000089407,
+            "allDefaultLayersMs": 1779.4000000059605,
+            "longestLongTaskMs": 157,
+            "heavyLayerOnMs": 175.1000000089407,
+            "heavyLayerOffMs": 55,
+            "heapMB": 26.104184
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 581.5999999940395,
+            "allDefaultLayersMs": 1715.7999999970198,
+            "longestLongTaskMs": 237,
+            "heavyLayerOnMs": 230,
+            "heavyLayerOffMs": 79.29999999701977,
+            "heapMB": 30.636632
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 559.7000000029802,
+            "allDefaultLayersMs": 1706.2000000029802,
+            "longestLongTaskMs": 268,
+            "heavyLayerOnMs": 260,
+            "heavyLayerOffMs": 95.29999999701977,
+            "heapMB": 30.635648
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 742.5,
+            "allDefaultLayersMs": 1898.0999999940395,
+            "longestLongTaskMs": 257,
+            "heavyLayerOnMs": 229.09999999403954,
+            "heavyLayerOffMs": 71.5,
+            "heapMB": 30.636148
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 568.8999999910593,
+            "allDefaultLayersMs": 1684.0999999940395,
+            "longestLongTaskMs": 293,
+            "heavyLayerOnMs": 230.90000000596046,
+            "heavyLayerOffMs": 78.59999999403954,
+            "heapMB": 30.638472
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 529.4000000059605,
+            "allDefaultLayersMs": 1708.6000000089407,
+            "longestLongTaskMs": 265,
+            "heavyLayerOnMs": 230.59999999403954,
+            "heavyLayerOffMs": 72.29999999701977,
+            "heapMB": 30.636432
+          }
+        ],
+        "medians": {
+          "base": {
+            "aspen": {
+              "mapUsableMs": 2627.800000011921,
+              "allDefaultLayersMs": 2627.800000011921,
+              "longestLongTaskMs": 1339,
+              "heavyLayerOnMs": 266.3999999910593,
+              "heapMB": 32.414316
+            },
+            "douglas-co": {
+              "mapUsableMs": 1379.7000000029802,
+              "allDefaultLayersMs": 1379.7000000029802,
+              "longestLongTaskMs": 547,
+              "heavyLayerOnMs": 246.40000000596046,
+              "heapMB": 26.731108
+            }
+          },
+          "head": {
+            "aspen": {
+              "mapUsableMs": 666.2999999970198,
+              "allDefaultLayersMs": 1812.2999999970198,
+              "longestLongTaskMs": 163,
+              "heavyLayerOnMs": 164.5,
+              "heapMB": 26.096104
+            },
+            "douglas-co": {
+              "mapUsableMs": 568.8999999910593,
+              "allDefaultLayersMs": 1708.6000000089407,
+              "longestLongTaskMs": 265,
+              "heavyLayerOnMs": 230.59999999403954,
+              "heapMB": 30.636432
+            }
+          }
+        },
+        "thresholds": {
+          "aspen": {
+            "mapUsableMs": {
+              "limit": 1576.6800000071526,
+              "actual": 666.2999999970198,
+              "base": 2627.800000011921,
+              "thresholdBase": 2627.800000011921,
+              "ratioPct": 25.35581094428789,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 3547.5300000160937,
+              "actual": 1812.2999999970198,
+              "base": 2627.800000011921,
+              "thresholdBase": 2627.800000011921,
+              "ratioPct": 68.96643580138513,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 669.5,
+              "actual": 163,
+              "base": 1339,
+              "thresholdBase": 1339,
+              "ratioPct": 12.17326362957431,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 332.99999998882413,
+              "actual": 164.5,
+              "base": 266.3999999910593,
+              "thresholdBase": 266.3999999910593,
+              "ratioPct": 61.74924925132162,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 37.2764634,
+              "actual": 26.096104,
+              "base": 32.414316,
+              "thresholdBase": 32.414316,
+              "ratioPct": 80.50795827374547,
+              "pass": true
+            }
+          },
+          "douglas-co": {
+            "mapUsableMs": {
+              "limit": 827.8200000017881,
+              "actual": 568.8999999910593,
+              "base": 1379.7000000029802,
+              "thresholdBase": 1379.7000000029802,
+              "ratioPct": 41.233601506837026,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 1862.5950000040234,
+              "actual": 1708.6000000089407,
+              "base": 1379.7000000029802,
+              "thresholdBase": 1379.7000000029802,
+              "ratioPct": 123.83851561971807,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 669.5,
+              "actual": 265,
+              "base": 547,
+              "thresholdBase": 1339,
+              "ratioPct": 48.446069469835464,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 308.0000000074506,
+              "actual": 230.59999999403954,
+              "base": 246.40000000596046,
+              "thresholdBase": 246.40000000596046,
+              "ratioPct": 93.58766233297942,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 30.740774199999997,
+              "actual": 30.636432,
+              "base": 26.731108,
+              "thresholdBase": 26.731108,
+              "ratioPct": 114.609660026064,
+              "pass": true
+            }
+          }
+        },
+        "committedBaseline": [
+          {
+            "page": "aspen",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 2669,
+            "wallMs": 6734,
+            "longTasks": {
+              "n": 7,
+              "total": 2186,
+              "max": 1234
+            },
+            "sameOriginRequests": 18,
+            "sameOriginBytes": 11821383,
+            "heapUsedMB": 33.4,
+            "domNodes": 432,
+            "layoutCount": 13,
+            "toggleHeavyLayerMs": {
+              "off": 61.5,
+              "on": 139.3
+            },
+            "freeMapPct": 79,
+            "sheet": [
+              0,
+              734,
+              390,
+              110
+            ],
+            "topbar": [
+              14,
+              12,
+              362,
+              44
+            ],
+            "tools": [
+              186,
+              665,
+              192,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 34x10",
+              "USGS The National  88x10",
+              "ohvernightFIELD TE 127x30",
+              "satellite 68x38",
+              "terrain 50x38"
+            ],
+            "layerDrawer": {
+              "rect": [
+                18,
+                127,
+                354,
+                717
+              ],
+              "coverPct": 77.2,
+              "modal": true
+            }
+          },
+          {
+            "page": "douglas",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 1478,
+            "wallMs": 5899,
+            "longTasks": {
+              "n": 8,
+              "total": 1426,
+              "max": 538
+            },
+            "sameOriginRequests": 10,
+            "sameOriginBytes": 6368868,
+            "heapUsedMB": 27.6,
+            "domNodes": 537,
+            "layoutCount": 9,
+            "toggleHeavyLayerMs": {
+              "off": 50,
+              "on": 180.5
+            },
+            "freeMapPct": 76.7,
+            "sheet": [
+              0,
+              703,
+              390,
+              121
+            ],
+            "topbar": [
+              12,
+              12,
+              366,
+              32
+            ],
+            "tools": [
+              12,
+              58,
+              366,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 39x11",
+              "ohvernight 143x32",
+              "notices 165x36",
+              "saved 84x36"
+            ],
+            "layerDrawer": {
+              "rect": [
+                19,
+                75,
+                352,
+                694
+              ],
+              "coverPct": 74.2,
+              "modal": true
+            }
+          }
+        ]
+      },
+      {
+        "baseCommit": "3dc0fef",
+        "headCommit": "86f1c970b9a866cd28d8e326be8fd133bad1b4a0",
+        "chrome": "Google Chrome 154.0.8037.95",
+        "node": "v24.21.0",
+        "viewport": [
+          390,
+          844
+        ],
+        "cpuThrottle": 4,
+        "runs": 5,
+        "events": {
+          "base": {
+            "aspen": "!!document.getElementById(\"landing-explore\")&&!document.getElementById(\"landing-explore\").disabled&&document.querySelectorAll(\"#legend-layers input[type=checkbox]\").length===12",
+            "douglas-co": "document.querySelectorAll(\"#layer-controls input[type=checkbox]\").length===8&&document.querySelectorAll(\"#coverage-data p\").length===7"
+          },
+          "head": {
+            "mapUsable": "!!window.explore?.state.mapUsable",
+            "allDefaultLayers": "!!window.explore?.state.defaultLayersLoaded"
+          }
+        },
+        "order": "Back to back: base Aspen five, base county five, head Aspen five, head county five",
+        "method": "One offline Chrome session; non-local requests blocked; cold cache; readiness observed consistently through CDP; 1500ms settle before long-task and GC measures; heaviest loaded layer selected by display bytes. Base readiness requires all-layer construction outputs; county status text is excluded because offline tile failure changes it early. Head events are spec 12.2 step 3 and completion state. Historical measurement script unchanged.",
+        "rows": [
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 3646,
+            "allDefaultLayersMs": 3646,
+            "longestLongTaskMs": 1545,
+            "heavyLayerOnMs": 257.29999999701977,
+            "heavyLayerOffMs": 175.3999999910593,
+            "heapMB": 32.404168
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 2440.7999999970198,
+            "allDefaultLayersMs": 2440.7999999970198,
+            "longestLongTaskMs": 1197,
+            "heavyLayerOnMs": 256.6000000089407,
+            "heavyLayerOffMs": 113.69999998807907,
+            "heapMB": 32.418136
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 2544,
+            "allDefaultLayersMs": 2544,
+            "longestLongTaskMs": 1335,
+            "heavyLayerOnMs": 259.79999999701977,
+            "heavyLayerOffMs": 122.29999999701977,
+            "heapMB": 32.408204
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 2278.5,
+            "allDefaultLayersMs": 2278.5,
+            "longestLongTaskMs": 1128,
+            "heavyLayerOnMs": 251.40000000596046,
+            "heavyLayerOffMs": 118.70000000298023,
+            "heapMB": 32.427372
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 2382.300000011921,
+            "allDefaultLayersMs": 2382.300000011921,
+            "longestLongTaskMs": 1232,
+            "heavyLayerOnMs": 273.20000000298023,
+            "heavyLayerOffMs": 123.40000000596046,
+            "heapMB": 32.42658
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 1451.2000000029802,
+            "allDefaultLayersMs": 1451.2000000029802,
+            "longestLongTaskMs": 446,
+            "heavyLayerOnMs": 234.1000000089407,
+            "heavyLayerOffMs": 77.90000000596046,
+            "heapMB": 26.741636
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 1358.7999999970198,
+            "allDefaultLayersMs": 1358.7999999970198,
+            "longestLongTaskMs": 548,
+            "heavyLayerOnMs": 238.40000000596046,
+            "heavyLayerOffMs": 91.20000000298023,
+            "heapMB": 26.731484
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 1324.7999999970198,
+            "allDefaultLayersMs": 1324.7999999970198,
+            "longestLongTaskMs": 525,
+            "heavyLayerOnMs": 314.1000000089407,
+            "heavyLayerOffMs": 112.5,
+            "heapMB": 26.731332
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 1462.7000000029802,
+            "allDefaultLayersMs": 1462.7000000029802,
+            "longestLongTaskMs": 573,
+            "heavyLayerOnMs": 228.1000000089407,
+            "heavyLayerOffMs": 80,
+            "heapMB": 26.731516
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 1379.8999999910593,
+            "allDefaultLayersMs": 1379.8999999910593,
+            "longestLongTaskMs": 530,
+            "heavyLayerOnMs": 232.79999999701977,
+            "heavyLayerOffMs": 85.1000000089407,
+            "heapMB": 26.729556
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 654.8999999910593,
+            "allDefaultLayersMs": 1875.5999999940395,
+            "longestLongTaskMs": 218,
+            "heavyLayerOnMs": 163.3999999910593,
+            "heavyLayerOffMs": 55.30000001192093,
+            "heapMB": 26.090252
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 740.9000000059605,
+            "allDefaultLayersMs": 1845.5,
+            "longestLongTaskMs": 154,
+            "heavyLayerOnMs": 165.1000000089407,
+            "heavyLayerOffMs": 53.69999998807907,
+            "heapMB": 26.102756
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 642.4000000059605,
+            "allDefaultLayersMs": 1778.2000000029802,
+            "longestLongTaskMs": 169,
+            "heavyLayerOnMs": 226.40000000596046,
+            "heavyLayerOffMs": 81,
+            "heapMB": 26.068976
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 625.4000000059605,
+            "allDefaultLayersMs": 1782,
+            "longestLongTaskMs": 162,
+            "heavyLayerOnMs": 187.40000000596046,
+            "heavyLayerOffMs": 54.8999999910593,
+            "heapMB": 26.069688
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 554.6000000089407,
+            "allDefaultLayersMs": 1797.7000000029802,
+            "longestLongTaskMs": 158,
+            "heavyLayerOnMs": 181.5,
+            "heavyLayerOffMs": 64.69999998807907,
+            "heapMB": 26.096244
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 733.2999999970198,
+            "allDefaultLayersMs": 1883.5,
+            "longestLongTaskMs": 246,
+            "heavyLayerOnMs": 234.6000000089407,
+            "heavyLayerOffMs": 85.8999999910593,
+            "heapMB": 30.650596
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 628.5,
+            "allDefaultLayersMs": 1847.699999988079,
+            "longestLongTaskMs": 279,
+            "heavyLayerOnMs": 226.79999999701977,
+            "heavyLayerOffMs": 71.40000000596046,
+            "heapMB": 30.639728
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 584.2999999970198,
+            "allDefaultLayersMs": 1761.6000000089407,
+            "longestLongTaskMs": 277,
+            "heavyLayerOnMs": 462.40000000596046,
+            "heavyLayerOffMs": 377.59999999403954,
+            "heapMB": 30.636688
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 1587.199999988079,
+            "allDefaultLayersMs": 2985,
+            "longestLongTaskMs": 433,
+            "heavyLayerOnMs": 404.79999999701977,
+            "heavyLayerOffMs": 277.1000000089407,
+            "heapMB": 30.645876
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 797.3999999910593,
+            "allDefaultLayersMs": 2141.7999999970198,
+            "longestLongTaskMs": 347,
+            "heavyLayerOnMs": 286.79999999701977,
+            "heavyLayerOffMs": 130.09999999403954,
+            "heapMB": 30.643704
+          }
+        ],
+        "medians": {
+          "base": {
+            "aspen": {
+              "mapUsableMs": 2440.7999999970198,
+              "allDefaultLayersMs": 2440.7999999970198,
+              "longestLongTaskMs": 1232,
+              "heavyLayerOnMs": 257.29999999701977,
+              "heapMB": 32.418136
+            },
+            "douglas-co": {
+              "mapUsableMs": 1379.8999999910593,
+              "allDefaultLayersMs": 1379.8999999910593,
+              "longestLongTaskMs": 530,
+              "heavyLayerOnMs": 234.1000000089407,
+              "heapMB": 26.731484
+            }
+          },
+          "head": {
+            "aspen": {
+              "mapUsableMs": 642.4000000059605,
+              "allDefaultLayersMs": 1797.7000000029802,
+              "longestLongTaskMs": 162,
+              "heavyLayerOnMs": 181.5,
+              "heapMB": 26.090252
+            },
+            "douglas-co": {
+              "mapUsableMs": 733.2999999970198,
+              "allDefaultLayersMs": 1883.5,
+              "longestLongTaskMs": 279,
+              "heavyLayerOnMs": 286.79999999701977,
+              "heapMB": 30.643704
+            }
+          }
+        },
+        "thresholds": {
+          "aspen": {
+            "mapUsableMs": {
+              "limit": 1464.4799999982117,
+              "actual": 642.4000000059605,
+              "base": 2440.7999999970198,
+              "thresholdBase": 2440.7999999970198,
+              "ratioPct": 26.319239593852213,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 3295.079999995977,
+              "actual": 1797.7000000029802,
+              "base": 2440.7999999970198,
+              "thresholdBase": 2440.7999999970198,
+              "ratioPct": 73.65208128503667,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 616,
+              "actual": 162,
+              "base": 1232,
+              "thresholdBase": 1232,
+              "ratioPct": 13.14935064935065,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 321.6249999962747,
+              "actual": 181.5,
+              "base": 257.29999999701977,
+              "thresholdBase": 257.29999999701977,
+              "ratioPct": 70.54022541861727,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 37.28085639999999,
+              "actual": 26.090252,
+              "base": 32.418136,
+              "thresholdBase": 32.418136,
+              "ratioPct": 80.48041997232662,
+              "pass": true
+            }
+          },
+          "douglas-co": {
+            "mapUsableMs": {
+              "limit": 827.9399999946355,
+              "actual": 733.2999999970198,
+              "base": 1379.8999999910593,
+              "thresholdBase": 1379.8999999910593,
+              "ratioPct": 53.14153199520045,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 1862.86499998793,
+              "actual": 1883.5,
+              "base": 1379.8999999910593,
+              "thresholdBase": 1379.8999999910593,
+              "ratioPct": 136.4953982181465,
+              "pass": false
+            },
+            "longestLongTaskMs": {
+              "limit": 616,
+              "actual": 279,
+              "base": 530,
+              "thresholdBase": 1232,
+              "ratioPct": 52.64150943396226,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 292.62500001117587,
+              "actual": 286.79999999701977,
+              "base": 234.1000000089407,
+              "thresholdBase": 234.1000000089407,
+              "ratioPct": 122.51174711066484,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 30.741206599999995,
+              "actual": 30.643704,
+              "base": 26.731484,
+              "thresholdBase": 26.731484,
+              "ratioPct": 114.6352518251512,
+              "pass": true
+            }
+          }
+        },
+        "committedBaseline": [
+          {
+            "page": "aspen",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 2669,
+            "wallMs": 6734,
+            "longTasks": {
+              "n": 7,
+              "total": 2186,
+              "max": 1234
+            },
+            "sameOriginRequests": 18,
+            "sameOriginBytes": 11821383,
+            "heapUsedMB": 33.4,
+            "domNodes": 432,
+            "layoutCount": 13,
+            "toggleHeavyLayerMs": {
+              "off": 61.5,
+              "on": 139.3
+            },
+            "freeMapPct": 79,
+            "sheet": [
+              0,
+              734,
+              390,
+              110
+            ],
+            "topbar": [
+              14,
+              12,
+              362,
+              44
+            ],
+            "tools": [
+              186,
+              665,
+              192,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 34x10",
+              "USGS The National  88x10",
+              "ohvernightFIELD TE 127x30",
+              "satellite 68x38",
+              "terrain 50x38"
+            ],
+            "layerDrawer": {
+              "rect": [
+                18,
+                127,
+                354,
+                717
+              ],
+              "coverPct": 77.2,
+              "modal": true
+            }
+          },
+          {
+            "page": "douglas",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 1478,
+            "wallMs": 5899,
+            "longTasks": {
+              "n": 8,
+              "total": 1426,
+              "max": 538
+            },
+            "sameOriginRequests": 10,
+            "sameOriginBytes": 6368868,
+            "heapUsedMB": 27.6,
+            "domNodes": 537,
+            "layoutCount": 9,
+            "toggleHeavyLayerMs": {
+              "off": 50,
+              "on": 180.5
+            },
+            "freeMapPct": 76.7,
+            "sheet": [
+              0,
+              703,
+              390,
+              121
+            ],
+            "topbar": [
+              12,
+              12,
+              366,
+              32
+            ],
+            "tools": [
+              12,
+              58,
+              366,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 39x11",
+              "ohvernight 143x32",
+              "notices 165x36",
+              "saved 84x36"
+            ],
+            "layerDrawer": {
+              "rect": [
+                19,
+                75,
+                352,
+                694
+              ],
+              "coverPct": 74.2,
+              "modal": true
+            }
+          }
+        ]
+      },
+      {
+        "baseCommit": "3dc0fef",
+        "headCommit": "86f1c970b9a866cd28d8e326be8fd133bad1b4a0",
+        "chrome": "Google Chrome 154.0.8037.95",
+        "node": "v24.21.0",
+        "viewport": [
+          390,
+          844
+        ],
+        "cpuThrottle": 4,
+        "runs": 5,
+        "events": {
+          "base": {
+            "aspen": "!!document.getElementById(\"landing-explore\")&&!document.getElementById(\"landing-explore\").disabled&&document.querySelectorAll(\"#legend-layers input[type=checkbox]\").length===12",
+            "douglas-co": "document.querySelectorAll(\"#layer-controls input[type=checkbox]\").length===8&&document.querySelectorAll(\"#coverage-data p\").length===7"
+          },
+          "head": {
+            "mapUsable": "!!window.explore?.state.mapUsable",
+            "allDefaultLayers": "!!window.explore?.state.defaultLayersLoaded"
+          }
+        },
+        "order": "Back to back: base Aspen five, base county five, head Aspen five, head county five",
+        "method": "One offline Chrome session; non-local requests blocked; cold cache; readiness observed consistently through CDP; 1500ms settle before long-task and GC measures; heaviest loaded layer selected by display bytes. Base readiness requires all-layer construction outputs; county status text is excluded because offline tile failure changes it early. Head events are spec 12.2 step 3 and completion state. Historical measurement script unchanged.",
+        "rows": [
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 3095.2999999970198,
+            "allDefaultLayersMs": 3095.2999999970198,
+            "longestLongTaskMs": 1306,
+            "heavyLayerOnMs": 321.20000000298023,
+            "heavyLayerOffMs": 124.79999999701977,
+            "heapMB": 32.399312
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 2286.0999999940395,
+            "allDefaultLayersMs": 2286.0999999940395,
+            "longestLongTaskMs": 1125,
+            "heavyLayerOnMs": 257,
+            "heavyLayerOffMs": 131.5,
+            "heapMB": 32.419356
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 2404.8999999910593,
+            "allDefaultLayersMs": 2404.8999999910593,
+            "longestLongTaskMs": 1241,
+            "heavyLayerOnMs": 252.90000000596046,
+            "heavyLayerOffMs": 127.09999999403954,
+            "heapMB": 32.421516
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 2306.2000000029802,
+            "allDefaultLayersMs": 2306.2000000029802,
+            "longestLongTaskMs": 1087,
+            "heavyLayerOnMs": 246.5,
+            "heavyLayerOffMs": 135.20000000298023,
+            "heapMB": 32.423704
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 2571.4000000059605,
+            "allDefaultLayersMs": 2571.4000000059605,
+            "longestLongTaskMs": 1349,
+            "heavyLayerOnMs": 264.6000000089407,
+            "heavyLayerOffMs": 126.5,
+            "heapMB": 32.41632
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 1522,
+            "allDefaultLayersMs": 1522,
+            "longestLongTaskMs": 495,
+            "heavyLayerOnMs": 229.5,
+            "heavyLayerOffMs": 98.79999999701977,
+            "heapMB": 26.743844
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 1342.9000000059605,
+            "allDefaultLayersMs": 1342.9000000059605,
+            "longestLongTaskMs": 524,
+            "heavyLayerOnMs": 249.20000000298023,
+            "heavyLayerOffMs": 83.5,
+            "heapMB": 26.733628
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 1376.9000000059605,
+            "allDefaultLayersMs": 1376.9000000059605,
+            "longestLongTaskMs": 536,
+            "heavyLayerOnMs": 236.20000000298023,
+            "heavyLayerOffMs": 78.79999999701977,
+            "heapMB": 26.733992
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 1352.3999999910593,
+            "allDefaultLayersMs": 1352.3999999910593,
+            "longestLongTaskMs": 545,
+            "heavyLayerOnMs": 235.09999999403954,
+            "heavyLayerOffMs": 80.79999999701977,
+            "heapMB": 26.731032
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 1313.300000011921,
+            "allDefaultLayersMs": 1313.300000011921,
+            "longestLongTaskMs": 520,
+            "heavyLayerOnMs": 226.29999999701977,
+            "heavyLayerOffMs": 92,
+            "heapMB": 26.733232
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 651.6000000089407,
+            "allDefaultLayersMs": 1842.6000000089407,
+            "longestLongTaskMs": 210,
+            "heavyLayerOnMs": 188.79999999701977,
+            "heavyLayerOffMs": 87.30000001192093,
+            "heapMB": 26.062972
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 711.6999999880791,
+            "allDefaultLayersMs": 2023.8999999910593,
+            "longestLongTaskMs": 229,
+            "heavyLayerOnMs": 188.20000000298023,
+            "heavyLayerOffMs": 62.3999999910593,
+            "heapMB": 26.099584
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 647.9000000059605,
+            "allDefaultLayersMs": 1814.6000000089407,
+            "longestLongTaskMs": 199,
+            "heavyLayerOnMs": 160.70000000298023,
+            "heavyLayerOffMs": 55,
+            "heapMB": 26.097112
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 603.4000000059605,
+            "allDefaultLayersMs": 1789.6000000089407,
+            "longestLongTaskMs": 158,
+            "heavyLayerOnMs": 167.30000001192093,
+            "heavyLayerOffMs": 66.5,
+            "heapMB": 26.071408
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 524.2999999970198,
+            "allDefaultLayersMs": 1702.5999999940395,
+            "longestLongTaskMs": 160,
+            "heavyLayerOnMs": 164,
+            "heavyLayerOffMs": 53,
+            "heapMB": 26.095216
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 658,
+            "allDefaultLayersMs": 2066.9000000059605,
+            "longestLongTaskMs": 267,
+            "heavyLayerOnMs": 239.79999999701977,
+            "heavyLayerOffMs": 107.90000000596046,
+            "heapMB": 30.640152
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 585.2000000029802,
+            "allDefaultLayersMs": 1706.7000000029802,
+            "longestLongTaskMs": 263,
+            "heavyLayerOnMs": 237.29999999701977,
+            "heavyLayerOffMs": 84.5,
+            "heapMB": 30.636732
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 611.0999999940395,
+            "allDefaultLayersMs": 1896.2999999970198,
+            "longestLongTaskMs": 276,
+            "heavyLayerOnMs": 215.70000000298023,
+            "heavyLayerOffMs": 70.5,
+            "heapMB": 30.637944
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 581.9000000059605,
+            "allDefaultLayersMs": 1772.0999999940395,
+            "longestLongTaskMs": 285,
+            "heavyLayerOnMs": 234.79999999701977,
+            "heavyLayerOffMs": 84.20000000298023,
+            "heapMB": 30.635136
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 594.7000000029802,
+            "allDefaultLayersMs": 1722.800000011921,
+            "longestLongTaskMs": 269,
+            "heavyLayerOnMs": 231.29999999701977,
+            "heavyLayerOffMs": 71.40000000596046,
+            "heapMB": 30.63642
+          }
+        ],
+        "medians": {
+          "base": {
+            "aspen": {
+              "mapUsableMs": 2404.8999999910593,
+              "allDefaultLayersMs": 2404.8999999910593,
+              "longestLongTaskMs": 1241,
+              "heavyLayerOnMs": 257,
+              "heapMB": 32.419356
+            },
+            "douglas-co": {
+              "mapUsableMs": 1352.3999999910593,
+              "allDefaultLayersMs": 1352.3999999910593,
+              "longestLongTaskMs": 524,
+              "heavyLayerOnMs": 235.09999999403954,
+              "heapMB": 26.733628
+            }
+          },
+          "head": {
+            "aspen": {
+              "mapUsableMs": 647.9000000059605,
+              "allDefaultLayersMs": 1814.6000000089407,
+              "longestLongTaskMs": 199,
+              "heavyLayerOnMs": 167.30000001192093,
+              "heapMB": 26.095216
+            },
+            "douglas-co": {
+              "mapUsableMs": 594.7000000029802,
+              "allDefaultLayersMs": 1772.0999999940395,
+              "longestLongTaskMs": 269,
+              "heavyLayerOnMs": 234.79999999701977,
+              "heapMB": 30.636732
+            }
+          }
+        },
+        "thresholds": {
+          "aspen": {
+            "mapUsableMs": {
+              "limit": 1442.9399999946356,
+              "actual": 647.9000000059605,
+              "base": 2404.8999999910593,
+              "thresholdBase": 2404.8999999910593,
+              "ratioPct": 26.940829140852806,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 3246.6149999879303,
+              "actual": 1814.6000000089407,
+              "base": 2404.8999999910593,
+              "thresholdBase": 2404.8999999910593,
+              "ratioPct": 75.45428084393059,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 620.5,
+              "actual": 199,
+              "base": 1241,
+              "thresholdBase": 1241,
+              "ratioPct": 16.035455278001614,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 321.25,
+              "actual": 167.30000001192093,
+              "base": 257,
+              "thresholdBase": 257,
+              "ratioPct": 65.09727626922994,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 37.2822594,
+              "actual": 26.095216,
+              "base": 32.419356,
+              "thresholdBase": 32.419356,
+              "ratioPct": 80.49270318633103,
+              "pass": true
+            }
+          },
+          "douglas-co": {
+            "mapUsableMs": {
+              "limit": 811.4399999946355,
+              "actual": 594.7000000029802,
+              "base": 1352.3999999910593,
+              "thresholdBase": 1352.3999999910593,
+              "ratioPct": 43.97367642760365,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 1825.73999998793,
+              "actual": 1772.0999999940395,
+              "base": 1352.3999999910593,
+              "thresholdBase": 1352.3999999910593,
+              "ratioPct": 131.0337178353856,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 620.5,
+              "actual": 269,
+              "base": 524,
+              "thresholdBase": 1241,
+              "ratioPct": 51.335877862595424,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 293.8749999925494,
+              "actual": 234.79999999701977,
+              "base": 235.09999999403954,
+              "thresholdBase": 235.09999999403954,
+              "ratioPct": 99.87239472691307,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 30.743672199999995,
+              "actual": 30.636732,
+              "base": 26.733628,
+              "thresholdBase": 26.733628,
+              "ratioPct": 114.59997872342653,
+              "pass": true
+            }
+          }
+        },
+        "committedBaseline": [
+          {
+            "page": "aspen",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 2669,
+            "wallMs": 6734,
+            "longTasks": {
+              "n": 7,
+              "total": 2186,
+              "max": 1234
+            },
+            "sameOriginRequests": 18,
+            "sameOriginBytes": 11821383,
+            "heapUsedMB": 33.4,
+            "domNodes": 432,
+            "layoutCount": 13,
+            "toggleHeavyLayerMs": {
+              "off": 61.5,
+              "on": 139.3
+            },
+            "freeMapPct": 79,
+            "sheet": [
+              0,
+              734,
+              390,
+              110
+            ],
+            "topbar": [
+              14,
+              12,
+              362,
+              44
+            ],
+            "tools": [
+              186,
+              665,
+              192,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 34x10",
+              "USGS The National  88x10",
+              "ohvernightFIELD TE 127x30",
+              "satellite 68x38",
+              "terrain 50x38"
+            ],
+            "layerDrawer": {
+              "rect": [
+                18,
+                127,
+                354,
+                717
+              ],
+              "coverPct": 77.2,
+              "modal": true
+            }
+          },
+          {
+            "page": "douglas",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 1478,
+            "wallMs": 5899,
+            "longTasks": {
+              "n": 8,
+              "total": 1426,
+              "max": 538
+            },
+            "sameOriginRequests": 10,
+            "sameOriginBytes": 6368868,
+            "heapUsedMB": 27.6,
+            "domNodes": 537,
+            "layoutCount": 9,
+            "toggleHeavyLayerMs": {
+              "off": 50,
+              "on": 180.5
+            },
+            "freeMapPct": 76.7,
+            "sheet": [
+              0,
+              703,
+              390,
+              121
+            ],
+            "topbar": [
+              12,
+              12,
+              366,
+              32
+            ],
+            "tools": [
+              12,
+              58,
+              366,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 39x11",
+              "ohvernight 143x32",
+              "notices 165x36",
+              "saved 84x36"
+            ],
+            "layerDrawer": {
+              "rect": [
+                19,
+                75,
+                352,
+                694
+              ],
+              "coverPct": 74.2,
+              "modal": true
+            }
+          }
+        ]
+      }
+    ],
+    "required_session_misses": [
+      {
+        "session": 2,
+        "region": "douglas-co",
+        "measure": "allDefaultLayersMs",
+        "limit": 1862.86499998793,
+        "actual": 1883.5,
+        "base": 1379.8999999910593,
+        "thresholdBase": 1379.8999999910593,
+        "ratioPct": 136.4953982181465,
+        "pass": false
+      }
+    ],
+    "required_sessions_result": "Session 2 missed Douglas allDefaultLayersMs: 1883.5 ms against 1862.86499998793 ms, or 136.4953982181465% (136.4954%) of base against the 135% limit. This is NOT a pass. The other 29 comparisons passed; no session is dropped or replaced.",
+    "diagnostic_purpose": "Coordinator requested one unchanged five-run session per earlier A11 commit to locate a specific new-code inefficiency. These are not substitutes for the original required three sessions; the original miss remains.",
+    "diagnostic_sessions": [
+      {
+        "baseCommit": "3dc0fef",
+        "headCommit": "5fd59032bed935dfd94593223e4ebf198354e822",
+        "chrome": "Google Chrome 154.0.8037.95",
+        "node": "v24.21.0",
+        "viewport": [
+          390,
+          844
+        ],
+        "cpuThrottle": 4,
+        "runs": 5,
+        "events": {
+          "base": {
+            "aspen": "!!document.getElementById(\"landing-explore\")&&!document.getElementById(\"landing-explore\").disabled&&document.querySelectorAll(\"#legend-layers input[type=checkbox]\").length===12",
+            "douglas-co": "document.querySelectorAll(\"#layer-controls input[type=checkbox]\").length===8&&document.querySelectorAll(\"#coverage-data p\").length===7"
+          },
+          "head": {
+            "mapUsable": "!!window.explore?.state.mapUsable",
+            "allDefaultLayers": "!!window.explore?.state.defaultLayersLoaded"
+          }
+        },
+        "order": "Back to back: base Aspen five, base county five, head Aspen five, head county five",
+        "method": "One offline Chrome session; non-local requests blocked; cold cache; readiness observed consistently through CDP; 1500ms settle before long-task and GC measures; heaviest loaded layer selected by display bytes. Base readiness requires all-layer construction outputs; county status text is excluded because offline tile failure changes it early. Head events are spec 12.2 step 3 and completion state. Historical measurement script unchanged.",
+        "rows": [
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 3637.7999999970198,
+            "allDefaultLayersMs": 3637.7999999970198,
+            "longestLongTaskMs": 1592,
+            "heavyLayerOnMs": 257.69999998807907,
+            "heavyLayerOffMs": 141.80000001192093,
+            "heapMB": 32.402316
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 2395.4000000059605,
+            "allDefaultLayersMs": 2395.4000000059605,
+            "longestLongTaskMs": 1261,
+            "heavyLayerOnMs": 251.6000000089407,
+            "heavyLayerOffMs": 132.19999998807907,
+            "heapMB": 32.412112
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 2634.5,
+            "allDefaultLayersMs": 2634.5,
+            "longestLongTaskMs": 1431,
+            "heavyLayerOnMs": 255.09999999403954,
+            "heavyLayerOffMs": 130.6000000089407,
+            "heapMB": 32.418464
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 2253.2000000029802,
+            "allDefaultLayersMs": 2253.2000000029802,
+            "longestLongTaskMs": 1116,
+            "heavyLayerOnMs": 230.3999999910593,
+            "heavyLayerOffMs": 114.6000000089407,
+            "heapMB": 32.419452
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 2370.7000000029802,
+            "allDefaultLayersMs": 2370.7000000029802,
+            "longestLongTaskMs": 1212,
+            "heavyLayerOnMs": 253.40000000596046,
+            "heavyLayerOffMs": 117.8999999910593,
+            "heapMB": 32.418232
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 1403.1000000089407,
+            "allDefaultLayersMs": 1403.1000000089407,
+            "longestLongTaskMs": 447,
+            "heavyLayerOnMs": 230.59999999403954,
+            "heavyLayerOffMs": 74.70000000298023,
+            "heapMB": 26.739952
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 1293.2000000029802,
+            "allDefaultLayersMs": 1293.2000000029802,
+            "longestLongTaskMs": 518,
+            "heavyLayerOnMs": 224.8999999910593,
+            "heavyLayerOffMs": 75.6000000089407,
+            "heapMB": 26.730396
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 1288.2999999970198,
+            "allDefaultLayersMs": 1288.2999999970198,
+            "longestLongTaskMs": 503,
+            "heavyLayerOnMs": 224.5,
+            "heavyLayerOffMs": 88.6000000089407,
+            "heapMB": 26.729428
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 1277.9000000059605,
+            "allDefaultLayersMs": 1277.9000000059605,
+            "longestLongTaskMs": 493,
+            "heavyLayerOnMs": 223.8999999910593,
+            "heavyLayerOffMs": 91.90000000596046,
+            "heapMB": 26.72946
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 1289.9000000059605,
+            "allDefaultLayersMs": 1289.9000000059605,
+            "longestLongTaskMs": 503,
+            "heavyLayerOnMs": 224.70000000298023,
+            "heavyLayerOffMs": 85.79999999701977,
+            "heapMB": 26.73434
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 554.7000000029802,
+            "allDefaultLayersMs": 1716.2000000029802,
+            "longestLongTaskMs": 188,
+            "heavyLayerOnMs": 159,
+            "heavyLayerOffMs": 55.69999998807907,
+            "heapMB": 26.046392
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 637.5,
+            "allDefaultLayersMs": 1778.9000000059605,
+            "longestLongTaskMs": 169,
+            "heavyLayerOnMs": 155.29999999701977,
+            "heavyLayerOffMs": 53.900000005960464,
+            "heapMB": 26.058252
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 571.2000000029802,
+            "allDefaultLayersMs": 1669.5,
+            "longestLongTaskMs": 164,
+            "heavyLayerOnMs": 164.09999999403954,
+            "heavyLayerOffMs": 51.8999999910593,
+            "heapMB": 26.054792
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 587.0999999940395,
+            "allDefaultLayersMs": 1760.7999999970198,
+            "longestLongTaskMs": 188,
+            "heavyLayerOnMs": 156.8999999910593,
+            "heavyLayerOffMs": 51.80000001192093,
+            "heapMB": 26.048796
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 575.7000000029802,
+            "allDefaultLayersMs": 1690.5,
+            "longestLongTaskMs": 161,
+            "heavyLayerOnMs": 157.70000000298023,
+            "heavyLayerOffMs": 55.3999999910593,
+            "heapMB": 26.058112
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 515,
+            "allDefaultLayersMs": 1636.7999999970198,
+            "longestLongTaskMs": 218,
+            "heavyLayerOnMs": 252.20000000298023,
+            "heavyLayerOffMs": 71.40000000596046,
+            "heapMB": 30.61702
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 629.7999999970198,
+            "allDefaultLayersMs": 1705.1000000089407,
+            "longestLongTaskMs": 254,
+            "heavyLayerOnMs": 220.59999999403954,
+            "heavyLayerOffMs": 71.80000001192093,
+            "heapMB": 30.62494
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 532.6999999880791,
+            "allDefaultLayersMs": 1636.7999999970198,
+            "longestLongTaskMs": 265,
+            "heavyLayerOnMs": 215.29999999701977,
+            "heavyLayerOffMs": 66.30000001192093,
+            "heapMB": 30.62266
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 513.2000000029802,
+            "allDefaultLayersMs": 1641.3999999910593,
+            "longestLongTaskMs": 276,
+            "heavyLayerOnMs": 227.90000000596046,
+            "heavyLayerOffMs": 75.90000000596046,
+            "heapMB": 30.623616
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 542.2999999970198,
+            "allDefaultLayersMs": 1639.3999999910593,
+            "longestLongTaskMs": 255,
+            "heavyLayerOnMs": 226.1000000089407,
+            "heavyLayerOffMs": 71.59999999403954,
+            "heapMB": 30.62462
+          }
+        ],
+        "medians": {
+          "base": {
+            "aspen": {
+              "mapUsableMs": 2395.4000000059605,
+              "allDefaultLayersMs": 2395.4000000059605,
+              "longestLongTaskMs": 1261,
+              "heavyLayerOnMs": 253.40000000596046,
+              "heapMB": 32.418232
+            },
+            "douglas-co": {
+              "mapUsableMs": 1289.9000000059605,
+              "allDefaultLayersMs": 1289.9000000059605,
+              "longestLongTaskMs": 503,
+              "heavyLayerOnMs": 224.70000000298023,
+              "heapMB": 26.730396
+            }
+          },
+          "head": {
+            "aspen": {
+              "mapUsableMs": 575.7000000029802,
+              "allDefaultLayersMs": 1716.2000000029802,
+              "longestLongTaskMs": 169,
+              "heavyLayerOnMs": 157.70000000298023,
+              "heapMB": 26.054792
+            },
+            "douglas-co": {
+              "mapUsableMs": 532.6999999880791,
+              "allDefaultLayersMs": 1639.3999999910593,
+              "longestLongTaskMs": 255,
+              "heavyLayerOnMs": 226.1000000089407,
+              "heapMB": 30.623616
+            }
+          }
+        },
+        "thresholds": {
+          "aspen": {
+            "mapUsableMs": {
+              "limit": 1437.2400000035761,
+              "actual": 575.7000000029802,
+              "base": 2395.4000000059605,
+              "thresholdBase": 2395.4000000059605,
+              "ratioPct": 24.033564331700248,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 3233.7900000080467,
+              "actual": 1716.2000000029802,
+              "base": 2395.4000000059605,
+              "thresholdBase": 2395.4000000059605,
+              "ratioPct": 71.64565417043958,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 630.5,
+              "actual": 169,
+              "base": 1261,
+              "thresholdBase": 1261,
+              "ratioPct": 13.402061855670103,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 316.7500000074506,
+              "actual": 157.70000000298023,
+              "base": 253.40000000596046,
+              "thresholdBase": 253.40000000596046,
+              "ratioPct": 62.23362273057255,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 37.2809668,
+              "actual": 26.054792,
+              "base": 32.418232,
+              "thresholdBase": 32.418232,
+              "ratioPct": 80.370798752998,
+              "pass": true
+            }
+          },
+          "douglas-co": {
+            "mapUsableMs": {
+              "limit": 773.9400000035763,
+              "actual": 532.6999999880791,
+              "base": 1289.9000000059605,
+              "thresholdBase": 1289.9000000059605,
+              "ratioPct": 41.297775020204476,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 1741.3650000080468,
+              "actual": 1639.3999999910593,
+              "base": 1289.9000000059605,
+              "thresholdBase": 1289.9000000059605,
+              "ratioPct": 127.09512365171594,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 630.5,
+              "actual": 255,
+              "base": 503,
+              "thresholdBase": 1261,
+              "ratioPct": 50.695825049701796,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 280.8750000037253,
+              "actual": 226.1000000089407,
+              "base": 224.70000000298023,
+              "thresholdBase": 224.70000000298023,
+              "ratioPct": 100.62305296214593,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 30.739955399999996,
+              "actual": 30.623616,
+              "base": 26.730396,
+              "thresholdBase": 26.730396,
+              "ratioPct": 114.56476739065144,
+              "pass": true
+            }
+          }
+        },
+        "committedBaseline": [
+          {
+            "page": "aspen",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 2669,
+            "wallMs": 6734,
+            "longTasks": {
+              "n": 7,
+              "total": 2186,
+              "max": 1234
+            },
+            "sameOriginRequests": 18,
+            "sameOriginBytes": 11821383,
+            "heapUsedMB": 33.4,
+            "domNodes": 432,
+            "layoutCount": 13,
+            "toggleHeavyLayerMs": {
+              "off": 61.5,
+              "on": 139.3
+            },
+            "freeMapPct": 79,
+            "sheet": [
+              0,
+              734,
+              390,
+              110
+            ],
+            "topbar": [
+              14,
+              12,
+              362,
+              44
+            ],
+            "tools": [
+              186,
+              665,
+              192,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 34x10",
+              "USGS The National  88x10",
+              "ohvernightFIELD TE 127x30",
+              "satellite 68x38",
+              "terrain 50x38"
+            ],
+            "layerDrawer": {
+              "rect": [
+                18,
+                127,
+                354,
+                717
+              ],
+              "coverPct": 77.2,
+              "modal": true
+            }
+          },
+          {
+            "page": "douglas",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 1478,
+            "wallMs": 5899,
+            "longTasks": {
+              "n": 8,
+              "total": 1426,
+              "max": 538
+            },
+            "sameOriginRequests": 10,
+            "sameOriginBytes": 6368868,
+            "heapUsedMB": 27.6,
+            "domNodes": 537,
+            "layoutCount": 9,
+            "toggleHeavyLayerMs": {
+              "off": 50,
+              "on": 180.5
+            },
+            "freeMapPct": 76.7,
+            "sheet": [
+              0,
+              703,
+              390,
+              121
+            ],
+            "topbar": [
+              12,
+              12,
+              366,
+              32
+            ],
+            "tools": [
+              12,
+              58,
+              366,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 39x11",
+              "ohvernight 143x32",
+              "notices 165x36",
+              "saved 84x36"
+            ],
+            "layerDrawer": {
+              "rect": [
+                19,
+                75,
+                352,
+                694
+              ],
+              "coverPct": 74.2,
+              "modal": true
+            }
+          }
+        ]
+      },
+      {
+        "baseCommit": "3dc0fef",
+        "headCommit": "f65dacd994efe227fda21e572d6b778f98575702",
+        "chrome": "Google Chrome 154.0.8037.95",
+        "node": "v24.21.0",
+        "viewport": [
+          390,
+          844
+        ],
+        "cpuThrottle": 4,
+        "runs": 5,
+        "events": {
+          "base": {
+            "aspen": "!!document.getElementById(\"landing-explore\")&&!document.getElementById(\"landing-explore\").disabled&&document.querySelectorAll(\"#legend-layers input[type=checkbox]\").length===12",
+            "douglas-co": "document.querySelectorAll(\"#layer-controls input[type=checkbox]\").length===8&&document.querySelectorAll(\"#coverage-data p\").length===7"
+          },
+          "head": {
+            "mapUsable": "!!window.explore?.state.mapUsable",
+            "allDefaultLayers": "!!window.explore?.state.defaultLayersLoaded"
+          }
+        },
+        "order": "Back to back: base Aspen five, base county five, head Aspen five, head county five",
+        "method": "One offline Chrome session; non-local requests blocked; cold cache; readiness observed consistently through CDP; 1500ms settle before long-task and GC measures; heaviest loaded layer selected by display bytes. Base readiness requires all-layer construction outputs; county status text is excluded because offline tile failure changes it early. Head events are spec 12.2 step 3 and completion state. Historical measurement script unchanged.",
+        "rows": [
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 3131.1000000089407,
+            "allDefaultLayersMs": 3131.1000000089407,
+            "longestLongTaskMs": 1308,
+            "heavyLayerOnMs": 258.29999999701977,
+            "heavyLayerOffMs": 124.59999999403954,
+            "heapMB": 32.400984
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 2178.2999999970198,
+            "allDefaultLayersMs": 2178.2999999970198,
+            "longestLongTaskMs": 1125,
+            "heavyLayerOnMs": 261.29999999701977,
+            "heavyLayerOffMs": 113.09999999403954,
+            "heapMB": 32.420196
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 2234.7999999970198,
+            "allDefaultLayersMs": 2234.7999999970198,
+            "longestLongTaskMs": 1142,
+            "heavyLayerOnMs": 252.6000000089407,
+            "heavyLayerOffMs": 115.79999999701977,
+            "heapMB": 32.419836
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 2214.5,
+            "allDefaultLayersMs": 2214.5,
+            "longestLongTaskMs": 1096,
+            "heavyLayerOnMs": 246.1000000089407,
+            "heavyLayerOffMs": 121.29999999701977,
+            "heapMB": 32.428236
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 2295.8999999910593,
+            "allDefaultLayersMs": 2295.8999999910593,
+            "longestLongTaskMs": 1168,
+            "heavyLayerOnMs": 267,
+            "heavyLayerOffMs": 129.20000000298023,
+            "heapMB": 32.421892
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 1627.1000000089407,
+            "allDefaultLayersMs": 1627.1000000089407,
+            "longestLongTaskMs": 530,
+            "heavyLayerOnMs": 214.20000000298023,
+            "heavyLayerOffMs": 77.29999999701977,
+            "heapMB": 26.743284
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 1314.5,
+            "allDefaultLayersMs": 1314.5,
+            "longestLongTaskMs": 507,
+            "heavyLayerOnMs": 212.70000000298023,
+            "heavyLayerOffMs": 85.79999999701977,
+            "heapMB": 26.733276
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 1184.2000000029802,
+            "allDefaultLayersMs": 1184.2000000029802,
+            "longestLongTaskMs": 487,
+            "heavyLayerOnMs": 228.1000000089407,
+            "heavyLayerOffMs": 78.5,
+            "heapMB": 26.732848
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 1332.9000000059605,
+            "allDefaultLayersMs": 1332.9000000059605,
+            "longestLongTaskMs": 526,
+            "heavyLayerOnMs": 222.6000000089407,
+            "heavyLayerOffMs": 77.70000000298023,
+            "heapMB": 26.732292
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 1274.7999999970198,
+            "allDefaultLayersMs": 1274.7999999970198,
+            "longestLongTaskMs": 507,
+            "heavyLayerOnMs": 217.20000000298023,
+            "heavyLayerOffMs": 74.79999999701977,
+            "heapMB": 26.734744
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 610,
+            "allDefaultLayersMs": 1810.3999999910593,
+            "longestLongTaskMs": 206,
+            "heavyLayerOnMs": 169.59999999403954,
+            "heavyLayerOffMs": 55.5,
+            "heapMB": 26.054204
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 609.6000000089407,
+            "allDefaultLayersMs": 1736.800000011921,
+            "longestLongTaskMs": 167,
+            "heavyLayerOnMs": 158.5,
+            "heavyLayerOffMs": 53.5,
+            "heapMB": 26.060252
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 513.2999999970198,
+            "allDefaultLayersMs": 1672,
+            "longestLongTaskMs": 167,
+            "heavyLayerOnMs": 158,
+            "heavyLayerOffMs": 50.3999999910593,
+            "heapMB": 26.059808
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 564.9000000059605,
+            "allDefaultLayersMs": 1668.9000000059605,
+            "longestLongTaskMs": 152,
+            "heavyLayerOnMs": 163.20000000298023,
+            "heavyLayerOffMs": 57,
+            "heapMB": 26.056128
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 544.8999999910593,
+            "allDefaultLayersMs": 1655.7999999970198,
+            "longestLongTaskMs": 152,
+            "heavyLayerOnMs": 163.5,
+            "heavyLayerOffMs": 58.400000005960464,
+            "heapMB": 26.054472
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 508.3999999910593,
+            "allDefaultLayersMs": 1579.3999999910593,
+            "longestLongTaskMs": 223,
+            "heavyLayerOnMs": 249.20000000298023,
+            "heavyLayerOffMs": 75.19999998807907,
+            "heapMB": 30.627932
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 627,
+            "allDefaultLayersMs": 1749.2000000029802,
+            "longestLongTaskMs": 284,
+            "heavyLayerOnMs": 222.79999999701977,
+            "heavyLayerOffMs": 80.29999999701977,
+            "heapMB": 30.632256
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 559,
+            "allDefaultLayersMs": 1631.699999988079,
+            "longestLongTaskMs": 262,
+            "heavyLayerOnMs": 218.69999998807907,
+            "heavyLayerOffMs": 77.90000000596046,
+            "heapMB": 30.630388
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 514.6000000089407,
+            "allDefaultLayersMs": 1620.9000000059605,
+            "longestLongTaskMs": 264,
+            "heavyLayerOnMs": 213.59999999403954,
+            "heavyLayerOffMs": 68.40000000596046,
+            "heapMB": 30.628932
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 562.5999999940395,
+            "allDefaultLayersMs": 1667.7000000029802,
+            "longestLongTaskMs": 278,
+            "heavyLayerOnMs": 210.40000000596046,
+            "heavyLayerOffMs": 67.29999999701977,
+            "heapMB": 30.628496
+          }
+        ],
+        "medians": {
+          "base": {
+            "aspen": {
+              "mapUsableMs": 2234.7999999970198,
+              "allDefaultLayersMs": 2234.7999999970198,
+              "longestLongTaskMs": 1142,
+              "heavyLayerOnMs": 258.29999999701977,
+              "heapMB": 32.420196
+            },
+            "douglas-co": {
+              "mapUsableMs": 1314.5,
+              "allDefaultLayersMs": 1314.5,
+              "longestLongTaskMs": 507,
+              "heavyLayerOnMs": 217.20000000298023,
+              "heapMB": 26.733276
+            }
+          },
+          "head": {
+            "aspen": {
+              "mapUsableMs": 564.9000000059605,
+              "allDefaultLayersMs": 1672,
+              "longestLongTaskMs": 167,
+              "heavyLayerOnMs": 163.20000000298023,
+              "heapMB": 26.056128
+            },
+            "douglas-co": {
+              "mapUsableMs": 559,
+              "allDefaultLayersMs": 1631.699999988079,
+              "longestLongTaskMs": 264,
+              "heavyLayerOnMs": 218.69999998807907,
+              "heapMB": 30.628932
+            }
+          }
+        },
+        "thresholds": {
+          "aspen": {
+            "mapUsableMs": {
+              "limit": 1340.8799999982118,
+              "actual": 564.9000000059605,
+              "base": 2234.7999999970198,
+              "thresholdBase": 2234.7999999970198,
+              "ratioPct": 25.277429747928842,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 3016.979999995977,
+              "actual": 1672,
+              "base": 2234.7999999970198,
+              "thresholdBase": 2234.7999999970198,
+              "ratioPct": 74.8165383927971,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 571,
+              "actual": 167,
+              "base": 1142,
+              "thresholdBase": 1142,
+              "ratioPct": 14.623467600700527,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 322.8749999962747,
+              "actual": 163.20000000298023,
+              "base": 258.29999999701977,
+              "thresholdBase": 258.29999999701977,
+              "ratioPct": 63.18234611105815,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 37.28322539999999,
+              "actual": 26.056128,
+              "base": 32.420196,
+              "thresholdBase": 32.420196,
+              "ratioPct": 80.37005081647256,
+              "pass": true
+            }
+          },
+          "douglas-co": {
+            "mapUsableMs": {
+              "limit": 788.6999999999999,
+              "actual": 559,
+              "base": 1314.5,
+              "thresholdBase": 1314.5,
+              "ratioPct": 42.52567516165843,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 1774.575,
+              "actual": 1631.699999988079,
+              "base": 1314.5,
+              "thresholdBase": 1314.5,
+              "ratioPct": 124.13084823035976,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 571,
+              "actual": 264,
+              "base": 507,
+              "thresholdBase": 1142,
+              "ratioPct": 52.071005917159766,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 271.5000000037253,
+              "actual": 218.69999998807907,
+              "base": 217.20000000298023,
+              "thresholdBase": 217.20000000298023,
+              "ratioPct": 100.6906077279366,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 30.743267399999997,
+              "actual": 30.628932,
+              "base": 26.733276,
+              "thresholdBase": 26.733276,
+              "ratioPct": 114.57231055408248,
+              "pass": true
+            }
+          }
+        },
+        "committedBaseline": [
+          {
+            "page": "aspen",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 2669,
+            "wallMs": 6734,
+            "longTasks": {
+              "n": 7,
+              "total": 2186,
+              "max": 1234
+            },
+            "sameOriginRequests": 18,
+            "sameOriginBytes": 11821383,
+            "heapUsedMB": 33.4,
+            "domNodes": 432,
+            "layoutCount": 13,
+            "toggleHeavyLayerMs": {
+              "off": 61.5,
+              "on": 139.3
+            },
+            "freeMapPct": 79,
+            "sheet": [
+              0,
+              734,
+              390,
+              110
+            ],
+            "topbar": [
+              14,
+              12,
+              362,
+              44
+            ],
+            "tools": [
+              186,
+              665,
+              192,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 34x10",
+              "USGS The National  88x10",
+              "ohvernightFIELD TE 127x30",
+              "satellite 68x38",
+              "terrain 50x38"
+            ],
+            "layerDrawer": {
+              "rect": [
+                18,
+                127,
+                354,
+                717
+              ],
+              "coverPct": 77.2,
+              "modal": true
+            }
+          },
+          {
+            "page": "douglas",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 1478,
+            "wallMs": 5899,
+            "longTasks": {
+              "n": 8,
+              "total": 1426,
+              "max": 538
+            },
+            "sameOriginRequests": 10,
+            "sameOriginBytes": 6368868,
+            "heapUsedMB": 27.6,
+            "domNodes": 537,
+            "layoutCount": 9,
+            "toggleHeavyLayerMs": {
+              "off": 50,
+              "on": 180.5
+            },
+            "freeMapPct": 76.7,
+            "sheet": [
+              0,
+              703,
+              390,
+              121
+            ],
+            "topbar": [
+              12,
+              12,
+              366,
+              32
+            ],
+            "tools": [
+              12,
+              58,
+              366,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 39x11",
+              "ohvernight 143x32",
+              "notices 165x36",
+              "saved 84x36"
+            ],
+            "layerDrawer": {
+              "rect": [
+                19,
+                75,
+                352,
+                694
+              ],
+              "coverPct": 74.2,
+              "modal": true
+            }
+          }
+        ]
+      },
+      {
+        "baseCommit": "3dc0fef",
+        "headCommit": "bf2f3dc56bf3837a68bcebc01283958f2b4f2348",
+        "chrome": "Google Chrome 154.0.8037.95",
+        "node": "v24.21.0",
+        "viewport": [
+          390,
+          844
+        ],
+        "cpuThrottle": 4,
+        "runs": 5,
+        "events": {
+          "base": {
+            "aspen": "!!document.getElementById(\"landing-explore\")&&!document.getElementById(\"landing-explore\").disabled&&document.querySelectorAll(\"#legend-layers input[type=checkbox]\").length===12",
+            "douglas-co": "document.querySelectorAll(\"#layer-controls input[type=checkbox]\").length===8&&document.querySelectorAll(\"#coverage-data p\").length===7"
+          },
+          "head": {
+            "mapUsable": "!!window.explore?.state.mapUsable",
+            "allDefaultLayers": "!!window.explore?.state.defaultLayersLoaded"
+          }
+        },
+        "order": "Back to back: base Aspen five, base county five, head Aspen five, head county five",
+        "method": "One offline Chrome session; non-local requests blocked; cold cache; readiness observed consistently through CDP; 1500ms settle before long-task and GC measures; heaviest loaded layer selected by display bytes. Base readiness requires all-layer construction outputs; county status text is excluded because offline tile failure changes it early. Head events are spec 12.2 step 3 and completion state. Historical measurement script unchanged.",
+        "rows": [
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 3252.2000000029802,
+            "allDefaultLayersMs": 3252.2000000029802,
+            "longestLongTaskMs": 1293,
+            "heavyLayerOnMs": 262.90000000596046,
+            "heavyLayerOffMs": 109.20000000298023,
+            "heapMB": 32.404116
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 2225,
+            "allDefaultLayersMs": 2225,
+            "longestLongTaskMs": 1103,
+            "heavyLayerOnMs": 253.59999999403954,
+            "heavyLayerOffMs": 116.6000000089407,
+            "heapMB": 32.413496
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 2430.6000000089407,
+            "allDefaultLayersMs": 2430.6000000089407,
+            "longestLongTaskMs": 1296,
+            "heavyLayerOnMs": 251.70000000298023,
+            "heavyLayerOffMs": 113.40000000596046,
+            "heapMB": 32.407628
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 2171.8999999910593,
+            "allDefaultLayersMs": 2171.8999999910593,
+            "longestLongTaskMs": 1060,
+            "heavyLayerOnMs": 239.09999999403954,
+            "heavyLayerOffMs": 113.79999999701977,
+            "heapMB": 32.417632
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 2226.5999999940395,
+            "allDefaultLayersMs": 2226.5999999940395,
+            "longestLongTaskMs": 1142,
+            "heavyLayerOnMs": 245.5,
+            "heavyLayerOffMs": 112.29999999701977,
+            "heapMB": 32.409288
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 1397.4000000059605,
+            "allDefaultLayersMs": 1397.4000000059605,
+            "longestLongTaskMs": 448,
+            "heavyLayerOnMs": 214,
+            "heavyLayerOffMs": 75.79999999701977,
+            "heapMB": 26.738408
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 1269.2000000029802,
+            "allDefaultLayersMs": 1269.2000000029802,
+            "longestLongTaskMs": 495,
+            "heavyLayerOnMs": 224,
+            "heavyLayerOffMs": 84.5,
+            "heapMB": 26.729664
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 1345.7999999970198,
+            "allDefaultLayersMs": 1345.7999999970198,
+            "longestLongTaskMs": 517,
+            "heavyLayerOnMs": 240.69999998807907,
+            "heavyLayerOffMs": 90.40000000596046,
+            "heapMB": 26.731428
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 1273.2999999970198,
+            "allDefaultLayersMs": 1273.2999999970198,
+            "longestLongTaskMs": 492,
+            "heavyLayerOnMs": 227.09999999403954,
+            "heavyLayerOffMs": 77,
+            "heapMB": 26.734832
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 1252.9000000059605,
+            "allDefaultLayersMs": 1252.9000000059605,
+            "longestLongTaskMs": 505,
+            "heavyLayerOnMs": 221,
+            "heavyLayerOffMs": 77.5,
+            "heapMB": 26.73124
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 588.6999999880791,
+            "allDefaultLayersMs": 1748,
+            "longestLongTaskMs": 195,
+            "heavyLayerOnMs": 254.5,
+            "heavyLayerOffMs": 52.900000005960464,
+            "heapMB": 26.059312
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 688,
+            "allDefaultLayersMs": 1826.5999999940395,
+            "longestLongTaskMs": 159,
+            "heavyLayerOnMs": 160.69999998807907,
+            "heavyLayerOffMs": 56.70000000298023,
+            "heapMB": 26.067472
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 545,
+            "allDefaultLayersMs": 1665.5,
+            "longestLongTaskMs": 156,
+            "heavyLayerOnMs": 168.59999999403954,
+            "heavyLayerOffMs": 49.79999999701977,
+            "heapMB": 26.066368
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 500.59999999403954,
+            "allDefaultLayersMs": 1650.0999999940395,
+            "longestLongTaskMs": 155,
+            "heavyLayerOnMs": 188.79999999701977,
+            "heavyLayerOffMs": 57.1000000089407,
+            "heapMB": 26.069416
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 623.2000000029802,
+            "allDefaultLayersMs": 1720.9000000059605,
+            "longestLongTaskMs": 152,
+            "heavyLayerOnMs": 150.59999999403954,
+            "heavyLayerOffMs": 48,
+            "heapMB": 26.067364
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 534.7000000029802,
+            "allDefaultLayersMs": 1605.5999999940395,
+            "longestLongTaskMs": 208,
+            "heavyLayerOnMs": 211.79999999701977,
+            "heavyLayerOffMs": 66.79999999701977,
+            "heapMB": 30.633988
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 555.7999999970198,
+            "allDefaultLayersMs": 1649.3999999910593,
+            "longestLongTaskMs": 239,
+            "heavyLayerOnMs": 213.70000000298023,
+            "heavyLayerOffMs": 67.20000000298023,
+            "heapMB": 30.635292
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 545.9000000059605,
+            "allDefaultLayersMs": 1633.7999999970198,
+            "longestLongTaskMs": 256,
+            "heavyLayerOnMs": 219.09999999403954,
+            "heavyLayerOffMs": 69.29999999701977,
+            "heapMB": 30.641908
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 559,
+            "allDefaultLayersMs": 1629.0999999940395,
+            "longestLongTaskMs": 241,
+            "heavyLayerOnMs": 221.5,
+            "heavyLayerOffMs": 68,
+            "heapMB": 30.633576
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 525.4000000059605,
+            "allDefaultLayersMs": 1623.1000000089407,
+            "longestLongTaskMs": 252,
+            "heavyLayerOnMs": 216.29999999701977,
+            "heavyLayerOffMs": 68.80000001192093,
+            "heapMB": 30.636776
+          }
+        ],
+        "medians": {
+          "base": {
+            "aspen": {
+              "mapUsableMs": 2226.5999999940395,
+              "allDefaultLayersMs": 2226.5999999940395,
+              "longestLongTaskMs": 1142,
+              "heavyLayerOnMs": 251.70000000298023,
+              "heapMB": 32.409288
+            },
+            "douglas-co": {
+              "mapUsableMs": 1273.2999999970198,
+              "allDefaultLayersMs": 1273.2999999970198,
+              "longestLongTaskMs": 495,
+              "heavyLayerOnMs": 224,
+              "heapMB": 26.731428
+            }
+          },
+          "head": {
+            "aspen": {
+              "mapUsableMs": 588.6999999880791,
+              "allDefaultLayersMs": 1720.9000000059605,
+              "longestLongTaskMs": 156,
+              "heavyLayerOnMs": 168.59999999403954,
+              "heapMB": 26.067364
+            },
+            "douglas-co": {
+              "mapUsableMs": 545.9000000059605,
+              "allDefaultLayersMs": 1629.0999999940395,
+              "longestLongTaskMs": 241,
+              "heavyLayerOnMs": 216.29999999701977,
+              "heapMB": 30.635292
+            }
+          }
+        },
+        "thresholds": {
+          "aspen": {
+            "mapUsableMs": {
+              "limit": 1335.9599999964237,
+              "actual": 588.6999999880791,
+              "base": 2226.5999999940395,
+              "thresholdBase": 2226.5999999940395,
+              "ratioPct": 26.439414353258556,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 3005.9099999919536,
+              "actual": 1720.9000000059605,
+              "base": 2226.5999999940395,
+              "thresholdBase": 2226.5999999940395,
+              "ratioPct": 77.2882421634136,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 571,
+              "actual": 156,
+              "base": 1142,
+              "thresholdBase": 1142,
+              "ratioPct": 13.660245183887914,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 314.6250000037253,
+              "actual": 168.59999999403954,
+              "base": 251.70000000298023,
+              "thresholdBase": 251.70000000298023,
+              "ratioPct": 66.9845053603668,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 37.27068119999999,
+              "actual": 26.067364,
+              "base": 32.409288,
+              "thresholdBase": 32.409288,
+              "ratioPct": 80.43177005307862,
+              "pass": true
+            }
+          },
+          "douglas-co": {
+            "mapUsableMs": {
+              "limit": 763.9799999982118,
+              "actual": 545.9000000059605,
+              "base": 1273.2999999970198,
+              "thresholdBase": 1273.2999999970198,
+              "ratioPct": 42.872850075177745,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 1718.9549999959768,
+              "actual": 1629.0999999940395,
+              "base": 1273.2999999970198,
+              "thresholdBase": 1273.2999999970198,
+              "ratioPct": 127.94313987260288,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 571,
+              "actual": 241,
+              "base": 495,
+              "thresholdBase": 1142,
+              "ratioPct": 48.68686868686869,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 280,
+              "actual": 216.29999999701977,
+              "base": 224,
+              "thresholdBase": 224,
+              "ratioPct": 96.56249999866954,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 30.7411422,
+              "actual": 30.635292,
+              "base": 26.731428,
+              "thresholdBase": 26.731428,
+              "ratioPct": 114.60402339897442,
+              "pass": true
+            }
+          }
+        },
+        "committedBaseline": [
+          {
+            "page": "aspen",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 2669,
+            "wallMs": 6734,
+            "longTasks": {
+              "n": 7,
+              "total": 2186,
+              "max": 1234
+            },
+            "sameOriginRequests": 18,
+            "sameOriginBytes": 11821383,
+            "heapUsedMB": 33.4,
+            "domNodes": 432,
+            "layoutCount": 13,
+            "toggleHeavyLayerMs": {
+              "off": 61.5,
+              "on": 139.3
+            },
+            "freeMapPct": 79,
+            "sheet": [
+              0,
+              734,
+              390,
+              110
+            ],
+            "topbar": [
+              14,
+              12,
+              362,
+              44
+            ],
+            "tools": [
+              186,
+              665,
+              192,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 34x10",
+              "USGS The National  88x10",
+              "ohvernightFIELD TE 127x30",
+              "satellite 68x38",
+              "terrain 50x38"
+            ],
+            "layerDrawer": {
+              "rect": [
+                18,
+                127,
+                354,
+                717
+              ],
+              "coverPct": 77.2,
+              "modal": true
+            }
+          },
+          {
+            "page": "douglas",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 1478,
+            "wallMs": 5899,
+            "longTasks": {
+              "n": 8,
+              "total": 1426,
+              "max": 538
+            },
+            "sameOriginRequests": 10,
+            "sameOriginBytes": 6368868,
+            "heapUsedMB": 27.6,
+            "domNodes": 537,
+            "layoutCount": 9,
+            "toggleHeavyLayerMs": {
+              "off": 50,
+              "on": 180.5
+            },
+            "freeMapPct": 76.7,
+            "sheet": [
+              0,
+              703,
+              390,
+              121
+            ],
+            "topbar": [
+              12,
+              12,
+              366,
+              32
+            ],
+            "tools": [
+              12,
+              58,
+              366,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 39x11",
+              "ohvernight 143x32",
+              "notices 165x36",
+              "saved 84x36"
+            ],
+            "layerDrawer": {
+              "rect": [
+                19,
+                75,
+                352,
+                694
+              ],
+              "coverPct": 74.2,
+              "modal": true
+            }
+          }
+        ]
+      },
+      {
+        "baseCommit": "3dc0fef",
+        "headCommit": "810ff18b89c4f6bc9757ae2648144dca84456550",
+        "chrome": "Google Chrome 154.0.8037.95",
+        "node": "v24.21.0",
+        "viewport": [
+          390,
+          844
+        ],
+        "cpuThrottle": 4,
+        "runs": 5,
+        "events": {
+          "base": {
+            "aspen": "!!document.getElementById(\"landing-explore\")&&!document.getElementById(\"landing-explore\").disabled&&document.querySelectorAll(\"#legend-layers input[type=checkbox]\").length===12",
+            "douglas-co": "document.querySelectorAll(\"#layer-controls input[type=checkbox]\").length===8&&document.querySelectorAll(\"#coverage-data p\").length===7"
+          },
+          "head": {
+            "mapUsable": "!!window.explore?.state.mapUsable",
+            "allDefaultLayers": "!!window.explore?.state.defaultLayersLoaded"
+          }
+        },
+        "order": "Back to back: base Aspen five, base county five, head Aspen five, head county five",
+        "method": "One offline Chrome session; non-local requests blocked; cold cache; readiness observed consistently through CDP; 1500ms settle before long-task and GC measures; heaviest loaded layer selected by display bytes. Base readiness requires all-layer construction outputs; county status text is excluded because offline tile failure changes it early. Head events are spec 12.2 step 3 and completion state. Historical measurement script unchanged.",
+        "rows": [
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 2975,
+            "allDefaultLayersMs": 2975,
+            "longestLongTaskMs": 1233,
+            "heavyLayerOnMs": 260.79999999701977,
+            "heavyLayerOffMs": 119.40000000596046,
+            "heapMB": 32.401968
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 2220.2999999970198,
+            "allDefaultLayersMs": 2220.2999999970198,
+            "longestLongTaskMs": 1136,
+            "heavyLayerOnMs": 241.79999999701977,
+            "heavyLayerOffMs": 112.40000000596046,
+            "heapMB": 32.417596
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 2224.7999999970198,
+            "allDefaultLayersMs": 2224.7999999970198,
+            "longestLongTaskMs": 1116,
+            "heavyLayerOnMs": 244.30000001192093,
+            "heavyLayerOffMs": 117.59999999403954,
+            "heapMB": 32.420176
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 2190.0999999940395,
+            "allDefaultLayersMs": 2190.0999999940395,
+            "longestLongTaskMs": 1079,
+            "heavyLayerOnMs": 223.79999999701977,
+            "heavyLayerOffMs": 124.20000000298023,
+            "heapMB": 32.409456
+          },
+          {
+            "version": "base",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 2222,
+            "allDefaultLayersMs": 2222,
+            "longestLongTaskMs": 1084,
+            "heavyLayerOnMs": 224.5,
+            "heavyLayerOffMs": 116.70000000298023,
+            "heapMB": 32.422608
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 1378.2000000029802,
+            "allDefaultLayersMs": 1378.2000000029802,
+            "longestLongTaskMs": 452,
+            "heavyLayerOnMs": 232.1000000089407,
+            "heavyLayerOffMs": 86.29999999701977,
+            "heapMB": 26.74224
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 1243.5,
+            "allDefaultLayersMs": 1243.5,
+            "longestLongTaskMs": 497,
+            "heavyLayerOnMs": 280.20000000298023,
+            "heavyLayerOffMs": 90,
+            "heapMB": 26.733404
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 1369.300000011921,
+            "allDefaultLayersMs": 1369.300000011921,
+            "longestLongTaskMs": 558,
+            "heavyLayerOnMs": 224.3999999910593,
+            "heavyLayerOffMs": 78.90000000596046,
+            "heapMB": 26.73344
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 1324.8999999910593,
+            "allDefaultLayersMs": 1324.8999999910593,
+            "longestLongTaskMs": 522,
+            "heavyLayerOnMs": 242.20000000298023,
+            "heavyLayerOffMs": 109,
+            "heapMB": 26.729908
+          },
+          {
+            "version": "base",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 1301.7999999970198,
+            "allDefaultLayersMs": 1301.7999999970198,
+            "longestLongTaskMs": 517,
+            "heavyLayerOnMs": 233.20000000298023,
+            "heavyLayerOffMs": 79.29999999701977,
+            "heapMB": 26.733104
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 1,
+            "mapUsableMs": 652.6000000089407,
+            "allDefaultLayersMs": 1858.2000000029802,
+            "longestLongTaskMs": 196,
+            "heavyLayerOnMs": 163.70000000298023,
+            "heavyLayerOffMs": 55.5,
+            "heapMB": 26.093316
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 2,
+            "mapUsableMs": 635.5,
+            "allDefaultLayersMs": 1854,
+            "longestLongTaskMs": 189,
+            "heavyLayerOnMs": 181.79999999701977,
+            "heavyLayerOffMs": 54,
+            "heapMB": 26.063496
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 3,
+            "mapUsableMs": 577.7999999970198,
+            "allDefaultLayersMs": 1692.9000000059605,
+            "longestLongTaskMs": 151,
+            "heavyLayerOnMs": 148.29999999701977,
+            "heavyLayerOffMs": 51.6000000089407,
+            "heapMB": 26.09172
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 4,
+            "mapUsableMs": 507,
+            "allDefaultLayersMs": 1693.3999999910593,
+            "longestLongTaskMs": 148,
+            "heavyLayerOnMs": 153.80000001192093,
+            "heavyLayerOffMs": 49.900000005960464,
+            "heapMB": 26.0647
+          },
+          {
+            "version": "head",
+            "region": "aspen",
+            "run": 5,
+            "mapUsableMs": 580.2000000029802,
+            "allDefaultLayersMs": 1790.5,
+            "longestLongTaskMs": 178,
+            "heavyLayerOnMs": 158.80000001192093,
+            "heavyLayerOffMs": 52.69999998807907,
+            "heapMB": 26.072528
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 1,
+            "mapUsableMs": 597.9000000059605,
+            "allDefaultLayersMs": 1667.2999999970198,
+            "longestLongTaskMs": 220,
+            "heavyLayerOnMs": 218.20000000298023,
+            "heavyLayerOffMs": 70.09999999403954,
+            "heapMB": 30.634752
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 2,
+            "mapUsableMs": 567.8999999910593,
+            "allDefaultLayersMs": 1675.699999988079,
+            "longestLongTaskMs": 267,
+            "heavyLayerOnMs": 210.1000000089407,
+            "heavyLayerOffMs": 69.19999998807907,
+            "heapMB": 30.633036
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 3,
+            "mapUsableMs": 496.5,
+            "allDefaultLayersMs": 1605.9000000059605,
+            "longestLongTaskMs": 248,
+            "heavyLayerOnMs": 213.1000000089407,
+            "heavyLayerOffMs": 70,
+            "heapMB": 30.633508
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 4,
+            "mapUsableMs": 530.0999999940395,
+            "allDefaultLayersMs": 1627.5999999940395,
+            "longestLongTaskMs": 270,
+            "heavyLayerOnMs": 218.79999999701977,
+            "heavyLayerOffMs": 77.30000001192093,
+            "heapMB": 30.634832
+          },
+          {
+            "version": "head",
+            "region": "douglas-co",
+            "run": 5,
+            "mapUsableMs": 504.70000000298023,
+            "allDefaultLayersMs": 1570.5,
+            "longestLongTaskMs": 265,
+            "heavyLayerOnMs": 215.3999999910593,
+            "heavyLayerOffMs": 68.6000000089407,
+            "heapMB": 30.633032
+          }
+        ],
+        "medians": {
+          "base": {
+            "aspen": {
+              "mapUsableMs": 2222,
+              "allDefaultLayersMs": 2222,
+              "longestLongTaskMs": 1116,
+              "heavyLayerOnMs": 241.79999999701977,
+              "heapMB": 32.417596
+            },
+            "douglas-co": {
+              "mapUsableMs": 1324.8999999910593,
+              "allDefaultLayersMs": 1324.8999999910593,
+              "longestLongTaskMs": 517,
+              "heavyLayerOnMs": 233.20000000298023,
+              "heapMB": 26.733404
+            }
+          },
+          "head": {
+            "aspen": {
+              "mapUsableMs": 580.2000000029802,
+              "allDefaultLayersMs": 1790.5,
+              "longestLongTaskMs": 178,
+              "heavyLayerOnMs": 158.80000001192093,
+              "heapMB": 26.072528
+            },
+            "douglas-co": {
+              "mapUsableMs": 530.0999999940395,
+              "allDefaultLayersMs": 1627.5999999940395,
+              "longestLongTaskMs": 265,
+              "heavyLayerOnMs": 215.3999999910593,
+              "heapMB": 30.633508
+            }
+          }
+        },
+        "thresholds": {
+          "aspen": {
+            "mapUsableMs": {
+              "limit": 1333.2,
+              "actual": 580.2000000029802,
+              "base": 2222,
+              "thresholdBase": 2222,
+              "ratioPct": 26.111611161250238,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 2999.7000000000003,
+              "actual": 1790.5,
+              "base": 2222,
+              "thresholdBase": 2222,
+              "ratioPct": 80.58055805580558,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 558,
+              "actual": 178,
+              "base": 1116,
+              "thresholdBase": 1116,
+              "ratioPct": 15.949820788530467,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 302.2499999962747,
+              "actual": 158.80000001192093,
+              "base": 241.79999999701977,
+              "thresholdBase": 241.79999999701977,
+              "ratioPct": 65.67411084114069,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 37.2802354,
+              "actual": 26.072528,
+              "base": 32.417596,
+              "thresholdBase": 32.417596,
+              "ratioPct": 80.42708657360032,
+              "pass": true
+            }
+          },
+          "douglas-co": {
+            "mapUsableMs": {
+              "limit": 794.9399999946355,
+              "actual": 530.0999999940395,
+              "base": 1324.8999999910593,
+              "thresholdBase": 1324.8999999910593,
+              "ratioPct": 40.01056683505297,
+              "pass": true
+            },
+            "allDefaultLayersMs": {
+              "limit": 1788.61499998793,
+              "actual": 1627.5999999940395,
+              "base": 1324.8999999910593,
+              "thresholdBase": 1324.8999999910593,
+              "ratioPct": 122.84700732168639,
+              "pass": true
+            },
+            "longestLongTaskMs": {
+              "limit": 558,
+              "actual": 265,
+              "base": 517,
+              "thresholdBase": 1116,
+              "ratioPct": 51.25725338491296,
+              "pass": true
+            },
+            "heavyLayerOnMs": {
+              "limit": 291.5000000037253,
+              "actual": 215.3999999910593,
+              "base": 233.20000000298023,
+              "thresholdBase": 233.20000000298023,
+              "ratioPct": 92.36706689035444,
+              "pass": true
+            },
+            "heapMB": {
+              "limit": 30.743414599999998,
+              "actual": 30.633508,
+              "base": 26.733404,
+              "thresholdBase": 26.733404,
+              "ratioPct": 114.58887914161625,
+              "pass": true
+            }
+          }
+        },
+        "committedBaseline": [
+          {
+            "page": "aspen",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 2669,
+            "wallMs": 6734,
+            "longTasks": {
+              "n": 7,
+              "total": 2186,
+              "max": 1234
+            },
+            "sameOriginRequests": 18,
+            "sameOriginBytes": 11821383,
+            "heapUsedMB": 33.4,
+            "domNodes": 432,
+            "layoutCount": 13,
+            "toggleHeavyLayerMs": {
+              "off": 61.5,
+              "on": 139.3
+            },
+            "freeMapPct": 79,
+            "sheet": [
+              0,
+              734,
+              390,
+              110
+            ],
+            "topbar": [
+              14,
+              12,
+              362,
+              44
+            ],
+            "tools": [
+              186,
+              665,
+              192,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 34x10",
+              "USGS The National  88x10",
+              "ohvernightFIELD TE 127x30",
+              "satellite 68x38",
+              "terrain 50x38"
+            ],
+            "layerDrawer": {
+              "rect": [
+                18,
+                127,
+                354,
+                717
+              ],
+              "coverPct": 77.2,
+              "modal": true
+            }
+          },
+          {
+            "page": "douglas",
+            "viewport": "390x844",
+            "cpuThrottle": 4,
+            "readyMs": 1478,
+            "wallMs": 5899,
+            "longTasks": {
+              "n": 8,
+              "total": 1426,
+              "max": 538
+            },
+            "sameOriginRequests": 10,
+            "sameOriginBytes": 6368868,
+            "heapUsedMB": 27.6,
+            "domNodes": 537,
+            "layoutCount": 9,
+            "toggleHeavyLayerMs": {
+              "off": 50,
+              "on": 180.5
+            },
+            "freeMapPct": 76.7,
+            "sheet": [
+              0,
+              703,
+              390,
+              121
+            ],
+            "topbar": [
+              12,
+              12,
+              366,
+              32
+            ],
+            "tools": [
+              12,
+              58,
+              366,
+              44
+            ],
+            "hscroll": false,
+            "smallTargets": [
+              "Leaflet 39x11",
+              "ohvernight 143x32",
+              "notices 165x36",
+              "saved 84x36"
+            ],
+            "layerDrawer": {
+              "rect": [
+                19,
+                75,
+                352,
+                694
+              ],
+              "coverPct": 74.2,
+              "modal": true
+            }
+          }
+        ]
+      }
+    ],
+    "diagnostic_douglas_all_layers_ratios": [
+      {
+        "commit": "5fd59032bed935dfd94593223e4ebf198354e822",
+        "ratioPct": 127.09512365171594
+      },
+      {
+        "commit": "f65dacd994efe227fda21e572d6b778f98575702",
+        "ratioPct": 124.13084823035976
+      },
+      {
+        "commit": "bf2f3dc56bf3837a68bcebc01283958f2b4f2348",
+        "ratioPct": 127.94313987260288
+      },
+      {
+        "commit": "810ff18b89c4f6bc9757ae2648144dca84456550",
+        "ratioPct": 122.84700732168639
+      }
+    ],
+    "diagnostic_finding": "No specific inefficiency in the A11 code was identified. Labels skip feature scans and tooltip binding below zoom 14 and allocate only named, visible, collision-free labels up to the cap; selection styling runs after explicit selection; pin changes use CSS around the existing marker span. Diagnostic sessions are diagnostic evidence, not acceptance, and do not turn the required session-2 miss into a pass.",
+    "disposition": "The performance miss is recorded and its disposition is the owner's. No threshold or method was changed, no further runtime tuning was made, and no new measurement session is run for this documentation follow-up."
   }
 }
