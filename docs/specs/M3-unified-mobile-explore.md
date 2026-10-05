@@ -32,6 +32,20 @@ A1 and A2 were approved by the owner on 2026-10-04 with pull request #6.
 - *What A3 does not add.* No bundle-level field is copied. The Aspen page's "Research snapshot" date is replaced by the per-layer "Fetched `<date>`" lines of 12.5. The sentence naming the trip that research areas were screened for is built from the `evaluated_trip` already carried on each feature, when that layer loads. `Trust.sourceSummary` is given the fire feature from the loaded `fire_restriction_stage` display layer and the RIDB place list, and its wording does not change.
 - *Sections changed by A3:* 10.3, 12.1 (`index.json`), 12.3 (R65), 17.5 (PR B commit 1), 19 (T3, T10), 20 (criteria 9 and 19).
 
+A3 was approved by the owner on 2026-10-04 with pull request #7.
+
+**A4 (2026-10-04, coordinator amendment during PR B; approved when the owner merges PR B) — existing negated wording, and the Douglas coverage note (10.5, 17.3, 19 T3, criterion 11).**
+
+- *Finding.* Criterion 11 forbids the words verified, legal and permitted in user-facing strings outside manifest statements. Measured at `87da009`, the two pages already ship 15 strings that use those words, every one in negation or as a disclaimer: for example the label `Motorhome suitability unverified`, `Dispersed area · access unverified`, the `Trust.sourceSummary` sentence `Wildlife closures and special orders are not fully verified for this trip.`, `Research suggestions, not verified itineraries.`, `connection unverified` in nearby lists, and the Douglas coverage note. Sections 14.1 and 17.3 and tests T6 and T9 require several of these to stay byte-identical. Read literally, criterion 11 contradicts them. The rule it implements is trust principle 8: nothing is *described as* verified, permitted or legal.
+- *Resolution.*
+  1. No new user-facing string contains verified, legal, permitted or "open to", in any form. `evidence.js` and `land-style.js` contain none of these words at all; T3 and T4 are unchanged.
+  2. A string that shipped at base commit `3dc0fef` and uses one of those words only to deny or disclaim may be carried over byte-identical where a preserved behaviour needs it. It is never reworded, shortened or recombined. A string whose feature is replaced (the layer descriptions in `map-layers.js`, replaced by manifest `limitations`) is dropped, not carried.
+  3. Every carried string is listed in `v2/pipeline/tests/fixtures/legacy-negated-wording.json` with the base-commit file it came from. A test fails if any occurrence of those words in browser code or HTML under `v2/` (outside `v2/pipeline/` and outside manifest statements) is not inside a listed string, and if a listed string is absent. The reviewer checks the fixture against `3dc0fef`.
+  4. No string uses any of those words affirmatively. That was true before and stays true.
+  5. The Douglas coverage note — the paragraph in the base-commit `v2/regions/douglas-co/index.html` beginning `County/state trails, complete cross-county routes` — is region-specific text that 17.3 preserves, and it loses its home when that page becomes a forwarding page. It moves verbatim into `v2/regions/douglas-co/extras.js` as a second record beside the Rampart listing, pinned by a test in the same way. `extras.js` remains the only region-specific JavaScript file.
+- *Unchanged.* The wording itself; trust principle 8; the D12 strings; the rule that manifest statements are rendered verbatim.
+- *Sections changed by A4:* 10.5, 19 (T9), 20 (criterion 11).
+
 Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `docs/audits/architecture-audit.md`, `docs/specs/M2-regional-data-contract.md`, `v2/pipeline/docs/data-contract.md`.
 
 M3 is one milestone with two phases:
@@ -332,7 +346,7 @@ Basemap toggle, fit region, zoom in, zoom out, layers, and search. M3 adds no ge
 
 ### 10.5 What region-specific code remains
 
-One file: `v2/regions/douglas-co/extras.js`, holding the Rampart listing verbatim (17.4, D6). No other region-specific JavaScript. `discovery.js` and `preview.js` are deleted; `county.css` is deleted.
+One file: `v2/regions/douglas-co/extras.js`, holding the Rampart listing verbatim (17.4, D6) and the Douglas coverage note verbatim (A4). No other region-specific JavaScript. `discovery.js` and `preview.js` are deleted; `county.css` is deleted.
 
 ## 11. Mobile UX requirements
 
@@ -714,7 +728,7 @@ All tests are offline. Node and Python tests read no clock and write nothing ins
 - **T6 Golden compatibility.** `trip-evaluation-golden.json` rows are unchanged for `v2/` when the policy is 720 hours. The root rows are unchanged after 14.3.
 - **T7 Freshness policy.** `evaluate` with policy 720 equals the base-commit result for every golden row; with a missing, `null`, zero or negative policy, supportive results are "Source review is stale" and exclusions persist; no numeric day constant remains in `v2/trip-rules.js` or the Explore code (source-text check).
 - **T8 Trail seasons.** The moved `season`, `windows`, `days` and `gpx` functions return base-commit output for the existing Douglas test inputs.
-- **T9 Compatibility.** Adventure-pilot options and ordering, trail search results and nearby lists for Aspen equal base-commit output for a fixed input set. Douglas browse counts for each mode equal base-commit counts. The Rampart record text equals the base-commit text.
+- **T9 Compatibility.** Adventure-pilot options and ordering, trail search results and nearby lists for Aspen equal base-commit output for a fixed input set. Douglas browse counts for each mode equal base-commit counts. The Rampart record text equals the base-commit text. The Douglas coverage note equals the base-commit text, and the legacy-negated-wording inventory of A4 holds.
 
 **Python tests.**
 
@@ -768,7 +782,7 @@ Criteria apply to the PR that delivers the work. **PR A:** 1, 2, 6, 7, 8, 9a–9
    j. restore `v2/map-data.json` → T14 fails;
    k. (A3) change one transport value in a real `index.json` → R65 fails; make the loader fetch a layer's `status_ref` path → B7 fails.
 10. No file under `v2/explore/` references a region ID, `ASPEN`, `douglas` or a region path literal (source-text test). Region-specific text exists only under `v2/regions/<id>/`.
-11. No browser code reads `evidence.confidence` (the M2 T7 pattern still passes) and none contains the words verified, legal or permitted in user-facing strings outside the manifest statements.
+11. No browser code reads `evidence.confidence` (the M2 T7 pattern still passes). No new user-facing string contains the words verified, legal or permitted, and none uses them affirmatively; the only occurrences outside manifest statements are the base-commit strings inventoried under A4.
 12. The register in `data-contract.md` matches section 15, and `ADR-006` records the decision and the triggers in section 8.
 13. `grep -rn "no-store" v2/*.js v2/explore` prints nothing.
 14. The manual matrix is recorded with device, OS and browser versions.
