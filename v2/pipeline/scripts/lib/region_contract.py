@@ -215,6 +215,18 @@ def _validate_display(manifest, resolve, coverage):
            entry["path"] == expected_prefix or ".." in Path(entry["path"]).parts or entry["path"].startswith("/")
            for entry in index["artifacts"] if isinstance(entry, dict)):
         _display_error(manifest, None, "display index contains a path outside the active region")
+    status_layers = [layer for layer in manifest["layers"] if layer.get("status_ref") is not None]
+    transport = index.get("transport")
+    if not isinstance(transport, dict) or set(transport) != {layer["id"] for layer in status_layers}:
+        _error("R65", manifest, None, "display transport keys differ from canonical status references")
+    for layer in status_layers:
+        reference = layer["status_ref"]
+        try:
+            canonical_record = _json_pointer(resolve(reference["path"]), reference.get("pointer", ""))
+        except (KeyError, IndexError, TypeError, ValueError, FileNotFoundError):
+            _error("R65", manifest, layer["id"], "canonical transport reference does not resolve")
+        if not isinstance(canonical_record, dict) or transport[layer["id"]] != canonical_record:
+            _error("R65", manifest, layer["id"], "display transport differs from canonical record")
     for layer_id, declaration in declared:
         if layer_id != "coverage" and declaration.get("format") != "feature_collection":
             _display_error(manifest, layer_id, "display is allowed only on feature collections")

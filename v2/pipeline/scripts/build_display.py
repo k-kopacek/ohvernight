@@ -243,7 +243,13 @@ def build_region(region_id: str, root: Path = ROOT, write: bool = False) -> dict
             target = root / entry['path']
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
-    index = {'region_id': region_id, 'artifacts': entries}
+    transport = {}
+    for layer in manifest['layers']:
+        reference = layer.get('status_ref')
+        if reference is not None:
+            transport[layer['id']] = copy.deepcopy(_pointer(
+                _read_json(root / reference['path']), reference.get('pointer', '')))
+    index = {'region_id': region_id, 'artifacts': entries, 'transport': transport}
     index_data = (_canonical_json(index) + '\n').encode('utf-8')
     artifacts[f"regions/{region_id}/display/index.json"] = index_data
     if write:

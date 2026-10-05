@@ -11,6 +11,23 @@ from build_display import build_layer, build_region, display_water  # noqa: E402
 
 
 class DisplayArtifactTests(unittest.TestCase):
+    def test_transport_copies_every_status_reference_verbatim_including_place_lists(self):
+        for region_id in ('aspen', 'douglas-co'):
+            result = build_region(region_id, V2)
+            transport = result['index']['transport']
+            expected = {}
+            for layer in result['manifest']['layers']:
+                ref = layer['status_ref']
+                if ref is None:
+                    continue
+                record = json.loads((V2 / ref['path']).read_text())
+                for token in ref['pointer'].lstrip('/').split('/') if ref['pointer'] else []:
+                    token = token.replace('~1', '/').replace('~0', '~')
+                    record = record[int(token)] if isinstance(record, list) else record[token]
+                expected[layer['id']] = record
+            self.assertEqual(transport, expected)
+        self.assertIn('ridb_options', build_region('aspen', V2)['index']['transport'])
+
     def test_water_vectors(self):
         vectors = json.loads((V2 / 'pipeline/tests/fixtures/display-water-vectors.json').read_text())
         for vector in vectors:

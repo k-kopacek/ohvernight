@@ -153,8 +153,31 @@ class RegionContractTests(unittest.TestCase):
                             "canonical_sha256": hashlib.sha256(encoded(docs[canonical_path])).hexdigest()})
         docs["regions/synthetic/display/water.geojson"] = display
         docs["regions/synthetic/display/coverage.geojson"] = coverage_display
-        docs["regions/synthetic/display/index.json"] = {"region_id": "synthetic", "artifacts": entries}
+        docs["regions/synthetic/display/index.json"] = {"region_id": "synthetic", "artifacts": entries,
+                                                       "transport": {"water": copy.deepcopy(docs["data.json"]["status"])}}
         return manifest, docs
+
+    def test_display_transport_R65_changed_value(self):
+        manifest, docs = self.display_base()
+        self.valid(manifest, docs)
+        docs["regions/synthetic/display/index.json"]["transport"]["water"]["count"] = 2
+        with self.assertRaises(ContractError) as raised:
+            self.valid(manifest, docs)
+        self.assertEqual(raised.exception.rule, "R65")
+
+    def test_display_transport_R65_missing_key(self):
+        manifest, docs = self.display_base()
+        docs["regions/synthetic/display/index.json"]["transport"].pop("water")
+        with self.assertRaises(ContractError) as raised:
+            self.valid(manifest, docs)
+        self.assertEqual(raised.exception.rule, "R65")
+
+    def test_display_transport_R65_extra_null_status_key(self):
+        manifest, docs = self.display_base()
+        manifest["layers"][0]["status_ref"] = None
+        with self.assertRaises(ContractError) as raised:
+            self.valid(manifest, docs)
+        self.assertEqual(raised.exception.rule, "R65")
 
     def refresh_display_hash(self, docs, layer_id):
         value = docs[f"regions/synthetic/display/{layer_id}.geojson"]

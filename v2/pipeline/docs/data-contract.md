@@ -250,7 +250,7 @@ inferred from that repair.
 
 ## Display delivery contract (M3 PR A)
 
-The optional `display` declarations and rules R60–R64 are additive to contract
+The optional `display` declarations and rules R60–R65 are additive to contract
 version 1. The canonical region and source files remain authoritative. A
 display artifact is a derived delivery product, not a second source of truth;
 it is reproducible from committed files by `build_display.py` and the rebuild
@@ -258,6 +258,14 @@ check detects drift. Evidence is carried by reference only to reduce payload:
 nothing is dropped, merged or flattened, and restoring the reference gives
 the canonical evidence object exactly. The validator checks display artifacts
 against canonical data, never the reverse.
+
+The display index has a top-level `transport` object keyed by layer ID. For
+every manifest layer of either format with a non-null `status_ref`, it carries
+a verbatim, un-normalised copy of the referenced canonical record. Layers
+with a null reference have no key. Shared records are copied for each layer;
+place-list records are included. Legacy aliases and any legacy confirmation
+field are preserved, but retrieval never becomes confirmation. The browser
+normalises these copies without fetching a canonical geometry bundle.
 
 The stable display rules are:
 
@@ -268,6 +276,7 @@ The stable display rules are:
 | R62 | For every display feature, restoring `evidence` from `evidence_table` gives an object equal to the canonical feature's `evidence`, and every other property equals the canonical property. |
 | R63 | Every display geometry equals the canonical geometry transformed by 12.1 step 2: coordinates rounded to six decimals, consecutive duplicates removed, degenerate parts dropped (A1). Geometry type is unchanged. The geometry is non-empty and structurally well-formed: every line has at least two positions and every ring is closed with at least four. This is checked for every feature, whether or not the coordinates match. The index entry's `dropped_degenerate_parts` equals the number of parts dropped. Topological validity is not required of display geometry. |
 | R64 | The canonical-file `sha256` recorded in `index.json` equals the current file's. A canonical data change without regenerating display files fails. |
+| R65 | The key set of `index.json` `transport` equals the layer IDs whose `status_ref` is non-null, for both feature collections and place lists. Each value equals the referenced canonical object exactly, without normalisation. A region with no display artifact has no index and is not subject to this rule. |
 
 ## Known non-conformance register
 
