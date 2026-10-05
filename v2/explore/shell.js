@@ -41,6 +41,9 @@
       dialog.addEventListener('close',()=>dialogOpeners.get(dialog)?.focus());
     }
     function appendEvidence(box,output){
+      if(output.items){for(const item of output.items){
+        const node=element(item.url?'a':'p',item.text);if(item.url){node.href=item.url;node.target='_blank';node.rel='noopener noreferrer';}box.append(node);
+      }return;}
       for(const line of output.lines)box.append(element('p',line));
       for(const item of output.links){const link=element('a',item.label);link.href=item.url;link.target='_blank';link.rel='noopener noreferrer';box.append(link);}
     }
@@ -58,7 +61,8 @@
     }
     function showDetail(entry,feature){
       const declaration=manifest.layers.find(layer=>layer.id===entry.id),body=$('detail-body');body.replaceChildren();
-      const output=E.feature(manifest,declaration,feature,entry.title);$('detail-title').textContent=output.title;appendEvidence(body,output);
+      const output=scope.ExploreLand?.tier(declaration)==='G'?scope.ExploreLand.detail(manifest,declaration,feature):E.feature(manifest,declaration,feature,entry.title);
+      $('detail-title').textContent=output.title;appendEvidence(body,output);
       body.append(button('Sources & coverage',showSources));
       options.onDetail?.(active,entry,feature,body);openDialog($('detail-dialog'));
     }
@@ -72,6 +76,7 @@
       if(result.state==='loaded'){
         if(mapAvailable){M.addLayer(entry.id,result.data,styleFor(entry));M.onFeature(entry.id,feature=>showDetail(entry,feature));M.setVisible(entry.id,visibleLayers.has(entry.id));}
         options.onLayer?.(active,entry,result.data);renderResults();
+        renderLandLegend(entry,row?.legend,result.data.features);
       }
     }
     async function load(entry){drawLayer({id:entry.id,state:'loading'});drawLayer(await region.loadLayer(entry.id,zoom));}
@@ -90,12 +95,20 @@
         if(check.checked)visibleLayers.add(entry.id);label.append(check,element('span',entry.title));
         const status=element('span','', 'explore-layer-state'),retry=button('Retry',()=>void load(entry));retry.hidden=true;
         const actions=element('div',undefined,'explore-layer-actions');actions.append(status,retry,button('Show source',showSources));
-        row.append(label,element('p',entry.description),actions);list.append(row);rows.set(entry.id,{row,status,retry,check});
+        const legend=element('div',undefined,'explore-land-legend');
+        row.append(label,element('p',entry.description),actions,legend);list.append(row);rows.set(entry.id,{row,status,retry,check,legend});renderLandLegend(entry,legend,[]);
         check.onchange=()=>{
           if(check.checked)visibleLayers.add(entry.id);else visibleLayers.delete(entry.id);
           M.setVisible(entry.id,check.checked);
           if(check.checked&&entry.format==='feature_collection'&&region.layers.get(entry.id).state!=='loaded')void load(entry);
         };
+      }
+    }
+    function renderLandLegend(entry,box,features){
+      if(!box||!scope.ExploreLand)return;box.replaceChildren();
+      const agency=manifest.sources[entry.sourceIds[0]]?.agency||'';
+      for(const item of scope.ExploreLand.legend(entry,features,entry.title,agency)){
+        const node=element('p',item.text);if(item.color)node.style.borderLeft='8px solid '+item.color;box.append(node);
       }
     }
     function renderResults(){
