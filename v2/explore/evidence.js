@@ -34,7 +34,7 @@
   function region(manifest){
     const facts=Object.values(manifest.fact_coverage||{});
     return {lines:[manifest.coverage?.statement,...facts.map(fact=>fact.statement),...(manifest.known_gaps||[])].filter(value=>typeof value==='string'),
-      links:facts.flatMap(fact=>(fact.official_urls||[]).map(url=>({label:'Open source ↗',url:safeUrl(url)}))).filter(item=>item.url)};
+      links:facts.flatMap(fact=>(fact.official_urls||[]).map(url=>({label:'View source ↗',url:safeUrl(url)}))).filter(item=>item.url)};
   }
   function feature(manifest,declaration,record,title){
     const properties=record.properties||record;
@@ -43,7 +43,7 @@
     if(provenance.agency)lines.push(provenance.agency);
     if(provenance.retrieved_at)lines.push('Source fetched '+date(provenance.retrieved_at));
     lines.push(declaration.limitations);
-    return {title:properties.name||title,lines,links:[{label:'Open source ↗',url:safeUrl(provenance.source_url)}].filter(item=>item.url)};
+    return {title:properties.name||title,lines,links:[{label:'View source ↗',url:safeUrl(provenance.source_url)}].filter(item=>item.url)};
   }
   const api={safeUrl,retrievalLine,layer,region,feature};
   if(typeof module!=='undefined')module.exports=api;

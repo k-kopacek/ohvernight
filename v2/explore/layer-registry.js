@@ -47,11 +47,11 @@
       for(const item of config.landing.mountains||[]){object(item,['value','label'],['value','label']);if(typeof item.value!=='string'||typeof item.label!=='string')fail();}
       for(const item of config.landing.region_links||[]){object(item,['region_id','label'],['region_id','label']);if(!/^[a-z0-9-]+$/.test(item.region_id)||typeof item.label!=='string'||!item.label)fail();}
     }
-    // The base landing action is the single approved non-access word exception.
-    const checkWords=value=>{
-      if(typeof value==='string'&&value!=='Explore the open map'&&FORBIDDEN_WORDS.test(value))fail();
-      if(Array.isArray(value))value.forEach(checkWords);
-      else if(value&&typeof value==='object')Object.values(value).forEach(checkWords);
+    // Only the landing action field has a separately pinned wording exception.
+    const checkWords=(value,path='')=>{
+      if(typeof value==='string'&&path!=='landing.explore_label'&&FORBIDDEN_WORDS.test(value))fail();
+      if(Array.isArray(value))value.forEach((child,index)=>checkWords(child,path+'.'+index));
+      else if(value&&typeof value==='object')Object.entries(value).forEach(([key,child])=>checkWords(child,path?path+'.'+key:key));
     };
     checkWords(config);
   }

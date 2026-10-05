@@ -164,6 +164,23 @@ test('criterion 10: explore modules contain no region IDs, literal region paths,
   }
 });
 
+test('criterion 10: configuration presentation strings stay outside shared JavaScript',()=>{
+  // Exact exceptions belong here only when a title is also a generic shared label.
+  const exemptions=[];
+  for(const id of ['aspen','douglas-co']){
+    const config=readJson('regions/'+id+'/explore.json'),landing=config.landing||{};
+    const values=[config.region_id,...Object.values(landing).filter(x=>typeof x==='string'),
+      ...(landing.mountains||[]).map(x=>x.label),...(landing.region_links||[]).flatMap(x=>[x.label,x.region_id]),
+      ...Object.values(config.storage_keys||{}),...Object.values(config.export_names||{}),
+      ...config.official_links.flatMap(x=>[x.label,x.url]),...config.layers.map(x=>x.title)];
+    for(const name of fs.readdirSync(path.join(root,'explore')).filter(x=>x.endsWith('.js'))){
+      const source=fs.readFileSync(path.join(root,'explore',name),'utf8');
+      for(const value of values.filter(x=>x.length>=4&&!exemptions.includes(x)))
+        assert.equal(source.includes(value),false,name+' contains presentation string '+value);
+    }
+  }
+});
+
 test('T1: invalid configuration fails before geometry and still exposes the loaded manifest',async()=>{
  const manifest=readJson('regions/aspen/region.json'),index=readJson('regions/aspen/display/index.json');
  const config=readJson('regions/aspen/explore.json');let seen;

@@ -15,6 +15,8 @@ def validate_config(manifest, config):
     Draft202012Validator(SCHEMA, format_checker=FormatChecker()).validate(config)
     if config['region_id'] != manifest['region']['id']:
         raise ValueError('region mismatch')
+    if config.get('landing', {}).get('explore_label') not in (None, 'Explore the open map'):
+        raise ValueError('landing action must match the inventoried base string')
     ids = [layer['layer_id'] for layer in config['layers']]
     declared = {layer['id'] for layer in manifest['layers']}
     displayed = {layer['id'] for layer in manifest['layers'] if layer.get('display')}
@@ -101,6 +103,9 @@ class ExploreConfigTests(unittest.TestCase):
 
     def test_T11_landing(self):
         self.negative(lambda c: c.update(landing='html'))
+
+    def test_T11_landing_action_is_pinned(self):
+        self.negative(lambda c: c['landing'].update(explore_label='Open here'))
 
     def test_T11_export_names(self):
         self.negative(lambda c: c.update(export_names={'plan': '../plan.json'}))

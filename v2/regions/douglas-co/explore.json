@@ -11,7 +11,7 @@
   "layers": [
     {
       "layer_id": "trails",
-      "title": "Forest trails",
+      "title": "USFS trail segments",
       "order": 0,
       "default_on": true,
       "min_zoom": null

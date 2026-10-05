@@ -37,6 +37,7 @@ test('T4: class order follows data, Unknown is last even when unloaded, and pale
   colors.push(S.style(layer,13,{properties:{[layer.classification_source_field]:'PVT'}}).fillColor);
  }
  assert.equal(colors[0],colors[1]);assert.equal(S.label('NEW'),'NEW — unrecognised source code; unknown');
+ assert.ok(!S.palette.includes(S.color('NEW')));assert.notEqual(S.color('NEW'),S.color('PVT'));
  assert.equal(S.legend({kind:'wilderness',spatial_precision:'source_published',geometry_types:['Polygon']},[],'Wilderness','USFS')[0].text,'Wilderness — boundary as published by USFS');
  assert.equal(S.legend({spatial_precision:'computed'})[0].text,literal.W10);
 });
@@ -45,6 +46,12 @@ test('T4: generalized detail preserves the exact content order and verbatim fact
  const feature={properties:{manager:'PVT',evidence:{agency:'Agency',source_url:'https://agency.example',retrieved_at:'2026-09-27T00:00:00Z'}}};
  const output=S.detail(m,layer,feature);
  assert.equal(output.title,literal.W4);
- assert.deepEqual(output.items.map(x=>x.text),['Source classification: PVT',literal.W4,'Agency','Open source ↗','Source fetched 2026-09-27',literal.W7,literal.W3,m.fact_coverage.ownership.statement,m.fact_coverage.public_access.statement,layer.limitations]);
+ assert.deepEqual(output.items.map(x=>x.text),['Source classification: PVT',literal.W4,'Agency','View source ↗','Source fetched 2026-09-27',literal.W7,literal.W3,m.fact_coverage.ownership.statement,m.fact_coverage.public_access.statement,layer.limitations]);
  assert.equal(output.items[3].url,'https://agency.example/');
+});
+test('checkpoint C1: source strings avoid the access word except the literal Unknown legend',()=>{
+ for(const name of ['evidence.js','land-style.js']){
+  const source=fs.readFileSync(path.join(root,'explore',name),'utf8').replace(literal.W5,'');
+  assert.doesNotMatch(source,/\bopen\b/i,name);
+ }
 });

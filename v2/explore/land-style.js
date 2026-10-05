@@ -17,7 +17,7 @@
   };
   const palette=['#8f9f89','#8d9da7','#a59e88','#a49ba9','#91a6a0','#9ea3a6'];
   const codes=['USFS','BLM','OTHFE','ST','LG','PVT'];
-  function color(code){const index=codes.indexOf(code);return palette[index<0?5:index];}
+  function color(code){const index=codes.indexOf(code);return index<0?'#b8b9b6':palette[index];}
   const precision=layer=>layer.spatial_precision||layer.spatialPrecision;
   const field=layer=>layer.classification_source_field||layer.classificationSourceField;
   function tier(layer){
@@ -49,7 +49,7 @@
     const properties=feature.properties||{},evidence=properties.evidence||{},code=String(properties[field(layer)]??'');
     const items=[{text:wording.W11.replace('<code>',code)},{text:label(code)}];
     if(evidence.agency)items.push({text:evidence.agency});
-    const url=E.safeUrl(evidence.source_url);if(url)items.push({text:'Open source ↗',url});
+    const url=E.safeUrl(evidence.source_url);if(url)items.push({text:'View source ↗',url});
     if(evidence.retrieved_at)items.push({text:'Source fetched '+evidence.retrieved_at.slice(0,10)});
     items.push({text:wording.W7},{text:wording.W3},{text:manifest.fact_coverage.ownership.statement},{text:manifest.fact_coverage.public_access.statement},{text:layer.limitations});
     return {title:label(code),items};
