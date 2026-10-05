@@ -171,6 +171,27 @@ test('T5: an outside-season motorhome trip is excluded before the clearance caut
   assert.equal(inSeason.label, 'Motorhome suitability unverified');
 });
 
+test('T5: two matching rules exclude an eight-night trip under the five-day limit', () => {
+  const rules = [
+    {place_ids: ['two-rules'], stay_limit_days: 5, requires_high_clearance: true,
+      last_confirmed_at: '2026-01-01T00:00:00Z', max_age_hours: 24,
+      source_url: 'https://example.org/stale-limit'},
+    {place_ids: ['two-rules'], stay_limit_days: 12, requires_high_clearance: false,
+      last_confirmed_at: null, max_age_hours: 24,
+      source_url: 'https://example.org/unconfirmed-looser'},
+  ];
+  const merged = Trust.applyRules({id: 'two-rules', kind: 'dispersed', checked_on: '2026-09-26'},
+    {rules}, Date.parse('2026-09-26T00:00:00Z'));
+  assert.equal(merged.stay_limit_days, 5);
+  assert.equal(merged.requires_high_clearance, true);
+  assert.deepEqual(merged.ruleSources, rules.map(rule => rule.source_url));
+  const result = TripRules.evaluate(merged,
+    {arrive: '2026-09-26', depart: '2026-10-04', vehicle: 'high_clearance'},
+    '2026-09-26', {max_age_hours: 720});
+  assert.equal(result.status, 'excluded');
+  assert.equal(result.label, 'Stay exceeds published limit');
+});
+
 test('T7: missing or invalid review-age policy makes supportive results stale', () => {
   const place = {id: 'policy', kind: 'dispersed', checked_on: '2026-09-26'};
   const trip = {arrive: '2026-09-26', depart: '2026-09-27', vehicle: 'passenger_car'};
@@ -185,7 +206,7 @@ test('T7: missing or invalid review-age policy makes supportive results stale', 
       {access: {designations: {passenger_car: {designation: 'open', dates_open: '05/01-09/30'}}}},
       {stay_limit_days: 1},
     ]) {
-      const vehicle = restricted.requires_high_clearance ? 'passenger_car' : 'passenger_car';
+      const vehicle = 'passenger_car';
       const trip = restricted.stay_limit_days ? {arrive: '2026-09-26', depart: '2026-09-29', vehicle} :
         {arrive: '2027-01-15', depart: '2027-01-17', vehicle};
       const excluded = TripRules.evaluate({...restricted, kind: 'dispersed', checked_on: '2026-09-26'}, trip, '2026-09-26', policy);
