@@ -2,7 +2,7 @@
 
 An ADR records a decision that is settled and durable. Open questions do not
 get an ADR until they are decided; for example, the map rendering
-architecture (Leaflet or MapLibre) is undecided until M3 and has none.
+architecture is recorded in ADR-006.
 
 An ADR is changed or superseded only by a pull request approved by the human
 owner. A superseded ADR is kept and marked, not deleted.
@@ -14,3 +14,4 @@ owner. A superseded ADR is kept and marked, not deleted.
 | [ADR-003](ADR-003-claude-coordinates-codex-implements.md) | Claude coordinates, Codex implements | Accepted |
 | [ADR-004](ADR-004-hermes-research-operations-role.md) | Hermes joins in M4 as research/operations | Accepted |
 | [ADR-005](ADR-005-unknown-remains-unknown.md) | Unknown remains unknown | Accepted |
+| [ADR-006](ADR-006-explore-rendering-architecture.md) | Explore uses optimized Leaflet with regional GeoJSON | Accepted |

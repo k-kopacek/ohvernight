@@ -57,7 +57,9 @@ Field definitions:
 | `layers[].classification_source_field` | Required for `land_management`, forbidden elsewhere; must be in `fields.source`. |
 | `layers[].fields.source` | Property names copied or renamed from source attributes without interpretation. |
 | `layers[].fields.derived` | Property names computed or mapped by the pipeline. |
+| `layers[].display` | Optional derived delivery artifact declaration, allowed only on `feature_collection` layers; its path is under `regions/<region.id>/display/`. |
 | `rules` | `null` or a path to a region-scoped rules registry. |
+| `coverage.display` | Optional derived display artifact for the coverage feature; its path is under `regions/<region.id>/display/`. |
 | `known_gaps` | Strings recording what the region does not answer; an empty array is allowed. |
 
 Every object in the schema sets `additionalProperties: false`.
@@ -257,14 +259,15 @@ nothing is dropped, merged or flattened, and restoring the reference gives
 the canonical evidence object exactly. The validator checks display artifacts
 against canonical data, never the reverse.
 
-The stable display rules are: **R60**, declared paths stay under the active
-region and the index is exact with matching file hashes and byte counts;
-**R61**, each display is a FeatureCollection with the declared layer ID and
-the complete canonical feature set subject only to the water-selection rule;
-**R62**, restored evidence and all other properties equal canonical values;
-**R63**, geometry type and validity are preserved and coordinates are only
-rounded to six decimals with consecutive duplicates removed; and **R64**, the
-recorded canonical-file hash matches the current canonical file.
+The stable display rules are:
+
+| ID | Full rule |
+|---|---|
+| R60 | A `display.path` obeys R03 and lies under `regions/<region.id>/display/`. `index.json` exists, lists exactly the layers (and coverage) that declare `display`, and each listed `sha256` and `bytes` match the file. |
+| R61 | Each display file is a FeatureCollection whose `layer_id` equals the layer. Every feature ID exists in the canonical layer, and `feature_count` equals the number of features. `source_feature_count` equals the canonical feature count. Every canonical feature is present, except features excluded by the water selection rule in 12.1. |
+| R62 | For every display feature, restoring `evidence` from `evidence_table` gives an object equal to the canonical feature's `evidence`, and every other property equals the canonical property. |
+| R63 | Every display geometry equals the canonical geometry transformed by 12.1 step 2: coordinates rounded to six decimals, consecutive duplicates removed, degenerate parts dropped (A1). Geometry type is unchanged. The geometry is non-empty and structurally well-formed: every line has at least two positions and every ring is closed with at least four. This is checked for every feature, whether or not the coordinates match. The index entry's `dropped_degenerate_parts` equals the number of parts dropped. Topological validity is not required of display geometry. |
+| R64 | The canonical-file `sha256` recorded in `index.json` equals the current file's. A canonical data change without regenerating display files fails. |
 
 ## Known non-conformance register
 
@@ -279,14 +282,14 @@ runtime regressions retained as markers.
 | N4 | `evidence.confidence` differs for the same source across regions. | T7 |
 | N5 | Aspen `land_ownership` says ownership although data is limited-scale management context. | kind/R28 |
 | N6 | Staleness ordering hid restrictions in v2 and `Trust.applyRules`; fixed in M2. | T10–T14 |
-| N7 | Rampart designated-dispersed listing, including a paraphrased seasonal closure and date-only retrieval, is hard-coded in `preview.js`. | Milestone 7 (deferred) |
+| N7 | Rampart designated-dispersed listing, including a paraphrased seasonal closure and date-only retrieval, is hard-coded in `preview.js`. | M7 (deferred) |
 | N8 | Aspen MVUM publishes `access_status: designated_open` on 51 features for a past trip. | R27 |
 | N9 | The v2 trip evaluator reads the manifest policy; the 7-day `preview.js` and root 30-day legacy thresholds remain until their later migrations. | Milestone 3 PR A partial; PR B completes v2 |
 | N10 | Douglas recreation `seasonal_operational_status` can be historical. | manifest fields |
-| N11 | Place-list per-record source URLs are not checked against declared sources. | Milestone 3 PR B (deferred) |
+| N11 | Place-list per-record source URLs are not checked against declared sources. | M3 PR B (deferred) |
 | N12 | Douglas snapshot predates current fetch status for trails and roads. | T5 |
 | N13 | `v2/map-data.json` legacy extract is outside any manifest. | Retired in Milestone 3 PR A |
-| N14 | Per-feature evidence is duplicated for payload size in the canonical files; display delivery deduplicates it for PR B. | Milestone 3 PR B (deferred) |
+| N14 | Per-feature evidence is duplicated for payload size in the canonical files; display delivery deduplicates it for M3 PR B. | M3 PR B (deferred) |
 | N15 | Root legacy site had the same staleness ordering; fixed in M2. | T15 |
 | N16 | Motorhome clearance caution can precede vehicle-season exclusion, and conflicting rules are not applied. | Retired in Milestone 3 PR A |
 | N17 | Land styling exceeds generalized evidence. | spatial precision declaration; Milestone 3 PR B (deferred) |

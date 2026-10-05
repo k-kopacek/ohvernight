@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted. Recorded 2026-10-04 by owner decision D1. Implemented in M3 PR A
-as the foundation for PR B.
+Accepted. Recorded 2026-10-04 by owner decision D1. PR A lays the foundation;
+PR B builds the adapter and shell.
 
 ## Decision
 
@@ -24,22 +24,11 @@ The decision is reopened by a new specification and owner decision when any
 one objective trigger is observed. A trigger opens the question; it does not
 choose MapLibre:
 
-- **R-1 payload or feature budget:** a region's default-on set exceeds
-  15,000 displayed features or 1,500,000 bytes gzipped, or a display layer
-  exceeds 5,000 features or 450,000 bytes gzipped and cannot be remedied by
-  `min_zoom` or splitting.
-- **R-2 mobile loading or rendering:** a section 16.4 timing threshold fails
-  in three separate sessions after the 12.2 loading design is implemented,
-  or the manual device matrix records a reproducible pan, pinch or toggle
-  failure.
-- **R-3 M6 trail density:** a measured trail layer exceeds the R-1
-  single-layer budget after zoom gating and splitting.
-- **R-4 statewide browsing:** an approved requirement needs one continuous
-  detailed view across more than one region or needs more than one region's
-  budget loaded together.
-- **R-5 browser memory:** post-GC JS heap exceeds 66 MB in three separate
-  committed-script sessions, or the manual matrix records a reproducible
-  Explore tab reload or crash on a real device.
+- **R-1** | Payload or feature budget failure | A region's default-on layers exceed 15,000 displayed features or 1,500,000 bytes gzipped; or one display layer exceeds 5,000 features or 450,000 bytes gzipped and cannot be brought under by `min_zoom` or by splitting (section 16.5).
+- **R-2** | Mobile loading or rendering threshold failure | Any timing threshold in 16.4 is missed, as a median of five runs at 390×844 with 4× CPU throttle, in three separate sessions after the loading design in 12.2 is fully implemented; or the manual real-device matrix records a reproducible pan, pinch or layer-toggle failure.
+- **R-3** | M6 trail density | The M6 specification's measured trail layer for any one region exceeds the single-layer budget in R-1 after zoom gating and splitting.
+- **R-4** | Statewide browsing | An approved product requirement needs one continuous view that draws detailed geometry from more than one region at once, or needs more than one region's budget loaded together.
+- **R-5** | Browser memory | JS heap after load and garbage collection exceeds 66 MB (twice the M3 Aspen baseline of 33.4 MB) in three separate sessions of the committed script; or the manual matrix records a reproducible tab reload or crash on a real device while using Explore.
 
 ## Consequences
 

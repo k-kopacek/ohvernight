@@ -23,6 +23,10 @@ To ingest developed camping inventory, provide `RIDB_API_KEY` in your environmen
 
 ## Outputs and publication
 
+From the repository root, rebuild the committed display artifacts with
+`v2/pipeline/.venv/bin/python v2/pipeline/scripts/build_display.py`. These
+artifacts are derived from canonical files and are never hand-edited.
+
 The pipeline produces an untracked staging output at `data/processed/map-data-v2.json`. After a validated run, copy/promote it to the canonical app-facing `v2/map-data-v2.json` to publish it. It contains:
 
 - `trip`: the dates and vehicle actually evaluated.
