@@ -1,8 +1,9 @@
 import {createServer} from 'node:http';
-import {readFile,stat} from 'node:fs/promises';
+import {mkdtemp,readFile,rm,stat} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {createServer as createTcpServer} from 'node:net';
 import {extname,join,normalize,resolve} from 'node:path';
+import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
 
 const root=resolve(fileURLToPath(new URL('../../../../',import.meta.url)));
@@ -57,24 +58,14 @@ async function staticServer(){
   return {server,port:server.address().port};
 }
 async function inspectPage(client,url,localOrigin){
-  const state={url,sameOriginRequests:[],sameOriginBytes:0,failedSameOrigin:[],externalUrls:[],externalBlocked:0,exceptions:[],consoleErrors:[]};
+  const state={url,sameOriginRequests:[],failedSameOrigin:[],externalUrls:[],externalBlocked:0,exceptions:[],consoleErrors:[]};
   await client.command('Network.enable');
   await client.command('Runtime.enable');
   await client.command('Page.enable');
   await client.command('Log.enable');
-  // Existing pages use only these known basemap and tile hosts. Every request
-  // to them is failed before it can leave the machine; local requests continue.
-  await client.command('Fetch.enable',{patterns:[
-    {urlPattern:'*://basemap.nationalmap.gov/*',requestStage:'Request'},
-    {urlPattern:'*://server.arcgisonline.com/*',requestStage:'Request'},
-    {urlPattern:'*://tile.openstreetmap.org/*',requestStage:'Request'},
-    {urlPattern:'*://www.recreation.gov/*',requestStage:'Request'},
-    {urlPattern:'*://www.google.com/*',requestStage:'Request'},
-    {urlPattern:'*://www.fs.usda.gov/*',requestStage:'Request'},
-    {urlPattern:'*://pitkincounty.com/*',requestStage:'Request'}
-  ]});
+  await client.command('Fetch.enable',{patterns:[{urlPattern:'*',requestStage:'Request'}]});
   const finishAt=Date.now()+12000;
-  await client.command('Page.navigate',{url});
+  const navigation=client.command('Page.navigate',{url});
   while(Date.now()<finishAt){
     const message=client.events.shift();
     if(!message){await wait(20);continue;}
@@ -84,7 +75,7 @@ async function inspectPage(client,url,localOrigin){
       else {state.externalBlocked++;await client.command('Fetch.failRequest',{requestId:message.params.requestId,errorReason:'BlockedByClient'});}
     }else if(message.method==='Network.responseReceived'){
       const response=message.params.response;
-      if(response.url.startsWith(localOrigin)){state.sameOriginRequests.push({url:response.url,status:response.status,bytes:response.encodedDataLength||0});state.sameOriginBytes+=response.encodedDataLength||0;if(response.status>=400)state.failedSameOrigin.push(response.url);}
+      if(response.url.startsWith(localOrigin)){state.sameOriginRequests.push({url:response.url,status:response.status});if(response.status>=400)state.failedSameOrigin.push(response.url);}
       else if(!response.url.startsWith('data:')) state.externalUrls.push(response.url);
     }else if(message.method==='Network.loadingFailed'&&message.params.type!=='Other'&&message.params.errorText){
       if((message.params.errorText||'').includes('net::ERR_FAILED')) state.externalBlocked++;
@@ -94,6 +85,7 @@ async function inspectPage(client,url,localOrigin){
     if(state.loaded&&Date.now()>finishAt-2500) break;
   }
   state.dom=await client.command('Runtime.evaluate',{expression:`JSON.stringify({scrollWidth:document.documentElement.scrollWidth,innerWidth:innerWidth,hasLegacyLink:!!document.querySelector('a[href="./map-data.json"]'),title:document.title})`,returnByValue:true});
+  await navigation;
   state.dom=JSON.parse(state.dom.result.value);
   return state;
 }
@@ -101,7 +93,7 @@ async function main(){
   const chrome=await findChrome();
   const site=await staticServer();
   const debugPort=await freePort();
-  const profile=join('/tmp','ohvernight-browser-'+process.pid);
+  const profile=await mkdtemp(join(tmpdir(),'ohvernight-browser-'));
   const browser=spawn(chrome.candidate,[`--headless=new`,`--no-sandbox`,`--disable-gpu`,`--disable-dev-shm-usage`,`--remote-debugging-port=${debugPort}`,`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','ignore']});
   try{
     await waitFor(`http://127.0.0.1:${debugPort}/json/version`);
@@ -125,7 +117,10 @@ async function main(){
     console.log(JSON.stringify({chrome:chrome.version,server:`127.0.0.1:${site.port}`,pages},null,2));
     client.socket.close();
   }finally{
-    browser.kill('SIGTERM');site.server.close();
+    browser.kill('SIGTERM');
+    if(browser.exitCode===null) await new Promise(resolvePromise=>browser.once('close',resolvePromise));
+    site.server.close();
+    await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});
   }
 }
 main().catch(error=>{console.error(error.stack||error);process.exitCode=1;});
