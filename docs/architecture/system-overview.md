@@ -1,10 +1,10 @@
 # System overview
 
-Repository architecture after M3 PR B implementation (2026-10-05). The
-original three local sessions observe trigger R-2 and a Douglas heap miss
-below R-5. Proposed amendment A8 starts default-on requests together; the
-owner's decision on A8 and performance acceptance remains pending, along
-with independent review, GitHub CI, real-device checks and the merge gate.
+Repository architecture after M3 PR B implementation (2026-10-05). R-2 was
+triggered, reviewed and resolved by the owner on 2026-10-05: Leaflet is kept
+(A10). The original threshold misses remain recorded. A8 is approved and
+kept. PR B is not merged; the real-device matrix is still owed by the owner,
+and review, CI and human merge approval remain delivery gates.
 Plans are in the [roadmap](../../ROADMAP.md).
 
 ## Shape of the system
@@ -50,12 +50,18 @@ region-specific capability code. The legacy fire-monitor selector in
 [ADR-006](decisions/ADR-006-explore-rendering-architecture.md). The loader
 fetches the active manifest, presentation config and display index, then
 coverage and small place lists. Pins and coverage are usable before
-feature layers. Under proposed A8 (pending the owner), eligible default-on
+feature layers. Under approved A8, eligible default-on
 requests start together; parsing, evidence restoration and drawing proceed
 one layer per task in configured order, retaining the yields. An earlier
 pending response waits its turn; a failed response does not block the next
 layer. Failed layers have independent retry controls, off layers stay unloaded,
 and `min_zoom` gates first loading. Detail content is built on selection.
+
+The local benchmark is CPU/main-thread dominated; concurrent fetching showed
+no measurable local timing improvement. A8 avoids deliberately serialising
+independent network requests in real use; its benefit under real network
+latency remains unmeasured. A10's PR B heap threshold (115% of same-session
+base) and the architecture trigger R-5 (66 MB) are different controls.
 
 A collapsed results sheet and non-modal layer drawer preserve phone map
 space. Dates, vehicle and list filters do not hide map geometry. Land

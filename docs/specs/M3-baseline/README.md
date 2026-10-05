@@ -38,7 +38,10 @@ Set `CHROME=/path/to/chrome` if Chrome is not in a standard location, and
 `pr-b-performance.json` records five runs each of base `3dc0fef` and the
 PR B application per session at 390×844 with 4× CPU throttle. Three original
 sessions and three separate post-A8 sessions are preserved, with raw values
-and every threshold comparison. The new comparison code is `v2/pipeline/tests/browser/measure.mjs`; the historical
+and every threshold comparison. A separate section adds three A10 sessions,
+using the owner's amended thresholds without rewriting earlier results.
+All five measures pass for both regions in each of the three new A10 sessions.
+The comparison code is `v2/pipeline/tests/browser/measure.mjs`; the historical
 `measure.mjs` above remains byte-identical. It serves base files directly
 from Git and head files from the checkout, blocks non-local requests and
 uses the hardened browser-harness cleanup. Its method and threshold results
@@ -51,14 +54,19 @@ node v2/pipeline/tests/browser/measure.mjs > /tmp/ohvernight-performance.json
 The deterministic browser job asserts no timings. The owner's real-device
 matrix and the reviewer's independent same-session comparison remain owed.
 
-All deterministic budgets pass. All reported Aspen thresholds pass in each
-corrected session. Douglas all-default-layer time and heap miss in all three:
-R-2 is observed and escalated, while heap remains below the R-5 trigger.
+All deterministic budgets pass. The original Douglas all-default-layer time
+and heap thresholds were missed before and after A8; those results stand.
+R-2 was triggered, reviewed and resolved by the owner on 2026-10-05: Leaflet
+is kept (A10). This owner amendment is not a retroactive pass. A10 limits map
+usable to 60% and all layers to 135% of same-session base all-layer time, and
+heap to 115% of same-session base heap for the same region. The PR B heap
+control and architecture trigger R-5 (66 MB) are different controls.
 The report preserves the first discarded comparison, whose county status
 selector fired early on a blocked basemap tile, and explains the approved
-readiness correction. The coordinator authorized one isolated proposed A8
-request-sequencing change, pending the owner: eligible fetches start together while parsing,
-restoration and drawing stay ordered, with one layer per task and the
-existing yields. The original R-2 observation remains in the report.
-Douglas all-layer time and heap also miss in the post-A8 sessions; no
-further optimization, renderer change or budget change followed.
+readiness correction. A8 is approved and kept: eligible fetches start together
+while parsing, restoration and drawing stay ordered, with one layer per task
+and the existing yields. The local benchmark is CPU/main-thread dominated;
+concurrent fetching showed no measurable local timing improvement. A8 avoids
+deliberately serialising independent network requests in real use; its
+benefit under real network latency remains unmeasured. PR B is not merged;
+the real-device matrix is still owed by the owner.

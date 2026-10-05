@@ -14,7 +14,7 @@ states the exact scope.
 |---|---|---|
 | M1 | Verification Baseline / Repo Hygiene | **Complete** |
 | M2 | Regional Data Contract + Evidence Semantics | **Complete** |
-| M3 | Unified Mobile-First Explore Architecture | **In progress — PR B implemented; R-2 performance decision pending** |
+| M3 | Unified Mobile-First Explore Architecture | **In progress — PR B awaiting real-device validation and merge approval** |
 | M4 | Functional Recreational Water | Planned |
 | M5 | Land Classification v1 | Planned |
 | M6 | Trails / COTREX | Planned |
@@ -61,10 +61,14 @@ Merged in pull request #3.
 Status: Phase A selected optimized Leaflet behind a narrow adapter
 ([approved specification](docs/specs/M3-unified-mobile-explore.md),
 [ADR-006](docs/architecture/decisions/ADR-006-explore-rendering-architecture.md)).
-PR A is merged; PR B implementation records trigger R-2 from three local
-performance sessions. Proposed A8 addresses request sequencing and is pending
-the owner. Performance acceptance, independent review, GitHub CI,
-real-device checks and the human merge gate also remain pending.
+PR A is merged; PR B is not merged. R-2 was triggered, reviewed and resolved
+by the owner on 2026-10-05: Leaflet is kept (A10). A8 is approved and kept.
+The local benchmark is CPU/main-thread dominated; concurrent fetching showed
+no measurable local timing improvement. A8 avoids deliberately serialising
+independent network requests in real use; its benefit under real network
+latency remains unmeasured. The owner still owes the real-device matrix and
+merge approval. PR B's heap limit (115% of same-session base) and the
+architecture trigger R-5 (66 MB) are different controls.
 
 - Unify the Aspen and Douglas County app structure.
 - Fix mobile map real-estate problems.

@@ -57,9 +57,16 @@ The original `docs/specs/M3-baseline/measure.mjs` is an immutable record of
 how `baseline.json` was measured; it is not adapted for the new page.
 The PR B report lives beside that baseline. Compare versions in one session
 on one machine; historical absolute milliseconds are context only.
-The report separates the original three-session R-2 observation from three
-post-A8 sessions. Proposed A8 changes only default request sequencing and
-is pending the owner; the helper, budgets and thresholds are unchanged.
+The report preserves the original and post-A8 threshold misses and adds
+three A10 sessions. R-2 was triggered, reviewed and resolved by the owner on
+2026-10-05; Leaflet is kept (A10). A8 is approved and kept. The local benchmark
+is CPU/main-thread dominated; concurrent fetching showed no measurable local
+timing improvement. A8 avoids deliberately serialising independent network
+requests in real use; its benefit under real network latency remains
+unmeasured. A10 changes the PR B limits to 60% for map usable, 135% for all
+layers and 115% for heap, relative to same-session base. PR B's heap control
+and architecture trigger R-5 (66 MB) are different controls. The measurement
+method and other thresholds are unchanged; PR B is not merged.
 
 The human owner must still test real iOS Safari and Android Chrome, both
 regions: pan, pinch, sheet drag, drawer, trail/land details, landscape and

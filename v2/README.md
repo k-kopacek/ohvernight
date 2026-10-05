@@ -9,9 +9,8 @@ link when scripts are off.
 The map is the page. A collapsed results sheet and an on-demand layer drawer
 keep map space available on phones. Every layer starts on and loads
 progressively; dates, vehicle and list filters never remove map features.
-Proposed amendment A8 starts eligible default-on requests together, then
-parses and draws one layer per task in order with the existing yields. A8
-and performance acceptance remain pending the owner.
+Approved and kept amendment A8 starts eligible default-on requests together,
+then parses and draws one layer per task in order with the existing yields.
 Source details are built when selected. **Sources & coverage** carries the
 manifest's statements and limitations verbatim, with per-layer retrieval
 status from the display index. A stale source does not remove a feature or
@@ -71,6 +70,15 @@ four viewport sizes. Timing comparisons and the human real-device matrix
 are separate; see [browser instructions](pipeline/tests/browser/README.md).
 The app has no build step, package manager, backend or runtime dependency
 beyond vendored Leaflet. Requests use normal HTTP caching and display hashes.
+
+R-2 was triggered, reviewed and resolved by the owner on 2026-10-05; Leaflet
+is kept (A10). The original threshold misses remain recorded. The local
+benchmark is CPU/main-thread dominated; concurrent fetching showed no
+measurable local timing improvement. A8 avoids deliberately serialising
+independent network requests in real use; its benefit under real network
+latency remains unmeasured. The PR B heap threshold (115% of same-session
+base) and architecture trigger R-5 (66 MB) are different controls. PR B is
+not merged; the real-device matrix is still owed by the owner.
 
 GitHub Pages publishes the repository from `main`. A reviewed pull request,
 green CI and explicit human approval are required before merging. The root

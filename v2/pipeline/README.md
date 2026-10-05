@@ -59,10 +59,18 @@ geometry never supplies a contract check; the pipeline does not deploy the app.
 Each region has a closed-schema `explore.json` with presentation, layer order,
 visibility, zoom gating and capability flags. It carries no trust statements
 or source policy. The loader isolates regions and builds default-on layers
-one task at a time. Proposed A8 (pending the owner) starts eligible default-on
+one task at a time. Approved and kept A8 starts eligible default-on
 requests together while preserving ordered parsing/drawing and task yields.
 The browser's review/retrieval ages use manifest hours;
 canonical pipeline support checks are unchanged.
+
+R-2 was triggered, reviewed and resolved by the owner on 2026-10-05; Leaflet
+is kept (A10). The local benchmark is CPU/main-thread dominated; concurrent
+fetching showed no measurable local timing improvement. A8 avoids deliberately
+serialising independent network requests in real use; its benefit under real
+network latency remains unmeasured. PR B's heap threshold (115% of same-session
+base) and architecture trigger R-5 (66 MB) are different controls. PR B is not
+merged, and the real-device matrix is still owed by the owner.
 
 ## Actual dispersed sites
 
