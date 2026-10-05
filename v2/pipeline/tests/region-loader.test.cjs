@@ -80,13 +80,24 @@ test('T1: loader rejects malformed IDs, requires an injected default, and scopes
   const injected=fixtureFetch(aspen,fixtureConfig(aspen),aspenIndex,'aspen');
   const defaulted=createRegionLoader({fetch:injected.fetch,defaultRegion:'aspen'});
   assert.equal((await defaulted.loadRegion('')).regionId,'aspen');
+  assert.equal((await defaulted.loadRegion('?region=')).regionId,'aspen');
   for(const regionId of ['aspen','douglas-co']){
     const manifest=readJson(`regions/${regionId}/region.json`);
     const index=readJson(`regions/${regionId}/display/index.json`);
-    const fixture=fixtureFetch(manifest,fixtureConfig(manifest),index,regionId);
-    await createRegionLoader({fetch:fixture.fetch,defaultRegion:regionId}).loadRegion(`?region=${regionId}`);
+    const displayLayers=manifest.layers.filter(layer=>layer.display);
+    const fixture=fixtureFetch(manifest,fixtureConfig(manifest,[displayLayers[0].id]),index,regionId);
+    const loaded=await createRegionLoader({fetch:fixture.fetch,defaultRegion:regionId}).loadRegion(`?region=${regionId}`);
+    assert.deepEqual((await loaded.loadDefaultLayers()).map(result=>result.state),['loaded']);
+    for(const layer of displayLayers.slice(1)){
+      assert.equal(fixture.calls.some(url=>url.startsWith(layer.display.path+'?')),false);
+      assert.equal((await loaded.loadLayer(layer.id)).state,'loaded');
+    }
     assert.equal(fixture.calls.some(url=>url.includes(`regions/${regionId==='aspen'?'douglas-co':'aspen'}/`)),false);
-    assert.equal(fixture.calls.filter(url=>/display\/[^/]+\.geojson/.test(url)).every(url=>/[?]v=[0-9a-f]{12}$/.test(url)),true);
+    const expected=[`regions/${regionId}/region.json`,`regions/${regionId}/explore.json`,
+      `regions/${regionId}/display/index.json`,
+      ...manifest.layers.filter(layer=>layer.format==='place_list').map(layer=>layer.path),
+      ...index.artifacts.map(artifact=>artifact.path+'?v='+artifact.sha256.slice(0,12))];
+    assert.deepEqual([...fixture.calls].sort(),expected.sort());
   }
 });
 
@@ -116,6 +127,8 @@ test('T1: manifest/config/index and display failures stay isolated while place-l
   assert.equal((await loaded.loadLayer(first.id)).state,'failed');
   oneMissing.docs.set(first.display.path,{...missingDoc,type:'NotAFeatureCollection'});
   assert.equal((await loaded.loadLayer(first.id)).state,'failed');
+  const other=manifest.layers.find(layer=>layer.display&&layer.id!==first.id);
+  assert.equal((await loaded.loadLayer(other.id)).state,'loaded');
   const place=fixtureFetch(manifest,fixtureConfig(manifest),index);
   place.docs.get('destinations.json').resorts=null;
   const withFailedPlaces=await createRegionLoader({fetch:place.fetch}).loadRegion('?region=aspen');
@@ -123,9 +136,11 @@ test('T1: manifest/config/index and display failures stay isolated while place-l
   assert.equal((await withFailedPlaces.loadLayer(first.id)).state,'loaded');
   const badEvidence=fixtureFetch(manifest,fixtureConfig(manifest),index);
   const artifact=badEvidence.docs.get(first.display.path);
-  artifact.features[0].properties.evidence=999;
   const bad=await createRegionLoader({fetch:badEvidence.fetch}).loadRegion('?region=aspen');
-  assert.equal((await bad.loadLayer(first.id)).state,'failed');
+  for(const reference of [999,-1,0.5,'0',null]){
+    artifact.features[0].properties.evidence=reference;
+    assert.equal((await bad.loadLayer(first.id)).state,'failed',String(reference));
+  }
 });
 
 test('I1: a manifest cannot make the loader request another region path',async()=>{
