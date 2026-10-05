@@ -140,6 +140,12 @@ dependency patches Leaflet globally; pursuing rotation is the owner's decision.
   vehicle/access constraints where relevant.
 - Output: ranked adventure options based on verified evidence.
 - Explore Map remains the free-discovery alternative.
+- Owner product direction (recorded 2026-10-05): the core question this
+  milestone answers is "Where can I stay overnight while I have fun doing the
+  activities I chose?" Discovery must combine activities, trails, water and
+  recreation, camping and overnight options, location, dates, and later access
+  and vehicle constraints. M3 supplies only the reusable results, selection
+  and detail interaction that this workflow will populate.
 
 ## Constraints that apply to every milestone
 
