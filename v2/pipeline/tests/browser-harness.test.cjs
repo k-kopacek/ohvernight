@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
+const {createHash}=require('node:crypto');
 
 const harness=import('./browser/run.mjs');
 const chrome={candidate:'/offline/test-chrome',version:'Test Chrome 123'};
@@ -99,4 +100,63 @@ test('browser exit interrupts an in-flight readiness request',{timeout:3000},asy
     return true;
   });
   assert.ok(performance.now()-started<2000,'child exit should interrupt the fetch timeout');
+});
+
+async function webSocketServer(t,onConnection){
+  const sockets=new Set();
+  const server=createServer();
+  server.on('connection',socket=>{sockets.add(socket);socket.once('close',()=>sockets.delete(socket));});
+  server.on('upgrade',(request,socket)=>{
+    const accept=createHash('sha1').update(request.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
+    socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+accept+'\r\n\r\n');
+    onConnection(socket);
+  });
+  t.after(async()=>{
+    for(const socket of sockets) socket.destroy();
+    await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
+  });
+  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
+  return `ws://127.0.0.1:${server.address().port}/devtools/page/offline`;
+}
+
+test('pending CDP commands reject with their methods when DevTools drops',{timeout:3000},async t=>{
+  const {cdpClient}=await harness;
+  const url=await webSocketServer(t,socket=>socket.once('data',()=>socket.destroy()));
+  const client=cdpClient(url,{commandTimeoutMs:2500});
+  const started=performance.now();
+  await Promise.all([
+    assert.rejects(client.command('Runtime.evaluate'),/Runtime.evaluate: DevTools connection closed/),
+    assert.rejects(client.command('Network.enable'),/Network.enable: DevTools connection closed/),
+  ]);
+  assert.ok(client.signal.aborted);
+  assert.ok(performance.now()-started<2000,'disconnect must reject commands before their timeout');
+});
+
+test('CDP commands issued after a disconnect reject immediately',{timeout:3000},async t=>{
+  const {cdpClient}=await harness;
+  const url=await webSocketServer(t,socket=>socket.once('data',()=>socket.destroy()));
+  const client=cdpClient(url,{commandTimeoutMs:2500});
+  await assert.rejects(client.command('Page.enable'),/DevTools connection closed/);
+  const started=performance.now();
+  await assert.rejects(client.command('Page.navigate'),/Page.navigate: DevTools connection closed/);
+  assert.ok(performance.now()-started<2000,'later commands must not queue until timeout');
+});
+
+test('unanswered CDP commands reject at their injected timeout',{timeout:3000},async t=>{
+  const {cdpClient}=await harness;
+  let receivedCommand=false;
+  const url=await webSocketServer(t,socket=>socket.on('data',()=>{receivedCommand=true;}));
+  const client=cdpClient(url,{commandTimeoutMs:150});
+  const started=performance.now();
+  await assert.rejects(client.command('Runtime.evaluate'),/Runtime.evaluate: CDP command timed out after 150 ms/);
+  assert.ok(receivedCommand,'the endpoint must receive a command and leave it unanswered');
+  assert.ok(performance.now()-started<2000,'a silent endpoint must not hang a command');
+});
+
+test('DevTools failure before the handshake rejects ready and later commands',{timeout:3000},async t=>{
+  const {cdpClient}=await harness;
+  const {url}=await localServer(t,(_request,response)=>{response.writeHead(503);response.end();});
+  const client=cdpClient(url.replace('http:','ws:'),{commandTimeoutMs:2500});
+  await assert.rejects(client.command('Network.enable'),/Network.enable: DevTools connection closed/);
+  await assert.rejects(client.command('Runtime.enable'),/Runtime.enable: DevTools connection closed/);
 });

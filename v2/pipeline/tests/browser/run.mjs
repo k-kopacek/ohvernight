@@ -10,9 +10,10 @@ import {setTimeout as delay} from 'node:timers/promises';
 const root=resolve(fileURLToPath(new URL('../../../../',import.meta.url)));
 const chromeCandidates=[process.env.CHROME,'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','google-chrome','chromium'].filter(Boolean);
 const mime={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.geojson':'application/geo+json','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
-const wait=ms=>new Promise(resolvePromise=>setTimeout(resolvePromise,ms));
 export const CHROME_STARTUP_TIMEOUT_MS=60000;
+export const CDP_COMMAND_TIMEOUT_MS=20000;
 const CHROME_STOP_GRACE_MS=1500;
+const CHROME_EXIT_DIAGNOSTIC_GRACE_MS=250;
 
 async function freePort(){
   const server=createTcpServer();
@@ -82,16 +83,46 @@ async function closeServer(server){
   server.closeAllConnections?.();
   await closed;
 }
-function cdpClient(url){
+export function cdpClient(url,{commandTimeoutMs=CDP_COMMAND_TIMEOUT_MS}={}){
   const socket=new WebSocket(url);let nextId=0;const pending=new Map();const events=[];
-  const ready=new Promise((resolvePromise,reject)=>{socket.addEventListener('open',()=>resolvePromise());socket.addEventListener('error',reject);});
+  const connection=new AbortController();
+  let disconnected,resolveReady,rejectReady;
+  const ready=new Promise((resolvePromise,reject)=>{resolveReady=resolvePromise;rejectReady=reject;});
+  ready.catch(()=>{}); // A disconnect before the first command must not be unhandled.
+  const settle=(id,error,result)=>{
+    const entry=pending.get(id);if(!entry) return;
+    pending.delete(id);clearTimeout(entry.timer);
+    error?entry.reject(new Error(`${entry.method}: ${error.message}`,{cause:error})):entry.resolve(result);
+  };
+  const disconnect=detail=>{
+    if(disconnected) return;
+    disconnected=new Error(`DevTools connection closed (${detail})`);
+    rejectReady(disconnected);
+    for(const id of pending.keys()) settle(id,disconnected);
+    connection.abort(disconnected);
+  };
+  socket.addEventListener('open',()=>{if(!disconnected) resolveReady();});
+  socket.addEventListener('close',event=>disconnect(`code=${event.code}${event.reason?`; ${event.reason}`:''}`));
+  socket.addEventListener('error',event=>disconnect(`WebSocket error${event.message?`: ${event.message}`:''}`));
   socket.addEventListener('message',event=>{
     const message=JSON.parse(event.data);
-    if(message.id&&pending.has(message.id)){const {resolve:resolvePromise,reject}=pending.get(message.id);pending.delete(message.id);message.error?reject(new Error(message.error.message)):resolvePromise(message.result);}
+    if(message.id&&pending.has(message.id)) settle(message.id,message.error?new Error(message.error.message):null,message.result);
     else events.push(message);
   });
-  const command=async(method,params={})=>{await ready;const id=++nextId;return new Promise((resolvePromise,reject)=>{pending.set(id,{resolve:resolvePromise,reject});socket.send(JSON.stringify({id,method,params}));});};
-  return {command,events,socket};
+  const command=(method,params={})=>{
+    if(disconnected) return Promise.reject(new Error(`${method}: ${disconnected.message}`,{cause:disconnected}));
+    const id=++nextId;
+    return new Promise((resolvePromise,reject)=>{
+      const timer=setTimeout(()=>settle(id,new Error(`CDP command timed out after ${commandTimeoutMs} ms`)),commandTimeoutMs);
+      pending.set(id,{method,resolve:resolvePromise,reject,timer});
+      ready.then(()=>{
+        if(!pending.has(id)) return;
+        try{socket.send(JSON.stringify({id,method,params}));}
+        catch(error){disconnect(`send failed: ${error.message}`);}
+      },error=>settle(id,error));
+    });
+  };
+  return {command,events,socket,signal:connection.signal};
 }
 async function findChrome(){
   for(const candidate of chromeCandidates){
@@ -116,7 +147,8 @@ async function staticServer(){
   await new Promise(resolvePromise=>server.listen(0,'127.0.0.1',resolvePromise));
   return {server,port:server.address().port};
 }
-async function inspectPage(client,url,localOrigin){
+async function inspectPage(client,url,localOrigin,signal){
+  signal.throwIfAborted();
   const state={url,sameOriginRequests:[],failedSameOrigin:[],externalUrls:[],externalBlocked:0,exceptions:[],consoleErrors:[]};
   await client.command('Network.enable');
   await client.command('Runtime.enable');
@@ -125,9 +157,11 @@ async function inspectPage(client,url,localOrigin){
   await client.command('Fetch.enable',{patterns:[{urlPattern:'*',requestStage:'Request'}]});
   const finishAt=Date.now()+12000;
   const navigation=client.command('Page.navigate',{url});
+  navigation.catch(()=>{}); // Navigation is awaited after processing intercepted requests.
   while(Date.now()<finishAt){
+    signal.throwIfAborted();
     const message=client.events.shift();
-    if(!message){await wait(20);continue;}
+    if(!message){await delay(20,undefined,{signal});continue;}
     if(message.method==='Fetch.requestPaused'){
       const requestUrl=message.params.request.url;
       if(requestUrl.startsWith(localOrigin)) await client.command('Fetch.continueRequest',{requestId:message.params.requestId});
@@ -163,7 +197,25 @@ async function main(){
     if(!target) throw new Error('Chrome page target missing');
     client=cdpClient(target.webSocketDebuggerUrl);
     const origin=`http://127.0.0.1:${site.port}`;
-    const pages=[await inspectPage(client,`${origin}/v2/index.html`,origin),await inspectPage(client,`${origin}/v2/regions/douglas-co/index.html`,origin)];
+    const inspectionSignal=AbortSignal.any([lifecycle.signal,client.signal]);
+    const chromeExited=()=>new Error(`Chrome exited during page inspection; exit code=${lifecycle.state.exitCode}; signal=${lifecycle.state.signal}`);
+    let pages;
+    let onExit;
+    try{
+      const exited=new Promise((_,reject)=>{
+        onExit=()=>reject(chromeExited());
+        if(lifecycle.signal.aborted) onExit();
+        else lifecycle.signal.addEventListener('abort',onExit,{once:true});
+      });
+      const inspect=async()=>[await inspectPage(client,`${origin}/v2/index.html`,origin,inspectionSignal),await inspectPage(client,`${origin}/v2/regions/douglas-co/index.html`,origin,inspectionSignal)];
+      pages=await Promise.race([inspect(),exited]);
+    }catch(error){
+      // Socket closure can precede the child exit event; observe it before cleanup sends SIGTERM.
+      if(client.signal.aborted&&!lifecycle.state.exited) await settlesWithin(lifecycle.closed,CHROME_EXIT_DIAGNOSTIC_GRACE_MS);
+      if(lifecycle.state.exited) throw chromeExited();
+      if(inspectionSignal.aborted&&error.name==='AbortError') throw inspectionSignal.reason;
+      throw error;
+    }finally{lifecycle.signal.removeEventListener('abort',onExit);}
     for(const page of pages){
       if(!page.loaded) throw new Error(`page did not load: ${page.url}`);
       if(page.exceptions.length||page.consoleErrors.length) throw new Error(`browser errors on ${page.url}: ${JSON.stringify({exceptions:page.exceptions,consoleErrors:page.consoleErrors})}`);

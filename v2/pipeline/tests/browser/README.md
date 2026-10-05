@@ -27,3 +27,10 @@ Importing `run.mjs` does not start the harness. Its exported `waitFor` helper
 accepts deadline, retry interval, request timeout, and process-state overrides
 for the offline `browser-harness.test.cjs` tests included in the standard Node
 test suite. Page assertions and their timing behavior are unchanged.
+
+DevTools commands have a 20-second bound (including connection readiness).
+A closed or failed connection rejects pending commands with their method names
+and rejects later commands immediately. Page inspection stops on a connection
+drop or Chrome exit, reporting Chrome's exit code/signal when it exits, then
+runs the same cleanup. Offline tests exercise dropped connections, unanswered
+commands, and handshake failure using a minimal local WebSocket endpoint.
