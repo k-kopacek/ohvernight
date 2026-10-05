@@ -127,6 +127,33 @@ test('T14: stale and unconfirmed rules merge restrictions most restrictively', (
     Date.parse('2026-09-26T00:00:00Z')).stay_limit_days, 3);
 });
 
+test('T5: conflicting rule records merge the most restrictive values and retain every source', () => {
+  const rules = [
+    {place_ids: ['conflict'], stay_limit_days: 8, requires_high_clearance: false,
+      source_url: 'https://example.org/looser'},
+    {place_ids: ['conflict'], stay_limit_days: 5, requires_high_clearance: true,
+      source_url: 'https://example.org/stricter'},
+    {place_ids: ['conflict'], stay_limit_days: 12, requires_high_clearance: false,
+      source_url: 'https://example.org/third'},
+  ];
+  const result = Trust.applyRules({id: 'conflict', stay_limit_days: 10}, {rules});
+  assert.equal(result.stay_limit_days, 5);
+  assert.equal(result.requires_high_clearance, true);
+  assert.equal(result.ruleReview, 'Conflicting rule records need review');
+  assert.equal(result.ruleSource, 'https://example.org/looser');
+  assert.deepEqual(result.ruleSources, rules.map(rule => rule.source_url));
+});
+
+test('T5: an outside-season motorhome trip is excluded before the clearance caution', () => {
+  const place = {id: 'seasonal-rv', kind: 'dispersed', checked_on: '2026-09-26',
+    requires_high_clearance: true, access: {designations: {
+      motorhome: {designation: 'open', dates_open: '05/01-09/30'}}}};
+  const result = TripRules.evaluate(place,
+    {arrive: '2027-01-15', depart: '2027-01-17', vehicle: 'motorhome'}, '2026-09-26');
+  assert.equal(result.status, 'excluded');
+  assert.equal(result.label, 'Outside mapped vehicle-access season');
+});
+
 test('T15: root fresh evaluations match the base golden matrix', () => {
   assertGolden(golden.root.flatMap(place => place.results), rootPlaces,
     (place, trip, today) => rootEvaluate(place, trip, today));
