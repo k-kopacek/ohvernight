@@ -172,6 +172,26 @@ class RegionContractTests(unittest.TestCase):
             self.valid(manifest, docs)
         self.assertEqual(raised.exception.rule, "R65")
 
+    def test_display_transport_R65_scalar_type_change(self):
+        for value in (True, 1.0):
+            with self.subTest(value=value):
+                manifest, docs = self.display_base()
+                docs["regions/synthetic/display/index.json"]["transport"]["water"]["count"] = value
+                with self.assertRaises(ContractError) as raised:
+                    self.valid(manifest, docs)
+                self.assertEqual(raised.exception.rule, "R65")
+
+    def test_display_properties_R62_scalar_type_change(self):
+        manifest, docs = self.display_base()
+        docs["data.json"]["layers"]["water"]["features"][0]["properties"]["numeric_property"] = 1
+        docs["regions/synthetic/display/water.geojson"]["features"][0]["properties"]["numeric_property"] = True
+        entry = docs["regions/synthetic/display/index.json"]["artifacts"][0]
+        entry["canonical_sha256"] = hashlib.sha256((json.dumps(docs["data.json"], ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode()).hexdigest()
+        self.refresh_display_hash(docs, "water")
+        with self.assertRaises(ContractError) as raised:
+            self.valid(manifest, docs)
+        self.assertEqual(raised.exception.rule, "R62")
+
     def test_display_transport_R65_extra_null_status_key(self):
         manifest, docs = self.display_base()
         manifest["layers"][0]["status_ref"] = None

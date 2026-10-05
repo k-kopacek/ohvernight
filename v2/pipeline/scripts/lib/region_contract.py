@@ -225,7 +225,7 @@ def _validate_display(manifest, resolve, coverage):
             canonical_record = _json_pointer(resolve(reference["path"]), reference.get("pointer", ""))
         except (KeyError, IndexError, TypeError, ValueError, FileNotFoundError):
             _error("R65", manifest, layer["id"], "canonical transport reference does not resolve")
-        if not isinstance(canonical_record, dict) or transport[layer["id"]] != canonical_record:
+        if not isinstance(canonical_record, dict) or _display_json_bytes(transport[layer["id"]]) != _display_json_bytes(canonical_record):
             _error("R65", manifest, layer["id"], "display transport differs from canonical record")
     for layer_id, declaration in declared:
         if layer_id != "coverage" and declaration.get("format") != "feature_collection":
@@ -303,7 +303,7 @@ def _validate_display(manifest, resolve, coverage):
             restored = copy.deepcopy(properties)
             restored["evidence"] = evidence_table[evidence_index]
             canonical_properties = canonical_feature.get("properties", {})
-            if restored != canonical_properties:
+            if _display_json_bytes(restored) != _display_json_bytes(canonical_properties):
                 _error("R62", manifest, layer_id, "display evidence or properties differ from canonical feature")
         if entry.get("dropped_degenerate_parts") != dropped_total:
             _error("R63", manifest, layer_id, "display drop count differs from canonical rounding")
