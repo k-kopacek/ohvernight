@@ -4,6 +4,7 @@
   const layers=new Map(),handlers=new Map(),styles=new Map(),labelRules=new Map(),labelled=new Set();
   const LABEL_LIMIT=32;
   const HIT_TOLERANCE=14;
+  const TAP_MOVEMENT_SLOP=10;
   const TOUCH_TAP_WINDOW=280;
   const TOUCH_CLICK_WINDOW=700,TOUCH_RADIUS=30;
   let pendingTap,mouseTapZoom,mouseTapPoint,lastTouch,lastTap,resizeFrame;
@@ -89,6 +90,9 @@
     const elapsed=previous?current.time-previous.time:Infinity;
     return elapsed>=0&&elapsed<=TOUCH_TAP_WINDOW&&Math.hypot(current.clientX-previous.clientX,current.clientY-previous.clientY)<=TOUCH_RADIUS;
   }
+  function withinTapSlop(start,current){
+    return Math.hypot(current.clientX-start.clientX,current.clientY-start.clientY)<=TAP_MOVEMENT_SLOP;
+  }
   function doubleClick(event){
     if(event.originalEvent?.pointerType==='touch'||matchingTouch(event.originalEvent||{},lastTouch))return;
     cancelTap();map.setZoomAround(mouseTapPoint||event.latlng,Math.min(19,(mouseTapZoom??map.getZoom())+1),{animate:false});
@@ -115,16 +119,29 @@
       let gesture;
       const touchStart=event=>{
         cancelTap();const t=event.touches[0];
-        if(event.touches.length!==1||event.target.closest?.('.leaflet-control')){gesture=null;lastTap=null;return;}
-        gesture={clientX:t.clientX,clientY:t.clientY};
+        if(event.touches.length!==1||event.target.closest?.('.leaflet-control')){gesture={cancelled:true};lastTap=null;return;}
+        const r=surface.getBoundingClientRect(),point={x:t.clientX-r.left,y:t.clientY-r.top},latlng=map.containerPointToLatLng(point);
+        gesture={clientX:t.clientX,clientY:t.clientY,point,latlng,projected:map.latLngToContainerPoint(latlng)};
       };
-      const touchMove=()=>{gesture=null;lastTap=null;cancelTap();};
+      const touchMove=event=>{
+        if(gesture&&!gesture.cancelled&&event.touches.length===1&&withinTapSlop(gesture,event.touches[0]))return;
+        if(gesture)gesture.cancelled=true;lastTap=null;cancelTap();
+      };
       const touchEnd=event=>{
         const t=event.changedTouches[0];if(!t)return;
         const r=surface.getBoundingClientRect(),point={x:t.clientX-r.left,y:t.clientY-r.top};
-        lastTouch={time:event.timeStamp,clientX:t.clientX,clientY:t.clientY,point};
-        const clean=!!gesture&&event.touches.length===0&&event.changedTouches.length===1;gesture=null;
-        if(!clean){lastTap=null;return;}
+        lastTouch={time:event.timeStamp,clientX:t.clientX,clientY:t.clientY,point,handled:false};
+        const tracked=!!gesture,clean=tracked&&!gesture.cancelled&&event.touches.length===0&&event.changedTouches.length===1&&withinTapSlop(gesture,t);
+        // Clean jitter belongs to the initial contact. Reproject its map
+        // coordinate because Leaflet may pan below our tap-slop threshold.
+        const projected=clean?map.latLngToContainerPoint(gesture.latlng):null;
+        // Leaflet rounds projections; retain the initial fractional residual.
+        const target=clean?{x:gesture.point.x+projected.x-gesture.projected.x,y:gesture.point.y+projected.y-gesture.projected.y}:null;
+        if(event.touches.length===0)gesture=null;else if(gesture)gesture.cancelled=true;
+        // A tracked pan/pinch is consumed without selection. An untracked
+        // release remains eligible for the compatibility-click fallback.
+        if(!clean){lastTouch.handled=tracked;lastTap=null;return;}
+        lastTouch.handled=true;
         // Touchend is authoritative: Safari need not deliver compatibility clicks.
         // A 280 ms deferral (coordinator decision) prevents a first fit changing
         // the view before the second tap, and prevents selection on a double tap.
@@ -134,7 +151,7 @@
         }
         lastTap=lastTouch;
         if(scope.CustomEvent)surface.dispatchEvent(new scope.CustomEvent('exploremaptap',{bubbles:true}));
-        pendingTap=scope.setTimeout(()=>{pendingTap=null;selectTap(point);},TOUCH_TAP_WINDOW);
+        pendingTap=scope.setTimeout(()=>{pendingTap=null;selectTap(target);},TOUCH_TAP_WINDOW);
       };
       const touchCancel=()=>{gesture=null;lastTap=null;lastTouch=null;cancelTap();};
       for(const [name,handler] of [['touchstart',touchStart],['touchmove',touchMove],['touchend',touchEnd],['touchcancel',touchCancel]]){
@@ -143,8 +160,8 @@
       const click=event=>{
         if(event.detail>1||event.target.closest?.('.leaflet-control')||map.dragging?.moved()||(!event.clientX&&!event.clientY))return;
         const remembered=matchingTouch(event,lastTouch);if(lastTouch&&event.timeStamp-lastTouch.time>TOUCH_CLICK_WINDOW)lastTouch=null;
-        if(event.pointerType==='touch'||remembered)return; // Already scheduled from touchend, including plain Safari clicks.
-        lastTouch=null;lastTap=null;cancelTap();const r=surface.getBoundingClientRect(),point={x:event.clientX-r.left,y:event.clientY-r.top};
+        if(remembered?.handled)return; // Scheduled or consumed by touchend, including plain Safari clicks.
+        lastTouch=null;lastTap=null;cancelTap();const r=surface.getBoundingClientRect(),point=remembered?.point||{x:event.clientX-r.left,y:event.clientY-r.top};
         mouseTapZoom=map.getZoom();mouseTapPoint=map.containerPointToLatLng(point);selectTap(point);
       };
       surface.addEventListener('click',click,true);mapBindings.push([surface,'click',click,true]);

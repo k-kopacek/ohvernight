@@ -142,7 +142,8 @@
         const actions=element('div',undefined,'explore-layer-actions');actions.append(mode,status,retry,button('Show source',showSources));
         const legend=element('div',undefined,'explore-land-legend');
         const agencies=[...new Set(entry.sourceIds.map(id=>manifest.sources[id]?.agency).filter(Boolean))];
-        row.dataset.layerId=entry.id;row.append(label,element('p','Source: '+agencies.join(' · '),'explore-layer-source'),element('p',entry.description,'explore-layer-limitation'),actions,legend);list.append(row);rows.set(entry.id,{row,status,retry,check,legend,mode});renderLandLegend(entry,legend,[]);
+        row.dataset.layerId=entry.id;row.append(label);if(agencies.length)row.append(element('p','Source: '+agencies.join(' · '),'explore-layer-source'));
+        row.append(element('p',entry.description,'explore-layer-limitation'),actions,legend);list.append(row);rows.set(entry.id,{row,status,retry,check,legend,mode});renderLandLegend(entry,legend,[]);
         if(entry.format==='place_list'){const list=region.places[entry.id];status.textContent=Array.isArray(list)?(list.length?list.length+' locations loaded':'No features in this dataset'):'Could not load';}
         check.onchange=()=>{
           if(check.checked)visibleLayers.add(entry.id);else visibleLayers.delete(entry.id);

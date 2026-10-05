@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'../..'),source=fs.readFileSync(path.join(root,'explore/map-adapter.js'),'utf8');
 const names=['init','addLayer','removeLayer','setVisible','setStyle','setPins','onFeature','fit','setBasemap','destroy','setSelected','setLabels'];
-function predicates(){const context={};vm.runInNewContext(source.replace('const api={init,','scope.testPredicates={hitGeometry,chooseHit,resolveTap,HIT_TOLERANCE,layers,handlers,labelled,matchingTouch,pinActivation,isDoubleTap,setMap:value=>{map=value;}}; const api={init,'),context);return context.testPredicates;}
+function predicates(){const context={};vm.runInNewContext(source.replace('const api={init,','scope.testPredicates={hitGeometry,chooseHit,resolveTap,HIT_TOLERANCE,layers,handlers,labelled,matchingTouch,pinActivation,isDoubleTap,withinTapSlop,TAP_MOVEMENT_SLOP,setMap:value=>{map=value;}}; const api={init,'),context);return context.testPredicates;}
 const project=([x,y])=>({x,y});
 test('A12 hit tolerance includes the boundary for lines and points, including multipart lines',()=>{
  const H=predicates(),line={type:'LineString',coordinates:[[0,0],[100,0]]};
@@ -104,7 +104,7 @@ test('A12 regression samples include shortest, longest, real crossings and eight
 test('A12 touch selection uses fractional touch coordinates rather than the rounded compatibility click',()=>{
  const surface=new EventTarget();surface.getBoundingClientRect=()=>({left:0,top:0});surface.closest=()=>null;
  const active=new Set();let scheduled,chosen;
- const map={getContainer:()=>surface,createPane(){},getPane:()=>({style:{}}),on(){},off(){},setView(){},getZoom:()=>18,getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1}),hasLayer:g=>active.has(g),latLngToContainerPoint:p=>({x:p[1],y:p[0]}),containerPointToLatLng:p=>({lng:p.x,lat:p.y}),remove(){},removeLayer:g=>active.delete(g)};
+ const map={getContainer:()=>surface,createPane(){},getPane:()=>({style:{}}),on(){},off(){},setView(){},getZoom:()=>18,getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1}),hasLayer:g=>active.has(g),latLngToContainerPoint:p=>p.lng===undefined?({x:p[1],y:p[0]}):({x:Math.round(p.lng),y:Math.round(p.lat)}),containerPointToLatLng:p=>({lng:p.x,lat:p.y}),remove(){},removeLayer:g=>active.delete(g)};
  const context={module:{exports:{}},setTimeout(fn){scheduled=fn;return 1;},clearTimeout(){scheduled=null;}};
  context.L={map:()=>map,control:{scale:()=>({addTo(){}})},tileLayer:()=>({addTo(){return this;}}),geoJSON(data){const group={addTo(){active.add(this);return this;},eachLayer(fn){data.features.forEach(feature=>fn({feature,getBounds:()=>({getNorthWest:()=>[feature.geometry.coordinates[0][1],10],getSouthEast:()=>[feature.geometry.coordinates[0][1],20]})}));}};return group;}};
  vm.runInNewContext(source,context);const A=context.module.exports;A.init('map',{center:[0,0],zoom:18});
@@ -152,6 +152,33 @@ test('A12 double-tap uses touch time and distance, beyond Leaflet 200 ms, with d
  assert.equal(H.isDoubleTap(first,{time:300,clientX:50.01,clientY:30}),false);
  assert.equal(H.isDoubleTap(first,{time:99,clientX:20,clientY:30}),false);
  assert.equal(H.isDoubleTap(null,{time:200,clientX:20,clientY:30}),false);
+});
+
+test('D1: tap slop uses total displacement from the start, including its exact boundary',()=>{
+ const H=predicates(),start={clientX:20,clientY:30};assert.equal(H.TAP_MOVEMENT_SLOP,10);
+ for(const [dx,dy] of [[3,0],[6,0],[10,0],[6,8]])assert.equal(H.withinTapSlop(start,{clientX:20+dx,clientY:30+dy}),true);
+ assert.equal(H.withinTapSlop(start,{clientX:30.01,clientY:30}),false);assert.equal(H.withinTapSlop(start,{clientX:20,clientY:55}),false);
+});
+
+test('D1: jitter schedules one fractional selection; unhandled click falls back; pans and pinch stay consumed',()=>{
+ const surface=new EventTarget();surface.getBoundingClientRect=()=>({left:0,top:0});surface.closest=()=>null;
+ const active=new Set();let scheduled,chosen,zoom=18;
+ const map={getContainer:()=>surface,createPane(){},getPane:()=>({style:{}}),on(){},off(){},setView(){},getZoom:()=>zoom,setZoomAround(point,value){zoom=value;},getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1}),hasLayer:g=>active.has(g),latLngToContainerPoint:p=>p.lng===undefined?({x:p[1],y:p[0]}):({x:Math.round(p.lng),y:Math.round(p.lat)}),containerPointToLatLng:p=>({lng:p.x,lat:p.y}),remove(){},removeLayer:g=>active.delete(g)};
+ const context={module:{exports:{}},setTimeout(fn){scheduled=fn;return 1;},clearTimeout(){scheduled=null;}};
+ context.L={map:()=>map,control:{scale:()=>({addTo(){}})},tileLayer:()=>({addTo(){return this;}}),geoJSON(data){return {addTo(){active.add(this);return this;},eachLayer(fn){data.features.forEach(feature=>fn({feature,getBounds:()=>({getNorthWest:()=>[feature.geometry.coordinates[0][1],10],getSouthEast:()=>[feature.geometry.coordinates[0][1],40]})}));}};}};
+ vm.runInNewContext(source,context);const A=context.module.exports;A.init('map',{center:[0,0],zoom:18});
+ A.addLayer('lines',{features:[['target',100.6],['neighbor',101]].map(([id,y])=>({properties:{id},geometry:{type:'LineString',coordinates:[[10,y],[40,y]]}}))},{});A.onFeature('lines',f=>{chosen=f.properties.id;});
+ const point={clientX:15.5,clientY:100.6};
+ function event(type,time,p=point,multiple=false,remaining=[]){const e=new Event(type,{cancelable:true});Object.defineProperty(e,'timeStamp',{value:time});if(type==='click')Object.assign(e,{clientX:Math.round(p.clientX),clientY:Math.round(p.clientY),detail:1});else{e.touches=type==='touchend'?remaining:multiple?[p,{clientX:40,clientY:100}]:[p];e.changedTouches=[p];}surface.dispatchEvent(e);}
+ for(const [i,dx] of [3,6,10].entries()){
+  chosen=undefined;scheduled=null;const time=1000+i*1000,p={...point,clientX:point.clientX+dx};event('touchstart',time);event('touchmove',time+5,p);event('touchend',time+10,p);event('click',time+15,p);
+  assert.equal(chosen,undefined,'handled native tap skips the compatibility click');assert.equal(typeof scheduled,'function');scheduled();assert.equal(chosen,'target');
+ }
+ chosen=undefined;scheduled=null;event('touchstart',5000);event('touchmove',5005,{...point,clientX:point.clientX+25});event('touchmove',5010);event('touchend',5015);event('click',5020);assert.equal(scheduled,null);assert.equal(chosen,undefined,'a pan cannot become a tap by returning to the start');
+ event('touchend',6000);event('click',6010);assert.equal(chosen,'target','unhandled release falls back with fractional coordinates, not rounded neighbor');
+ chosen=undefined;scheduled=null;event('touchstart',7000);event('touchmove',7005,point,true);event('touchend',7010);event('click',7015);assert.equal(scheduled,null);assert.equal(chosen,undefined,'multi-touch remains consumed without selection');
+ event('touchstart',7500,point,true);event('touchend',7505,point,false,[point]);event('touchend',7510);event('click',7515);assert.equal(scheduled,null);assert.equal(chosen,undefined,'sequential finger releases remain consumed through the last release');
+ event('touchstart',8000);event('touchmove',8005,{...point,clientX:point.clientX+3});event('touchend',8010,{...point,clientX:point.clientX+3});assert.equal(typeof scheduled,'function');event('touchstart',8240);event('touchmove',8245,{...point,clientX:point.clientX+3});event('touchend',8250,{...point,clientX:point.clientX+3});event('click',8260);assert.equal(scheduled,null);assert.equal(chosen,undefined);assert.equal(zoom,19,'jittery double-tap zooms once');A.destroy();
 });
 
 test('A12 viewport and orientation changes coalesce renderer resize and clean up listeners/frame',()=>{
