@@ -52,10 +52,10 @@ A3 was approved by the owner on 2026-10-04 with pull request #7.
 - *Resolution.* `explore.json` may also carry, under the same closed schema:
   - `storage_keys`: an object of key names (`trip`, `plan`, `notes`, and any other key the base-commit page used), each matching `^[a-z0-9-]+$`. A test pins the values to the keys listed in 17.2.
   - `trip_defaults`: the default trip inputs the base-commit page shipped.
-  - `landing`: display strings for a region's landing form, used only when `trip_planner` is on, carried byte-identical from the base-commit page.
+  - `landing`: display strings for a region's landing form, used only when `trip_planner` is on, carried byte-identical from the base-commit page. It may include `region_links`, a list of `{label, region_id}`; the shell builds the link from the validated region ID, so no URL or path is stored. This is where the base-commit link from the Aspen landing to Douglas County lives.
   - `export_names`: file names the base-commit page used for downloads.
   - capability `region_extras` (boolean): when true the shell loads `regions/<region id>/extras.js`. The path is derived by the shell from the active region ID; the configuration never carries a script path or URL to load.
-- *Rules.* These are presentation only. No field carries a trust statement, a limitation, a source description, a freshness policy or a rule; those stay in the manifest. Every string in `explore.json` obeys the word rule of 10.2 (extended from `title` to all strings), except a base-commit string inventoried under A4. T11 gains a negative test for each new field, including an attempt to declare a script path.
+- *Rules.* These are presentation only. No field carries a trust statement, a limitation, a source description, a freshness policy or a rule; those stay in the manifest. Every string in `explore.json` obeys the word rule of 10.2 (extended from `title` to all strings), except a base-commit string inventoried under A4. That inventory also lists a base-commit string that uses one of the 10.2 words in a sense unrelated to access or permission; the only such string today is the landing button `Explore the open map` (17.1). T11 gains a negative test for each new field, including an attempt to declare a script path.
 - *Sections changed by A5:* 10.2, 19 (T11).
 
 **A6 (2026-10-04; final wording decided by the owner on 2026-10-04) — GPX export and proximity read display geometry (17.3, T8, T9).**
