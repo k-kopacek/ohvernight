@@ -71,17 +71,11 @@ class RegionContractTests(unittest.TestCase):
             self.assertEqual({key: value["statement"] for key, value in manifest["fact_coverage"].items()}, expected[path.parent.name])
 
     def test_normalize_transport_aliases(self):
-        rows = [
-            ({"status": "available", "completed_at": "2026-01-01T00:00:00Z"}, {"status": "available", "last_checked_at": "2026-01-01T00:00:00Z", "last_retrieved_at": "2026-01-01T00:00:00Z"}, ["completed_at"]),
-            ({"status": "available", "retrieved_at": "2026-01-01T00:00:00Z"}, {"status": "available", "last_checked_at": "2026-01-01T00:00:00Z", "last_retrieved_at": "2026-01-01T00:00:00Z"}, ["retrieved_at"]),
-            ({"status": "failed", "checked_at": "2026-01-01T00:00:00Z", "error": "nope"}, {"status": "unavailable", "last_checked_at": "2026-01-01T00:00:00Z", "reason": "nope"}, ["checked_at", "failed", "error"]),
-            ({"status": "available", "last_checked_at": "2026-01-01T00:00:00Z", "last_confirmed_at": "2026-01-01T00:00:00Z"}, {"status": "available", "last_retrieved_at": "2026-01-01T00:00:00Z"}, ["inferred_retrieval", "last_confirmed_at"]),
-        ]
-        for record, expected, aliases in rows:
-            normalized, used = normalize_transport(record)
-            for key, value in expected.items():
-                self.assertEqual(normalized[key], value)
-            self.assertEqual(used, aliases)
+        vectors = self.load("pipeline/tests/fixtures/transport-vectors.json")
+        for vector in vectors:
+            normalized, used = normalize_transport(vector["input"])
+            self.assertEqual(normalized, vector["record"])
+            self.assertEqual(used, vector["used"])
 
     def test_pinned_real_transport_alias_sets(self):
         aspen = validate_region(V2 / "regions/aspen/region.json", V2)

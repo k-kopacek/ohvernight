@@ -1,0 +1,147 @@
+(function(scope){
+  'use strict';
+  const registryApi=(typeof require==='function'?require('./layer-registry.js'):scope.LayerRegistry);
+  const REGION_ID=/^[a-z0-9-]+$/;
+  const DEFAULT_REGION=[97,115,112,101,110].map(code=>String.fromCharCode(code)).join('');
+
+  class RegionLoaderError extends Error{
+    constructor(code,message){super(message);this.name='RegionLoaderError';this.code=code;}
+  }
+
+  function resolveRegionId(search,defaultRegion=DEFAULT_REGION){
+    let value;
+    if(search instanceof URLSearchParams) value=search.get('region');
+    else if(typeof search==='string') value=new URLSearchParams(search.replace(/^\?/,'')).get('region');
+    else if(search && typeof search==='object') value=search.region||(
+      typeof search.search==='string'?new URLSearchParams(search.search.replace(/^\?/,'')).get('region'):undefined);
+    value=value===null||value===undefined||value===''?defaultRegion:value;
+    if(typeof value!=='string' || !REGION_ID.test(value)){
+      throw new RegionLoaderError('REGION_NOT_FOUND','Region identifier is invalid');
+    }
+    return value;
+  }
+
+  function joinPath(base,path){
+    const left=String(base||'').replace(/\/+$/,'');
+    return left?left+'/'+path:path;
+  }
+
+  function pointerGet(document,pointer){
+    if(pointer===undefined||pointer===null||pointer==='') return document;
+    if(typeof pointer!=='string'||pointer[0]!=='/') throw new Error('Invalid JSON pointer');
+    let value=document;
+    for(const raw of pointer.slice(1).split('/')){
+      const token=raw.replace(/~1/g,'/').replace(/~0/g,'~');
+      value=value[Array.isArray(value)?Number(token):token];
+    }
+    return value;
+  }
+
+  function activePath(regionId,path,kind){
+    if(typeof path!=='string'||!path||path.includes('..')||path.startsWith('/')||/^https?:/i.test(path)){
+      throw new Error('Invalid '+kind+' path');
+    }
+    const prefix='regions/'+regionId+'/';
+    if(kind==='display' && !path.startsWith(prefix+'display/')) throw new Error('Display path is outside active region');
+    return path;
+  }
+
+  async function readJson(fetcher,url){
+    const response=await fetcher(url);
+    if(response && typeof response.json==='function'){
+      if(response.ok===false) throw new Error('HTTP '+(response.status||0));
+      return response.json();
+    }
+    return response;
+  }
+
+  function restoreEvidence(document){
+    const table=Array.isArray(document.evidence_table)?document.evidence_table:[];
+    if(!Array.isArray(document.features)) throw new Error('Display file is not a FeatureCollection');
+    return {...document,features:document.features.map(feature=>{
+      const properties={...(feature.properties||{})};
+      if(Number.isInteger(properties.evidence) && properties.evidence>=0 && properties.evidence<table.length){
+        properties.evidence=table[properties.evidence];
+      }
+      return {...feature,properties};
+    })};
+  }
+
+  function createRegionLoader(options={}){
+    const fetcher=options.fetch;
+    if(typeof fetcher!=='function') throw new TypeError('An injected fetch function is required');
+    const base=options.basePath||'';
+    const makeUrl=path=>joinPath(base,path);
+    async function fetchDisplay(regionId,path,index,layerId){
+      activePath(regionId,path,'display');
+      const artifact=index.artifacts.find(item=>item.path===path);
+      if(!artifact) throw new Error('Display artifact is not declared in the index');
+      if(layerId && artifact.layer_id!==layerId) throw new Error('Display artifact layer ID does not match its declaration');
+      const url=makeUrl(path)+'?v='+String(artifact.sha256||'').slice(0,12);
+      const document=await readJson(fetcher,url);
+      if(!document || document.type!=='FeatureCollection') throw new Error('Display file is not a FeatureCollection');
+      if(layerId && document.layer_id!==layerId) throw new Error('Display file layer ID does not match its declaration');
+      return restoreEvidence(document);
+    }
+    async function loadRegion(search){
+      const regionId=resolveRegionId(search,options.defaultRegion||DEFAULT_REGION);
+      const manifestPath='regions/'+regionId+'/region.json';
+      let manifest;
+      try{manifest=await readJson(fetcher,makeUrl(manifestPath));}
+      catch(error){throw new RegionLoaderError('REGION_NOT_FOUND','Region manifest could not be loaded: '+error.message);}
+      if(!manifest || manifest.contract_version!==1 || manifest.region?.id!==regionId){
+        throw new RegionLoaderError('REGION_NOT_AVAILABLE','Manifest does not describe the requested region');
+      }
+      const configPath='regions/'+regionId+'/explore.json';
+      const indexPath='regions/'+regionId+'/display/index.json';
+      let config,index;
+      try{
+        [config,index]=await Promise.all([readJson(fetcher,makeUrl(configPath)),readJson(fetcher,makeUrl(indexPath))]);
+      }catch(error){throw new RegionLoaderError('REGION_NOT_AVAILABLE','Region configuration or display index could not be loaded: '+error.message);}
+      if(!index || !Array.isArray(index.artifacts)) throw new RegionLoaderError('REGION_NOT_AVAILABLE','Display index is invalid');
+      let entries;
+      try{entries=registryApi.buildLayerRegistry(manifest,config);}catch(error){throw new RegionLoaderError('REGION_NOT_AVAILABLE',error.message);}
+      const declaredPaths=new Set(index.artifacts.map(item=>item.path));
+      const coveragePath=manifest.coverage?.display?.path;
+      if(!coveragePath || !declaredPaths.has(coveragePath)) throw new RegionLoaderError('REGION_NOT_AVAILABLE','Coverage display artifact is missing');
+      let coverage;
+      try{coverage=await fetchDisplay(regionId,coveragePath,index,'coverage');}catch(error){throw new RegionLoaderError('REGION_NOT_AVAILABLE','Coverage display could not be loaded: '+error.message);}
+      const places={};
+      await Promise.all(manifest.layers.filter(layer=>layer.format==='place_list').map(async layer=>{
+        try{
+          const document=await readJson(fetcher,makeUrl(activePath(regionId,layer.path,'canonical')));
+          const value=pointerGet(document,layer.pointer);
+          places[layer.id]=value===document && /(?:places|options)/.test(layer.id)?(document.places||document):value;
+        }catch(error){places[layer.id]={state:'failed',error:error.message};}
+      }));
+      const state=new Map(entries.map(entry=>[entry.id,{...entry,state:'idle'}]));
+      async function loadLayer(layerId,zoom){
+        const entry=state.get(layerId);
+        if(!entry) throw new Error('Unknown layer: '+layerId);
+        if(entry.minZoom!==null && zoom!==undefined && Number(zoom)<entry.minZoom) return {id:layerId,state:'deferred',minZoom:entry.minZoom};
+        if(entry.format!=='feature_collection' || !entry.displayPath) return {id:layerId,state:'unavailable'};
+        entry.state='loading';
+        try{
+          entry.data=await fetchDisplay(regionId,entry.displayPath,index,entry.id);
+          entry.state='loaded';
+          entry.count=entry.data.features.length;
+          return {id:layerId,state:'loaded',count:entry.count,data:entry.data};
+        }catch(error){
+          entry.state='failed';entry.error=error;
+          return {id:layerId,state:'failed',error};
+        }
+      }
+      async function loadDefaultLayers(){
+        const result=[];
+        for(const entry of [...state.values()].filter(item=>item.defaultOn)) result.push(await loadLayer(entry.id));
+        return result;
+      }
+      return {regionId,manifest,config,index,coverage,places,registry:entries,layers:state,loadLayer,loadDefaultLayers};
+    }
+    return {loadRegion,resolveRegionId:(search)=>resolveRegionId(search,options.defaultRegion||DEFAULT_REGION)};
+  }
+
+  const api={createRegionLoader,resolveRegionId,RegionLoaderError,REGION_ID};
+  if(typeof module!=='undefined') module.exports=api;
+  scope.RegionLoader=api;
+})(typeof globalThis!=='undefined'?globalThis:this);
