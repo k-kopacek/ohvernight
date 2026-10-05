@@ -64,7 +64,21 @@ export async function runExploreChecks(client,origin,signal,root){
   for(let i=0;i<controls.length*2+6;i++){await key('Tab');const focus=await evaluate('({id:document.activeElement.dataset.focusCheck,inBody:!!document.activeElement.closest("#explore-sheet-body")})');if(focus.id)seen.add(focus.id);assert.equal(focus.inBody,false,'B5 collapsed body inert');}
   for(const control of controls)assert.ok(seen.has(control),'B5 unreachable control '+control);assert.equal(await evaluate(`[...document.querySelectorAll('[tabindex]')].some(e=>Number(e.getAttribute('tabindex'))>0)`),false);result.checks.push('B5');
   await evaluate('explore.$("layers").click();explore.$("sources").click()');assert.equal(await evaluate('explore.$("source-dialog").open'),true);await key('Escape');await key('Escape');
-  await evaluate('explore.$("search").click()');const searchOpen=await evaluate('!!document.querySelector("dialog[open]")');assert.equal(searchOpen,true);await key('Escape');
+  await evaluate('explore.$("search").click()');assert.equal(await evaluate('!explore.$("list-view").hidden&&explore.sheet.expanded&&!document.querySelector("dialog[open]")'),true,'B6 search opens persistent sheet list with map exposed');await evaluate(`(()=>{
+   const list=explore.$('list-view'),query=list.querySelector('#query')||explore.$('query');
+   const result=[...list.querySelectorAll('button')].find(e=>e.classList.contains('explore-result')||e.parentElement===explore.$('search-results'));
+   if(!result)throw Error('A11 no search result');
+   const title=result.querySelector('strong')?.textContent||result.textContent;
+   query.value=title.split(' · #')[0];query.dispatchEvent(new Event('input',{bubbles:true}));
+   window.__a11Query=query;window.__a11Value=query.value;window.__a11List=list;
+   const filtered=[...list.querySelectorAll('button')].filter(e=>e.classList.contains('explore-result')||e.parentElement===explore.$('search-results'));
+   if(!filtered.length)throw Error('A11 filtered list disappeared');window.__a11Count=filtered.length;filtered[0].click();
+  })()`);
+  assert.equal(await evaluate('!explore.$("detail-view").hidden&&explore.$("list-view").hidden&&!document.querySelector("dialog[open]")'),true,'A11 selection opens sheet detail');
+  await evaluate('explore.$("detail-back").click()');
+  assert.equal(await evaluate('explore.$("list-view")===window.__a11List&&!explore.$("list-view").hidden&&window.__a11Query.value===window.__a11Value'),true,'A11 Back preserves list and filter');
+  assert.equal(await evaluate('[...explore.$("list-view").querySelectorAll("button")].filter(e=>e.classList.contains("explore-result")||e.parentElement===explore.$("search-results")).length'),await evaluate('window.__a11Count'),'A11 filtered results persist');
+  await key('Escape');
   async function checkTargets(){const small=await evaluate(`[...document.querySelectorAll('button,input,select,textarea,summary,[role=button],a')].filter(${visible}).filter(e=>!e.closest('.leaflet-control-attribution')&&!(e.tagName==='A'&&e.closest('p')&&e.parentElement.childNodes.length>1)).filter(e=>{const r=e.getBoundingClientRect();return r.width<44||r.height<44}).map(e=>e.id||e.textContent)`);assert.deepEqual(small,[],'B2 overlay target size');}
   const overlays=await evaluate('[...document.querySelectorAll("dialog")].length');for(let i=0;i<overlays;i++){await evaluate(`(()=>{const d=document.querySelectorAll('dialog')[${i}];explore.openDialog(d);return d.open})()`);await checkTargets();await key('Escape');}
   await evaluate('explore.drawer.close();explore.sheet.setExpanded(false)');assert.ok(await evaluate(AREA)>=(width===1440?90:minimum),'B6 restored map '+JSON.stringify(await evaluate('({free:'+AREA+',open:[...document.querySelectorAll("dialog[open]")].map(x=>x.id),drawer:explore.$("drawer").hidden})') ));result.checks.push('B6');

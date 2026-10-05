@@ -76,7 +76,7 @@
   function miles(place){const a=place.coordinates,b=resort()?.coordinates;if(!b)return Infinity;const rad=Math.PI/180,dlat=(a[1]-b[1])*rad,dlon=(a[0]-b[0])*rad,h=Math.sin(dlat/2)**2+Math.cos(a[1]*rad)*Math.cos(b[1]*rad)*Math.sin(dlon/2)**2;return 6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))/1609.344;}
   function result(place){const node=button('',()=>showPlace(place));node.className='explore-result';node.dataset.place=place.id;node.append(el('strong',place.name),el('small',place.label),el('small',miles(place).toFixed(1)+' mi direct'),el('small','Official listing · trip needs confirmation'));return node;}
   function render(){
-   places=evaluate(region,trip);const box=$('sheet-body');box.replaceChildren(toolbar);
+   places=evaluate(region,trip);const box=$('list-body');box.replaceChildren(toolbar);
    const failed=region.registry.filter(x=>x.format==='place_list'&&x.kind==='overnight_inventory').some(x=>!Array.isArray(region.places[x.id]));
    const count=places.filter(p=>p.status==='excluded').length;$('summary').textContent=failed?'Listings could not load':places.length+' sourced places · '+count+' trip conflicts';
    if(failed)paragraph(box,'Listings could not load');
@@ -84,8 +84,8 @@
    box.append(button('Explore a room backup →',()=>{kind='lodging';render();}));
    const health=el('details'),summary=el('summary','What has been checked?');health.open=true;health.append(summary);
    for(const key of ['fire','closures','inventory'])paragraph(health,sourceSummary(region)[key]);box.append(health);
-   const filters=el('nav');filters.setAttribute('aria-label','Stay type');for(const [value,label] of [['all','All'],['campground','Campgrounds'],['dispersed','Dispersed'],['lodging','Rooms']]){const node=button(label,()=>{kind=value;render();});node.setAttribute('aria-pressed',String(kind===value));filters.append(node);}box.append(filters);
-   const label=el('label'),check=el('input');check.type='checkbox';check.checked=conflicts;check.onchange=()=>{conflicts=check.checked;render();};label.append(check,el('span','Include date / vehicle / stay-limit conflicts'));box.append(label);
+   const panel=el('details',undefined,'explore-filters');panel.append(el('summary','Filters'));const filters=el('nav');filters.setAttribute('aria-label','Stay type');for(const [value,label] of [['all','All'],['campground','Campgrounds'],['dispersed','Dispersed'],['lodging','Rooms']]){const node=button(label,()=>{kind=value;render();});node.setAttribute('aria-pressed',String(kind===value));filters.append(node);}panel.append(filters);box.append(panel);
+   const label=el('label'),check=el('input');check.type='checkbox';check.checked=conflicts;check.onchange=()=>{conflicts=check.checked;render();};label.append(check,el('span','Include date / vehicle / stay-limit conflicts'));panel.append(label);
    for(const slot of ['a','b']){const place=places.find(p=>p.id===plan[slot]);if(place){box.append(el('h2',slot==='a'?'PLAN A':'BACKUP'),result(place),button('Remove',()=>{plan[slot]=null;persist();render();}));}}
    const shown=places.filter(p=>(kind==='all'||p.kind===kind)&&(conflicts||p.status!=='excluded')).sort((a,b)=>(a.status==='excluded')-(b.status==='excluded')||miles(a)-miles(b));
    for(const place of shown)box.append(result(place));if(!shown.length&&!failed)paragraph(box,'No places match. Try another stay type or include conflicts.');

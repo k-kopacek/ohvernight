@@ -17,18 +17,16 @@
     host.innerHTML=`<div id="explore-map" class="explore-map" aria-label="Interactive map"></div>
       <header class="explore-topbar"><span class="explore-region"></span><nav aria-label="Explore"><button id="explore-layers" type="button" aria-expanded="false">Layers</button><button id="explore-search" type="button">Search</button></nav></header>
       <nav class="explore-tools" aria-label="Map controls"><button id="explore-satellite" type="button" aria-pressed="true">Satellite</button><button id="explore-topo" type="button" aria-pressed="false">Topo</button><button id="explore-fit" type="button">Fit area</button><button id="explore-zoom-in" type="button" aria-label="Zoom in">+</button><button id="explore-zoom-out" type="button" aria-label="Zoom out">−</button></nav>
-      <section id="explore-sheet" class="explore-sheet" aria-label="Results"><div class="explore-sheet-header"><button id="explore-sheet-toggle" class="explore-sheet-toggle" type="button" aria-expanded="false">Results · Expand</button><p id="explore-summary" class="explore-summary" role="status">Loading</p></div><div id="explore-sheet-body" class="explore-sheet-body" inert></div></section>
+      <section id="explore-sheet" class="explore-sheet" aria-label="Results"><div class="explore-sheet-header"><button id="explore-sheet-toggle" class="explore-sheet-toggle" type="button" aria-expanded="false">Results · Expand</button><p id="explore-summary" class="explore-summary" role="status">Loading</p></div><div id="explore-sheet-body" class="explore-sheet-body" inert><div id="explore-list-view"><div id="explore-list-body"></div><div id="explore-search-view" hidden><button id="explore-search-back" type="button">Results</button><details class="explore-filters"><summary>Filters</summary><label>Trail name or number<input id="explore-query" type="search"></label><label>Activity<select id="explore-activity"><option value="">All activities</option></select></label></details><div id="explore-search-results"></div></div></div><section id="explore-detail-view" hidden><button id="explore-detail-back" type="button">Back</button><h2 id="explore-detail-title">Source details</h2><div id="explore-detail-body"></div></section></div></section>
       <aside id="explore-drawer" class="explore-drawer" aria-label="Layers & legend" hidden><div class="explore-heading"><h1>Layers & legend</h1><button id="explore-drawer-close" type="button" aria-label="Close layers">×</button></div><p>Turn layers on or off. Colors explain what the map can tell you; they do not prove a place is legal to camp.</p><p>All layers start on. Dates and vehicle choices do not hide map features. Tap a road or shaded area to learn more.</p><button id="explore-sources" type="button">Sources & coverage</button><div id="explore-layer-list"></div></aside>
       <dialog id="explore-source-dialog" class="explore-dialog" aria-labelledby="explore-source-title"><div class="explore-heading"><h1 id="explore-source-title">Sources & coverage</h1><button type="button" data-close aria-label="Close sources">×</button></div><div id="explore-source-body"></div></dialog>
-      <dialog id="explore-detail-dialog" class="explore-dialog" aria-labelledby="explore-detail-title"><div class="explore-heading"><h1 id="explore-detail-title">Source details</h1><button type="button" data-close aria-label="Close details">×</button></div><div id="explore-detail-body"></div></dialog>
-      <dialog id="explore-search-dialog" class="explore-dialog" aria-labelledby="explore-search-title"><div class="explore-heading"><h1 id="explore-search-title">Find trails</h1><button type="button" data-close aria-label="Close search">×</button></div><label>Trail name or number<input id="explore-query" type="search"></label><label>Activity<select id="explore-activity"><option value="">All activities</option></select></label><div id="explore-search-results"></div></dialog>
       <div id="explore-banner" class="explore-banner" role="status" hidden><span></span><button type="button">Dismiss</button></div>`;
     const $=id=>host.querySelector('#explore-'+id);
     const sheet=scope.ExploreSheet.createSheet($('sheet'),$('sheet-toggle'),$('sheet-body'));
     const drawer=scope.ExploreDrawer.createDrawer($('drawer'),$('layers'),$('drawer-close'));
     let region,manifest,mapAvailable=false,zoom=options.initialView?.zoom||10;
     const visibleLayers=new Set(),rows=new Map(),state={mapUsable:false,defaultLayersLoaded:false,view:null};
-      const active={state,visibleLayers,sheet,drawer,get region(){return region;},showSources,showDetail,openDialog,$,element,button,drawLayer};
+      const active={state,visibleLayers,sheet,drawer,get region(){return region;},showSources,showDetail,showList,isListActive,openDialog,$,element,button,drawLayer};
     function banner(text){$('banner').hidden=false;$('banner').querySelector('span').textContent=text;}
     $('banner').querySelector('button').onclick=()=>{$('banner').hidden=true;};
     const dialogOpeners=new Map(),boundDialogs=new WeakSet();
@@ -64,12 +62,29 @@
       if(active.extras?.coverage)body.append(element('p',active.extras.coverage.text));
       openDialog($('source-dialog'));
     }
+    let listScroll=0,listOpener,activeList=$('list-body');
+    function isListActive(node){return activeList===node;}
+    function showList(node=activeList){
+      const changed=node!==activeList;activeList=node;
+      if(!node.parentNode||node.parentNode!==$('list-view'))$('list-view').append(node);
+      for(const child of $('list-view').children)child.hidden=child!==node;
+      $('list-view').hidden=false;$('detail-view').hidden=true;
+      $('sheet-body').scrollTop=changed?0:listScroll;
+      if(!sheet.expanded)sheet.setState('half');
+    }
+    function backToList(){showList();listOpener?.focus({preventScroll:true});}
+    $('detail-back').onclick=backToList;
+    $('search-back').onclick=()=>showList($('list-body'));
     function showDetail(entry,feature){
+      if($('detail-view').hidden){listScroll=$('sheet-body').scrollTop;listOpener=document.activeElement;}
+      for(const dialog of host.querySelectorAll('dialog[open]'))dialog.close();
       const declaration=manifest.layers.find(layer=>layer.id===entry.id),body=$('detail-body');body.replaceChildren();
       const output=scope.ExploreLand?.tier(declaration)==='G'?scope.ExploreLand.detail(manifest,declaration,feature):E.feature(manifest,declaration,feature,entry.title,Date.now());
       $('detail-title').textContent=output.title;appendEvidence(body,output);
       body.append(button('Sources & coverage',showSources));
-      options.onDetail?.(active,entry,feature,body);openDialog($('detail-dialog'));
+      options.onDetail?.(active,entry,feature,body);
+      $('list-view').hidden=true;$('detail-view').hidden=false;$('sheet-body').scrollTop=0;
+      sheet.setState('half');$('detail-back').focus({preventScroll:true});
       active.capabilities?.detail(entry,feature,body);
     }
     function styleFor(entry){
@@ -122,7 +137,7 @@
         if(Object.values(region.places).some(list=>!Array.isArray(list))){$('summary').textContent='Listings could not load';$('sheet-body').append(element('p','Listings could not load'));}
         return;}
       if(options.renderResults){options.renderResults(active);return;}
-      const body=$('sheet-body');body.replaceChildren();
+      const body=$('list-body');body.replaceChildren();
       const lists=Object.entries(region.places),failed=lists.some(([,list])=>!Array.isArray(list));
       if(failed)body.append(element('p','Listings could not load'));
       let count=0;
@@ -137,7 +152,7 @@
         if(scope.TrailDiscovery.matches(feature,$('query').value,$('activity').value))box.append(button(feature.properties.name||entry.title,()=>showDetail(entry,feature)));
     }
     $('query').oninput=renderSearch;$('activity').onchange=renderSearch;
-    $('search').onclick=()=>{if(active.capabilities?.search){active.capabilities.search();return;}renderSearch();openDialog($('search-dialog'));};$('sources').onclick=showSources;
+    $('search').onclick=()=>{if(active.capabilities?.search){active.capabilities.search();return;}renderSearch();showList($('search-view'));};$('sources').onclick=showSources;
     for(const mode of ['satellite','topo'])$(mode).onclick=()=>{M.setBasemap(mode);$('satellite').setAttribute('aria-pressed',String(mode==='satellite'));$('topo').setAttribute('aria-pressed',String(mode==='topo'));};
     $('fit').onclick=()=>{sheet.setExpanded(false);M.fit(bounds(region?.coverage||{features:[]}));};
     async function start(){
