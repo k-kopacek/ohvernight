@@ -26,7 +26,7 @@
     const drawer=scope.ExploreDrawer.createDrawer($('drawer'),$('layers'),$('drawer-close'));
     let region,manifest,mapAvailable=false,zoom=options.initialView?.zoom||10;
     const visibleLayers=new Set(),rows=new Map(),state={mapUsable:false,defaultLayersLoaded:false,view:null};
-      const active={state,visibleLayers,sheet,drawer,get region(){return region;},showSources,showDetail,showList,isListActive,openDialog,$,element,button,drawLayer};
+      const active={state,visibleLayers,sheet,drawer,get region(){return region;},showSources,showDetail,select,showList,isListActive,openDialog,$,element,button,drawLayer};
     function banner(text){$('banner').hidden=false;$('banner').querySelector('span').textContent=text;}
     $('banner').querySelector('button').onclick=()=>{$('banner').hidden=true;};
     const dialogOpeners=new Map(),boundDialogs=new WeakSet();
@@ -72,10 +72,24 @@
       $('sheet-body').scrollTop=changed?0:listScroll;
       if(!sheet.expanded)sheet.setState('half');
     }
-    function backToList(){showList();listOpener?.focus({preventScroll:true});}
+    function backToList(){if(state.selection)M.setSelected(state.selection.layerId,null);state.selection=null;showList();listOpener?.focus({preventScroll:true});}
     $('detail-back').onclick=backToList;
     $('search-back').onclick=()=>showList($('list-body'));
-    function showDetail(entry,feature){
+    function select(entry,feature){
+      if(!entry)return;
+      const featureId=feature.properties?.id||feature.id;
+      state.selection={layerId:entry.id,featureId};
+      showFeatureDetail(entry,feature);
+      const geometry=feature.geometry||(feature.coordinates?{type:'Point',coordinates:feature.coordinates}:null);
+      if(mapAvailable&&geometry){
+        visibleLayers.add(entry.id);if(rows.get(entry.id))rows.get(entry.id).check.checked=true;M.setVisible(entry.id,true);
+        const phone=!scope.matchMedia('(min-width:768px)').matches;
+        M.fit(bounds({features:[{geometry}]}),{topLeft:[phone?24:$('sheet').getBoundingClientRect().width+24,108],bottomRight:[24,phone?Math.round(host.clientHeight*.4)+24:24]});
+      }
+      M.setSelected(entry.id,featureId);
+    }
+    function showDetail(entry,feature){select(entry,feature);}
+    function showFeatureDetail(entry,feature){
       if($('detail-view').hidden){listScroll=$('sheet-body').scrollTop;listOpener=document.activeElement;}
       for(const dialog of host.querySelectorAll('dialog[open]'))dialog.close();
       const declaration=manifest.layers.find(layer=>layer.id===entry.id),body=$('detail-body');body.replaceChildren();

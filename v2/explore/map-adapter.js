@@ -1,7 +1,8 @@
 (function(scope){
   'use strict';
   let map,baseLayer,view,controlBindings=[];
-  const layers=new Map(),handlers=new Map();
+  const layers=new Map(),handlers=new Map(),styles=new Map();
+  let selected=null;
   const reduced=()=>scope.matchMedia?.('(prefers-reduced-motion:reduce)').matches===true;
   function publishView(){
     if(!map)return;
@@ -39,16 +40,36 @@
     const layer=L.geoJSON(featureCollection,{pane,style,
       pointToLayer:(feature,latlng)=>marker(latlng,feature.properties),
       onEachFeature:(feature,item)=>item.on('click',event=>notify(id,feature,[event.latlng.lng,event.latlng.lat]))});
-    layers.set(id,layer);layer.addTo(map);
+    layers.set(id,layer);styles.set(id,style);layer.addTo(map);
   }
-  function removeLayer(id){const layer=layers.get(id);if(layer&&map)map.removeLayer(layer);layers.delete(id);}
+  function removeLayer(id){const layer=layers.get(id);if(layer&&map)map.removeLayer(layer);layers.delete(id);styles.delete(id);if(selected?.id===id)selected=null;}
   function setVisible(id,visible){const layer=layers.get(id);if(!map||!layer)return;if(visible)layer.addTo(map);else map.removeLayer(layer);}
-  function setStyle(id,style){layers.get(id)?.setStyle(style);}
+  function applySelection(id){
+    const layer=layers.get(id),style=styles.get(id);if(!layer)return;
+    layer.eachLayer(item=>{
+      const feature=item.feature,featureId=feature?.properties?.id||item.featureId;
+      const chosen=selected?.id===id&&selected.featureId===featureId;
+      const icon=item.getElement?.();if(icon){icon.classList.toggle('is-selected',chosen);icon.setAttribute('aria-pressed',String(chosen));}
+      if(feature&&style&&item.setStyle){
+        const base=typeof style==='function'?style(feature):style;
+        const polygon=/Polygon$/.test(feature.geometry?.type);
+        // Polygon selection changes relative emphasis, preserving its palette,
+        // precision treatment and all tier opacity/outline ceilings.
+        const emphasis=selected?.id===id?(polygon?{fillOpacity:chosen?base.fillOpacity:Math.min(base.fillOpacity||0,.04)}:chosen?{weight:(base.weight||1)+2,opacity:1}:{}):{};
+        item.setStyle({...base,...emphasis});item.options.selected=!!chosen;
+      }
+    });
+  }
+  function setSelected(id,featureId){
+    const previous=selected?.id;selected=featureId===null?null:{id,featureId};
+    if(previous)applySelection(previous);if(selected)applySelection(id);
+  }
+  function setStyle(id,style){styles.set(id,style);layers.get(id)?.setStyle(style);if(selected?.id===id)applySelection(id);}
   function setPins(id,pins){
     removeLayer(id);if(!map)return;
     const L=scope.L,group=L.layerGroup();
     for(const pin of pins){
-      const item=marker([pin.coordinates[1],pin.coordinates[0]],pin);
+      const item=marker([pin.coordinates[1],pin.coordinates[0]],pin);item.featureId=pin.id;
       item.on('click',()=>notify(id,pin,pin.coordinates.slice()));item.addTo(group);
     }
     layers.set(id,group);group.addTo(map);
@@ -56,7 +77,8 @@
   function onFeature(id,handler){handlers.set(id,handler);}
   function fit(bounds,padding=[24,24]){
     if(!map||!bounds)return;
-    map.invalidateSize();map.fitBounds(bounds.map(point=>[point[1],point[0]]),{padding,maxZoom:15,animate:!reduced()});publishView();
+    const inset=Array.isArray(padding)?{padding}:{paddingTopLeft:padding.topLeft,paddingBottomRight:padding.bottomRight};
+    map.invalidateSize();map.fitBounds(bounds.map(point=>[point[1],point[0]]),{...inset,maxZoom:15,animate:!reduced()});publishView();
   }
   function setBasemap(mode){
     if(!map)return;if(baseLayer)map.removeLayer(baseLayer);
@@ -68,9 +90,9 @@
   function destroy(){
     for(const [control,handler] of controlBindings)control.removeEventListener('click',handler);
     controlBindings=[];if(map){map.off('moveend zoomend',publishView);map.remove();}
-    map=null;baseLayer=null;layers.clear();handlers.clear();
+    map=null;baseLayer=null;layers.clear();handlers.clear();styles.clear();selected=null;
   }
-  const api={init,addLayer,removeLayer,setVisible,setStyle,setPins,onFeature,fit,setBasemap,destroy};
+  const api={init,addLayer,removeLayer,setVisible,setStyle,setPins,onFeature,fit,setBasemap,destroy,setSelected};
   if(typeof module!=='undefined')module.exports=api;
   scope.ExploreMap=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

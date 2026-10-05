@@ -27,3 +27,5 @@ body{margin:0}.explore-sheet-body label{display:flex;gap:8px;align-items:center}
 .explore-dialog a,.explore-sheet-body a{display:inline-flex;align-items:center;min-height:44px;min-width:44px}
 
 .explore-filters{border-bottom:1px solid var(--line);padding:4px 0 8px}.explore-filters label{display:block;margin:8px 0}.explore-filters input,.explore-filters select{display:block;width:100%;padding:8px}.explore-filters nav{display:flex;flex-wrap:wrap;gap:4px}.explore-filters input[type=checkbox]{display:inline-block;width:44px}.explore-sheet-body #explore-detail-back{position:sticky;top:0;z-index:2}
+
+.explore-pin.is-selected .pin-badge{box-shadow:0 0 0 3px #24271f,0 0 0 5px white}.explore-pin.is-selected{z-index:900!important}

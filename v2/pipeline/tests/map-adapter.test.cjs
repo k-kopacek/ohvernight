@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'../..'),source=fs.readFileSync(path.join(root,'explore/map-adapter.js'),'utf8');
-const names=['init','addLayer','removeLayer','setVisible','setStyle','setPins','onFeature','fit','setBasemap','destroy'];
+const names=['init','addLayer','removeLayer','setVisible','setStyle','setPins','onFeature','fit','setBasemap','destroy','setSelected'];
 test('criterion 17: exact adapter surface; all renderer references stay in the adapter',()=>{
  assert.deepEqual(Object.keys(require('../../explore/map-adapter.js')),names);
  for(const name of fs.readdirSync(path.join(root,'explore')).filter(name=>name.endsWith('.js')&&name!=='map-adapter.js'))
@@ -20,4 +20,21 @@ test('adapter absence returns false; plain view payload, control lifecycle and r
  [...listeners][0]();assert.equal(zoom,11);A.fit([[0,1],[2,3]]);assert.deepEqual(callbacks.at(-1).center,[3,4]);
  A.destroy();assert.equal(listeners.size,0);assert.equal(removed,1);
  assert.equal(A.init('map',{center:[2,3],zoom:12}),true);A.destroy();assert.equal(removed,2);
+});
+test('A11 selection emphasizes one feature, clears it, and preserves generalized polygon limits',()=>{
+ const context={module:{exports:{}}},groups=[];let fitted;
+ const map={createPane(){},getPane:()=>({style:{}}),on(){},off(){},setView(){},getZoom:()=>14,getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1}),remove(){},removeLayer(){},invalidateSize(){},fitBounds(bounds,options){fitted={bounds,options};}};
+ context.L={map:()=>map,control:{scale:()=>({addTo(){}})},tileLayer:()=>({addTo(){return this;}}),geoJSON(data){
+  const items=data.features.map(feature=>({feature,options:{},setStyle(value){Object.assign(this.options,value);},on(){return this;}}));
+  const group={items,eachLayer(fn){items.forEach(fn);},addTo(){return this;},setStyle(style){items.forEach(item=>item.setStyle(typeof style==='function'?style(item.feature):style));}};groups.push(group);return group;
+ }};
+ vm.runInNewContext(source,context);const A=context.module.exports;A.init('map',{center:[0,0],zoom:14});
+ const features=['one','two'].map(id=>({properties:{id},geometry:{type:'Polygon'}}));
+ A.addLayer('context',{features},{fillOpacity:.12,weight:0,opacity:0,stroke:false,dashArray:'5 5'});A.setSelected('context','one');
+ assert.equal(groups[0].items[0].options.selected,true);assert.equal(groups[0].items[0].options.fillOpacity,.12);
+ assert.equal(groups[0].items[1].options.fillOpacity,.04);assert.equal(groups[0].items[0].options.stroke,false);
+ A.setSelected('context',null);assert.equal(groups[0].items[1].options.fillOpacity,.12);assert.equal(groups[0].items[0].options.selected,false);
+ A.addLayer('line',{features:[{properties:{id:'trail'},geometry:{type:'LineString'}}]},{weight:3,opacity:.85});A.setSelected('line','trail');assert.equal(groups[1].items[0].options.weight,5);
+ A.setSelected('line',null);assert.equal(groups[1].items[0].options.weight,3);
+ A.fit([[0,0],[1,1]],{topLeft:[24,108],bottomRight:[24,360]});assert.deepEqual(JSON.parse(JSON.stringify(fitted.options.paddingBottomRight)),[24,360]);assert.equal(fitted.options.maxZoom,15);A.destroy();
 });
