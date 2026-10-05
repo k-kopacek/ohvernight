@@ -8,6 +8,8 @@ import {fileURLToPath} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
 import {cdpClient,waitFor,findChrome,freePort,trackProcess,closeSocket,stopChrome,closeServer} from './run.mjs';
 const root=resolve(fileURLToPath(new URL('../../../../',import.meta.url))),cache=new Map();
+// Owner amendment A10 (2026-10-05), spec 16.4: same-session relative limits.
+const MAP_USABLE_BASE_RATIO=0.60,ALL_LAYERS_BASE_RATIO=1.35,HEAP_BASE_RATIO=1.15;
 // Base Aspen enables its landing action only after renderPipelineLayers completes;
 // tile errors write map-status, not that action or the results-summary.
 // Base county tile errors can overwrite status early, so require the final
@@ -49,7 +51,19 @@ try{
   const row={version,region,run,mapUsableMs:usable,allDefaultLayersMs:complete,longestLongTaskMs:longest,heavyLayerOnMs:toggle.on,heavyLayerOffMs:toggle.off,heapMB:metrics.JSHeapUsedSize/1e6};rows.push(row);console.error(JSON.stringify(row));
  }
  const median=values=>[...values].sort((a,b)=>a-b)[2],medians={};for(const version of ['base','head']){medians[version]={};for(const region of ['aspen','douglas-co'])medians[version][region]=Object.fromEntries(['mapUsableMs','allDefaultLayersMs','longestLongTaskMs','heavyLayerOnMs','heapMB'].map(key=>[key,median(rows.filter(x=>x.version===version&&x.region===region).map(x=>x[key]))]));}
- const thresholds={};for(const region of ['aspen','douglas-co']){const base=medians.base[region],head=medians.head[region];thresholds[region]={mapUsableMs:base.allDefaultLayersMs*.5,allDefaultLayersMs:base.allDefaultLayersMs,longestLongTaskMs:medians.base.aspen.longestLongTaskMs*.5,heavyLayerOnMs:base.heavyLayerOnMs*1.25,heapMB:region==='aspen'?33.4:30.4};thresholds[region]=Object.fromEntries(Object.entries(thresholds[region]).map(([key,limit])=>[key,{limit,actual:head[key],pass:head[key]<=limit}]));}
+ const thresholds={};for(const region of ['aspen','douglas-co']){
+  const base=medians.base[region],head=medians.head[region];
+  const denominators={mapUsableMs:base.allDefaultLayersMs,allDefaultLayersMs:base.allDefaultLayersMs,
+   longestLongTaskMs:medians.base.aspen.longestLongTaskMs,heavyLayerOnMs:base.heavyLayerOnMs,heapMB:base.heapMB};
+  const limits={mapUsableMs:denominators.mapUsableMs*MAP_USABLE_BASE_RATIO,
+   allDefaultLayersMs:denominators.allDefaultLayersMs*ALL_LAYERS_BASE_RATIO,
+   longestLongTaskMs:denominators.longestLongTaskMs*.5,heavyLayerOnMs:denominators.heavyLayerOnMs*1.25,
+   heapMB:denominators.heapMB*HEAP_BASE_RATIO};
+  // Ratios compare the same region's measure; the unchanged long-task limit
+  // uses Aspen's base for both regions, recorded separately as thresholdBase.
+  thresholds[region]=Object.fromEntries(Object.entries(limits).map(([key,limit])=>[key,
+   {limit,actual:head[key],base:base[key],thresholdBase:denominators[key],ratioPct:head[key]/base[key]*100,pass:head[key]<=limit}]));
+ }
  const baseline=JSON.parse(await readFile(join(root,'docs/specs/M3-baseline/baseline.json')));
  const output={baseCommit:'3dc0fef',headCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),chrome:chrome.version,node:process.version,viewport:[390,844],cpuThrottle:4,runs:5,events,order:'Back to back: base Aspen five, base county five, head Aspen five, head county five',method:'One offline Chrome session; non-local requests blocked; cold cache; readiness observed consistently through CDP; 1500ms settle before long-task and GC measures; heaviest loaded layer selected by display bytes. Base readiness requires all-layer construction outputs; county status text is excluded because offline tile failure changes it early. Head events are spec 12.2 step 3 and completion state. Historical measurement script unchanged.',rows,medians,thresholds,committedBaseline:baseline.filter(x=>x.viewport==='390x844'&&x.cpuThrottle===4)};
  console.log(JSON.stringify(output,null,2));
