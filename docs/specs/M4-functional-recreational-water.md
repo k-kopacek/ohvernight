@@ -1,7 +1,7 @@
 # Milestone 4 specification — Functional recreational water
 
 **For:** Codex (implementation). **Reviewer / coordinator:** Claude. **Research:** Hermes. **Base:** `main` at `b45ca59`.
-**Status:** ARCHITECTURE APPROVED by the owner on 2026-10-06 (decisions D1–D12 and O1–O4, O6–O9; section 21). **Production implementation is not yet authorised:** one owner gate remains, the exact user-facing wording of section 10 (O5). Codex is not dispatched until that is resolved and recorded here.
+**Status:** APPROVED by the owner on 2026-10-06: architecture (decisions D1–D12, O1–O9) and the exact wording of section 10 (O5, with the owner's edits). Production implementation may begin in the approved order M4-A, then M4-B, then M4-C. M4-D remains optional and separately gated.
 **Delivery:** four sequential pull requests, M4-A to M4-D (section 16). M4 is complete when A, B and C are merged. M4-D is optional.
 **Owner decisions:** D1–D12 and O1–O9 of 2026-10-06 are recorded in section 21 and are binding on this document.
 
@@ -287,7 +287,7 @@ The report is generated; the note is written by Codex and checked by the coordin
 ### 9.2 Rules
 
 1. `water_id` is a display ID in that region: a waterbody feature ID or a stream group ID. One record per water.
-2. Exactly four activities are modelled: `fishing`, `boating`, `paddling`, `swimming`. Each is present in every record. `boating` means motorised or trailered craft; `paddling` means hand-powered craft. Where a source says "all boating", both are set from it, each with its own evidence object citing the same page.
+2. Exactly four activities are modelled: `fishing`, `boating`, `paddling`, `swimming`. Each is present in every record. `boating` means motorized or trailered craft; `paddling` means hand-powered craft. Where a source says "all boating", both are set from it, each with its own evidence object citing the same page.
 3. `status` is one of `unknown`, `allowed`, `restricted`, `prohibited`.
    - `allowed`: the source states the activity is offered or allowed at this water, with no condition beyond general law.
    - `restricted`: the source states it is allowed only with conditions specific to this water (place, season, reservation, craft type, permit).
@@ -338,29 +338,30 @@ Future options, recorded and not built: sources whose terms clearly permit reuse
 
 ## 10. Trust wording
 
-**Status: pending owner review (O5).** The strings below are proposed. They are not approved, and no implementation may use them until the owner approves or amends them and this section records the result.
+**Status: approved by the owner on 2026-10-06 (O5), with edits: WW8 reworded, WW16 added, `motorized` spelling, and the limitation sentence replaced.** The strings are exact. Implementation uses them byte for byte and does not rewrite, shorten or vary them by region.
 
 Fixed strings, compared against literals in tests. None contains "verified", "legal", "permitted" or "open to" (M3 A4 rule). A status word is never shown without its activity. All of them appear only in the water feature detail in the results sheet, except WW14 and WW15, which are also the feature's title in search results.
 
-### 10.1 The fifteen fixed strings
+### 10.1 The sixteen fixed strings
 
 | ID | String | Where it appears | Evidence or state that causes it |
 |---|---|---|---|
 | WW1 | `Mapped water. Access and allowed activities are not established.` | Water detail, in place of the operator-statement section | The water has no record in the recreation registry |
 | WW2 | `A mapped water feature is not permission to enter, fish, boat, paddle, swim, park or camp.` | Water detail, always the last line | Every water feature, whatever its claims |
 | WW3 | `Not established` | Water detail, operator-statement section, after an activity label or `Access` | That activity's claim is `unknown`; or its stored status is `allowed` and the review is past its maximum age |
-| WW4 | `Allowed` | Same place, after an activity label | The claim is `allowed`, with complete evidence, within its maximum age |
+| WW4 | `Allowed` | Same place, after an activity label | The claim is `allowed`, with complete qualifying authoritative evidence, and that evidence is within its approved freshness window. In no other case |
 | WW5 | `Restricted` | Same place, after an activity label or `Access` | The claim is `restricted`, with complete evidence; shown whether or not the review is overdue |
-| WW6 | `Prohibited` | Same place, after an activity label | The claim is `prohibited`, with complete evidence; shown whether or not the review is overdue |
-| WW7 | `Review overdue` | Same line as WW5 or WW6 | The claim is `restricted` or `prohibited` and its last confirmation is older than its maximum age |
-| WW8 | `Operator statement` | Water detail, heading of the section that lists the activities, followed by the operator's name | The water has a record in the recreation registry |
+| WW6 | `Prohibited` | Same place, after an activity label | The claim is `prohibited`, with complete evidence; shown whether or not the review is overdue. The word is not softened |
+| WW7 | `Review overdue` | Same line as WW5 or WW6 | The claim is `restricted` or `prohibited` and its last confirmation is older than its maximum age. The restriction itself is not weakened |
+| WW8 | `Agency or operator statement` | Water detail, heading of the section that lists the activities, followed by the operator's name | The water has a record in the recreation registry |
 | WW9 | `From the source` | Water detail, heading of the first section | Every water feature |
 | WW10 | `Computed by Ohvernight` | Water detail, heading of the section holding length or area | Every water feature that has a length or an area |
-| WW11 | `Reviewed` | Water detail, after each non-unknown activity line, followed by the date of last confirmation | The claim is `allowed`, `restricted` or `prohibited` |
-| WW12 | `Perennial` | Water detail, "From the source" section | The source code states the feature is perennial. Not shown when the category is unknown |
+| WW11 | `Reviewed` | Water detail, after each non-unknown activity line, followed by the date of last confirmation | The claim is `allowed`, `restricted` or `prohibited`. It means a person reviewed the evidence and the claim on that date |
+| WW12 | `Perennial` | Water detail, "From the source" section | The source code states the feature is perennial. The source's own term is kept; it is not replaced by a plainer word that could imply more than the classification establishes |
 | WW13 | `source segments` | Water detail, "From the source" section, after a number, as in `96 source segments` | The feature is a grouped stream |
 | WW14 | `Unnamed lake` | Detail title and search-result title | A lake or pond with no source name |
 | WW15 | `Unnamed reservoir` | Detail title and search-result title | A reservoir with no source name |
+| WW16 | `Hydrographic category not stated by the source` | Water detail, "From the source" section, in the place WW12 would take | The displayed feature is eligible under section 8 and its `hydro_category` is `unknown` (for example Rueter-Hess Reservoir). Perennial or intermittent status is never inferred |
 
 ### 10.2 Labels used with them
 
@@ -369,7 +370,7 @@ These are also user-facing and fixed.
 | String | Where it appears | Evidence or state that causes it |
 |---|---|---|
 | `Fishing` | Operator-statement section, start of an activity line | The water has a record |
-| `Boating (motorised or trailered)` | Same | The water has a record |
+| `Boating (motorized or trailered)` | Same | The water has a record |
 | `Paddling` | Same | The water has a record |
 | `Swimming` | Same | The water has a record |
 | `Access` | Same, last line of the section | The water has a record |
@@ -377,15 +378,15 @@ These are also user-facing and fixed.
 | `Lake or pond` | Same | Source type is lake or pond |
 | `Reservoir` | Same | Source type is reservoir |
 
-An activity line reads: label, status word, the reviewer's summary, a link to the operator's page, then `Reviewed` and the date, then `Review overdue` when it applies. Example, for a claim that is prohibited and within its review age: `Boating (motorised or trailered): Prohibited. All boating prohibited. Denver Water. Reviewed 2026-10-20`. The summary is written per claim by the reviewer and approved by the owner in M4-C; it is not one of the fixed strings.
+An activity line reads: label, status word, the reviewer's summary, a link to the operator's page, then `Reviewed` and the date, then `Review overdue` when it applies. Example, for a claim that is prohibited and within its review age: `Boating (motorized or trailered): Prohibited. All boating prohibited. Denver Water. Reviewed 2026-10-20.` The summary is written per claim by the reviewer and approved by the owner in M4-C; it is not one of the fixed strings.
 
 Reused unchanged from M3: the agency name, the source link label, the "Source fetched" line and the rendering of the layer limitation sentence.
 
 ### 10.3 Water-layer limitation sentence
 
-The manifest `limitations` sentence for each water layer is rewritten in M4-B and rendered verbatim, as today, in the layer drawer row and in the "From the source" section of every water detail. Proposed text, both regions:
+The manifest `limitations` sentence for each water layer is rewritten in M4-B and rendered verbatim, as today, in the layer drawer row and in the "From the source" section of every water detail. Approved text, identical in both regions:
 
-`Perennial rivers, streams, lakes and reservoirs selected from source type codes. Unnamed streams and intermittent water are not shown. A mapped water feature is not evidence of access or of any allowed activity.`
+`Rivers, streams, lakes and reservoirs selected from source type codes. Displayed streams and lakes are coded perennial; some reservoirs have no hydrographic category stated by the source. Unnamed streams and intermittent water are not shown. A mapped water feature is not evidence of access or of any allowed activity.`
 
 ## 11. Interaction
 
@@ -411,9 +412,9 @@ Map tap: the river is selected and highlighted and its detail opens. If fitting 
 **Detail content**, in this order, only where the value is carried:
 
 1. Title: the name, or WW14 / WW15 for an unnamed waterbody.
-2. `From the source`: type label; `Perennial` only when `hydro_category` is `perennial`; for a stream, `<n> source segments`; agency; source link; "Source fetched" date; the layer limitation sentence.
+2. `From the source`: type label; WW12 when `hydro_category` is `perennial`, WW16 when it is `unknown`; for a stream, `<n> source segments`; agency; source link; "Source fetched" date; the layer limitation sentence.
 3. `Computed by Ohvernight`: length in kilometres for a stream or area in hectares for a waterbody, to one decimal.
-4. If the water has a recreation record: `Operator statement` with the operator's name, then one line per activity — label, status word, summary, link, `Reviewed <date>`, and `Review overdue` when it applies. Activities with status unknown show `Not established`. Prohibited and restricted lines come before allowed ones.
+4. If the water has a recreation record: WW8 with the operator's name, then one line per activity — label, status word, summary, link, `Reviewed <date>`, and `Review overdue` when it applies. Activities with status unknown show `Not established`. Prohibited and restricted lines come before allowed ones.
 5. If it has no record: WW1.
 6. Always last: WW2.
 
@@ -475,7 +476,7 @@ Offline, clock-free, nothing written inside the repository, as in M3.
 
 **Python (validator and build):** a negative fixture for every rule R66–R76; the fixed tables; ID sanitising and collision; legacy mapping by geometry (a moved row number does not match; an identical geometry does); eligibility for each row of 8.2 at, just below and just above the threshold; grouping: same `gnis_id` in two disconnected sets gives two groups; two `gnis_id` values touching end to end stay two groups; a segment with empty `gnis_id` joins nothing; same `gnis_id` with two names fails the build; an intermittent reach connects two perennial reaches into one group whose geometry is two separate lines, with no coordinate added between them (G9); two reaches of one `gnis_id` with nothing in the source between them stay two groups; a reach connected only through a different `gnis_id` is not joined; a supporting unnamed feature bridges two named parts and is never drawn or given a group; an unnamed feature that does not bridge is not kept; an expected major river that is missing, below its drawn fraction or carrying a foreign member fails the build; an artificial path is drawn when it connects to a drawn segment through artificial paths alone and not when a non-perennial segment lies between; a group cannot consist of artificial paths only; each reservoir code of 8.1 is eligible or not as listed; a canal with the same `gnis_id` is neither drawn nor used for connectivity; exclusion and inclusion lists; claims: each invalid form of 9.2; freshness table of 9.3 as a pure function with an injected time.
 
-**Node:** detail rendering for a grouped stream, a named lake, an unnamed lake, a water with claims in each status and with an overdue restriction; every WW string against a literal; no activity status rendered without evidence; `Perennial` not rendered when the category is `unknown`; fit policy for a short feature and a very long river, from a map tap and from a list.
+**Node:** detail rendering for a grouped stream, a named lake, an unnamed lake, a water with claims in each status and with an overdue restriction; every WW string against a literal; no activity status rendered without evidence; WW16 and not WW12 rendered when the category is `unknown`; fit policy for a short feature and a very long river, from a map tap and from a list.
 
 **Browser check (both regions, four sizes):** the water layers load within budget; a real stream group selects as one feature from a tap on two different member lines and from its label, with one casing set and one label; a real waterbody selects with the camera preserved; detail shows the M4 sections and WW2; no canal or ditch name appears in the rendered water layer (asserted from `water_class`, not from names); from M4-C, Cheesman's detail shows `Prohibited` for boating with its link, and a water with no record shows WW1.
 
@@ -582,7 +583,7 @@ Stated as unknown; none blocks approval of this specification.
 | O2 | Identity and rendered geometry are separate. A river may be one group across an intervening intermittent reach when GNIS identity agrees, source topology establishes continuity, no unrelated branch is absorbed and no geometry is invented. No synthetic connector. No joining across extent-edge gaps, disconnected geometry, different GNIS IDs or ambiguous branches. Member source IDs preserved. Positive and negative tests |
 | O3 | No restriction colours, warning icons or other map-level status symbols in M4. Status belongs in the detail |
 | O4 | Named intermittent waterbodies hidden by default; included only through a reviewed inclusion with authoritative evidence and a recorded reason; a name is not a reason |
-| O5 | **Pending.** The exact wording of section 10 awaits owner review. This is the last gate before production implementation |
+| O5 | Approved with edits: WW1–WW7 and WW9–WW15 as proposed; WW8 changed to "Agency or operator statement" (not "Official statement"); WW16 added for an unstated hydrographic category; "motorized" spelling; "Reviewed" and "Perennial" kept; the limitation sentence replaced with the owner's exact wording, identical in both regions |
 | O6 | Fit cap approved: a map-tap selection never zooms out more than about two levels to fit a river; search and list selection may fit more broadly down to a configurable minimum zoom; ordinary short lines unchanged; the policy is per layer and geometry, not hard-coded in the adapter; tests for a short feature and a very long river |
 | O7 | Pursue clarification from CPW. A draft outreach message is in [cpw-outreach-draft.md](../research/m4-water/cpw-outreach-draft.md). M4-A, B and C do not wait. M4-D stays optional and needs separate written approval and a specification amendment once terms are clear |
 | O8 | Display otherwise-eligible reservoirs whose attributes establish neither perennial nor intermittent and no exclusion condition; never label them perennial; record the category as unknown; activities and access stay unknown |

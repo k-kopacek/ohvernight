@@ -15,7 +15,7 @@ states the exact scope.
 | M1 | Verification Baseline / Repo Hygiene | **Complete** |
 | M2 | Regional Data Contract + Evidence Semantics | **Complete** |
 | M3 | Unified Mobile-First Explore Architecture | **Complete** |
-| M4 | Functional Recreational Water | **Specification proposed — awaiting owner approval** |
+| M4 | Functional Recreational Water | **In progress — specification approved 2026-10-06; M4-A next** |
 | M5 | Land Classification v1 | Planned |
 | M6 | Trails / COTREX | Planned |
 | M7 | Camping / Dispersed Camping | Planned |
@@ -137,8 +137,8 @@ Deferred beyond M3, each recorded so it is not lost:
 
 Status: research complete ([docs/research/m4-water/](docs/research/m4-water/))
 and a [specification](docs/specs/M4-functional-recreational-water.md) is
-proposed, with owner decisions D1–D12 of 2026-10-06 recorded. No production
-implementation starts until the owner approves it. Delivery is four
+approved by the owner on 2026-10-06 (decisions D1–D12 and O1–O9, including
+the exact wording). Delivery is four
 sequential pull requests: M4-A source preservation, M4-B functional water
 display, M4-C reviewed official recreation claims, and an optional M4-D for
 CPW structured data. M4 is complete with A, B and C.
