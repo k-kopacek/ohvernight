@@ -60,9 +60,41 @@ test('A11 selection emphasizes one feature, clears it, and preserves generalized
  assert.equal(groups[0].items[0].options.selected,true);assert.equal(groups[0].items[0].options.fillOpacity,.12);
  assert.equal(groups[0].items[1].options.fillOpacity,.04);assert.equal(groups[0].items[0].options.stroke,false);
  A.setSelected('context',null);assert.equal(groups[0].items[1].options.fillOpacity,.12);assert.equal(groups[0].items[0].options.selected,false);
- A.addLayer('line',{features:[{properties:{id:'trail'},geometry:{type:'LineString'}}]},{weight:3,opacity:.85});A.setSelected('line','trail');assert.equal(groups[1].items[0].options.weight,5);
+ A.addLayer('line',{features:[{properties:{id:'trail'},geometry:{type:'LineString'}}]},{weight:3,opacity:.85});A.setSelected('line','trail');assert.equal(groups[1].items[0].options.weight,6);
  A.setSelected('line',null);assert.equal(groups[1].items[0].options.weight,3);
  A.fit([[0,0],[1,1]],{topLeft:[24,108],bottomRight:[24,360]});assert.deepEqual(JSON.parse(JSON.stringify(fitted.options.paddingBottomRight)),[24,360]);assert.equal(fitted.options.maxZoom,15);A.destroy();
+});
+test('A13 selected line uses a two-tone casing and every lifecycle path restores normal styles',()=>{
+ const surface=new EventTarget();surface.getBoundingClientRect=()=>({left:0,top:0});surface.closest=()=>null;
+ const context={module:{exports:{}},document:{createElement:()=>({className:'',classList:{toggle(){}}})}},groups=[],mapLayers=new Set(),front=[];
+ const map={createPane(){},getPane:()=>({style:{}}),on(){},off(){},setView(){},getZoom:()=>14,getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1}),getContainer:()=>surface,latLngToContainerPoint:ll=>({x:Array.isArray(ll)?ll[1]:ll.lng,y:Array.isArray(ll)?ll[0]:ll.lat}),containerPointToLatLng:p=>({lng:p.x,lat:p.y}),remove(){mapLayers.clear();},addLayer(group){mapLayers.add(group);},removeLayer(group){mapLayers.delete(group);},hasLayer(group){return mapLayers.has(group);},invalidateSize(){},fitBounds(){}};
+ context.L={map:()=>map,control:{scale:()=>({addTo(){}})},tileLayer:()=>({addTo(){return this;}}),geoJSON(data,options={}){
+  const items=data.features.map(feature=>{const base=typeof options.style==='function'?options.style(feature):options.style||{};return {feature,options:{...base},setStyle(value){Object.assign(this.options,value);},bringToFront(){front.push(this);},getBounds(){return {getNorthWest:()=>[0,0],getSouthEast:()=>[1,1]};}};});
+  const group={items,options,eachLayer(fn){if(String(options.style?.className||'').startsWith('explore-selection-casing-'))this.eachCalls=(this.eachCalls||0)+1;items.forEach(fn);},addTo(target){target.addLayer(this);return this;},setStyle(style){items.forEach(item=>item.setStyle(typeof style==='function'?style(item.feature):style));}};groups.push(group);return group;
+ }};
+ vm.runInNewContext(source.replace('const api={init,','scope.__a13Test={layers,casings,resolveTap,setMap:value=>{map=value;}};const api={init,'),context);const A=context.module.exports;A.init('map',{center:[0,0],zoom:14});
+ const features=['one','two','three'].map(id=>({type:'Feature',properties:{id},geometry:{type:'LineString',coordinates:[[0,0],[1,1]]}}));
+ const normal=feature=>({color:feature.properties.id==='two'?'#b4a4ad':'#73c5dc',weight:feature.properties.id==='two'?2.25:3,opacity:.85,dashArray:'5 2'});
+ A.addLayer('lines',{type:'FeatureCollection',features},normal);const lines=groups[0],base=lines.items.map(item=>({...normal(item.feature)}));
+ const casingGroups=()=>groups.filter(group=>mapLayers.has(group)&&String(group.options.style?.className||'').startsWith('explore-selection-casing-'));
+ const assertNormal=()=>lines.items.forEach((item,index)=>{for(const key of Object.keys(base[index]))assert.equal(item.options[key],base[index][key]);assert.equal(item.options.selected,false);});
+ A.setSelected('lines','one');
+ const selected=lines.items[0];assert.equal(selected.options.weight,6);assert.equal(selected.options.opacity,1);assert.equal(selected.options.color,base[0].color);assert.equal(selected.options.dashArray,base[0].dashArray);
+ for(const item of lines.items.slice(1)){assert.equal(item.options.opacity,Math.max(.5,base[lines.items.indexOf(item)].opacity*.7));assert.ok(item.options.opacity>=.5);assert.equal(item.options.color,base[lines.items.indexOf(item)].color);assert.equal(item.options.weight,base[lines.items.indexOf(item)].weight);assert.equal(item.options.dashArray,base[lines.items.indexOf(item)].dashArray);assert.ok(mapLayers.has(lines));}
+ let cases=casingGroups();assert.equal(cases.length,2);assert.ok(cases.every(group=>group.items.length===1&&group.items[0].feature===features[0]&&group.options.interactive===false));
+ const halo=cases.find(group=>group.options.style.className==='explore-selection-casing-halo'),edge=cases.find(group=>group.options.style.className==='explore-selection-casing-edge');
+ assert.equal(halo.options.style.weight,selected.options.weight+4);assert.equal(edge.options.style.weight,selected.options.weight+6);assert.notEqual(halo.options.style.color,selected.options.color);assert.notEqual(edge.options.style.color,selected.options.color);
+ assert.deepEqual(front.slice(-3),[edge.items[0],halo.items[0],selected],'casing is above other lines and selected line sits directly above both casing tones');
+ assert.deepEqual([...context.__a13Test.layers.keys()],['lines'],'casing stays outside the selectable layer registry');A.onFeature('lines',()=>{});context.__a13Test.setMap(map);const resolverScanCounts=cases.map(group=>group.eachCalls);assert.equal(context.__a13Test.resolveTap({x:.5,y:.5})?.featureId,'one','resolver returns the source feature, never a casing path');assert.deepEqual(cases.map(group=>group.eachCalls),resolverScanCounts,'tap resolver does not inspect adapter-owned casing paths');
+ A.setSelected('lines','two');cases=casingGroups();assert.equal(cases.length,2);assert.ok(cases.every(group=>group.items[0].feature===features[1]));assert.equal(lines.items[1].options.weight,5.25);assert.ok(lines.items[1].options.weight>=5);assert.equal(lines.items[0].options.weight,base[0].weight);assert.equal(lines.items[0].options.opacity,Math.max(.5,base[0].opacity*.7));
+ A.setSelected('lines',null);assert.equal(casingGroups().length,0);assertNormal();
+ A.setSelected('lines','one');A.setVisible('lines',false);assert.equal(casingGroups().length,0);assertNormal();
+ const restyled=feature=>({...normal(feature),weight:feature.properties.id==='one'?4:2.5,opacity:.8});A.setStyle('lines',restyled);assert.equal(casingGroups().length,0);assert.equal(lines.items[0].options.weight,4);assert.equal(lines.items[0].options.opacity,.8);assert.equal(lines.items[0].options.selected,false);
+ A.setVisible('lines',true);assert.equal(casingGroups().length,2);assert.equal(lines.items[0].options.weight,7);
+ A.setStyle('lines',restyled);assert.equal(casingGroups().length,2);assert.equal(lines.items[0].options.weight,7);assert.equal(casingGroups().find(g=>g.options.style.className==='explore-selection-casing-halo').options.style.weight,11);
+ A.removeLayer('lines');assert.equal(casingGroups().length,0);assert.equal(mapLayers.size,0);
+ const polygons=[{type:'Feature',properties:{id:'land-one'},geometry:{type:'Polygon',coordinates:[]}}];A.addLayer('land',{type:'FeatureCollection',features:polygons},{color:'#8f9f89',fillColor:'#8f9f89',fillOpacity:.12,weight:0,opacity:0,stroke:false,dashArray:'5 5'});A.setSelected('land','land-one');assert.equal(casingGroups().length,0,'polygon selection never creates line casing');assert.equal(groups.at(-1).items[0].options.fillOpacity,.12);A.setSelected('land',null);
+ A.addLayer('again',{type:'FeatureCollection',features},normal);A.setSelected('again','one');assert.equal(casingGroups().length,2);A.destroy();assert.equal(casingGroups().length,0);assert.equal(mapLayers.size,0);
 });
 test('A11 labels use carried names only, respect zoom, clear, and share a global cap',()=>{
  const context={module:{exports:{}},document:{createElement:()=>({})}},active=new Set();let zoom=13,publish,scanned=0,bound=0;

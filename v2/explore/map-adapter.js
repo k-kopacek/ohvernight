@@ -1,7 +1,7 @@
 (function(scope){
   'use strict';
   let map,baseLayer,view,controlBindings=[],mapBindings=[];
-  const layers=new Map(),handlers=new Map(),styles=new Map(),labelRules=new Map(),labelled=new Set();
+  const layers=new Map(),handlers=new Map(),styles=new Map(),labelRules=new Map(),labelled=new Set(),casings=new Map();
   const LABEL_LIMIT=32;
   const HIT_TOLERANCE=14;
   const TAP_MOVEMENT_SLOP=10;
@@ -191,29 +191,58 @@
       onEachFeature:(feature,item)=>{if(item.getLatLng)item.on('click',event=>{if(pinActivation(event))notify(id,feature,feature.geometry.coordinates.slice());});}});
     layers.set(id,layer);styles.set(id,style);layer.addTo(map);
   }
-  function removeLayer(id){const layer=layers.get(id);if(layer&&map)map.removeLayer(layer);layers.delete(id);styles.delete(id);labelRules.delete(id);refreshLabels();if(selected?.id===id)selected=null;}
-  function setVisible(id,visible){const layer=layers.get(id);if(!map||!layer)return;if(visible)layer.addTo(map);else map.removeLayer(layer);refreshLabels();}
+  function removeCasing(id){
+    const casing=casings.get(id);if(!casing)return;
+    for(const path of casing.paths)if(map)map.removeLayer(path);
+    casings.delete(id);
+  }
+  function normalStyle(style,feature){return typeof style==='function'?style(feature):style||{};}
+  function restoreLayer(id){
+    removeCasing(id);const layer=layers.get(id),style=styles.get(id);if(!layer)return;
+    layer.eachLayer(item=>{
+      const feature=item.feature,featureId=feature?.properties?.id||item.featureId,icon=item.getElement?.();
+      if(icon){icon.classList.toggle('is-selected',false);icon.setAttribute('aria-pressed','false');}
+      if(feature&&item.setStyle){item.setStyle(normalStyle(style,feature));item.options.selected=false;}
+    });
+  }
+  function addCasing(id,feature,weight,selectedItem){
+    const L=scope.L,collection={type:'FeatureCollection',features:[feature]},paths=[];
+    // A light halo separates the source stroke from imagery; a narrow dark edge
+    // keeps the halo legible over pale topo lines and snow/bright ground.
+    for(const [tone,width] of [['edge',weight+6],['halo',weight+4]]){
+      const path=L.geoJSON(collection,{pane:'overlayPane',interactive:false,bubblingMouseEvents:false,
+        style:{className:'explore-selection-casing-'+tone,color:tone==='halo'?'#f8f8f2':'#202124',weight:width,opacity:1,fill:false,fillOpacity:0}});
+      path.addTo(map);path.eachLayer(item=>item.bringToFront?.());paths.push(path);
+    }
+    selectedItem.bringToFront?.();casings.set(id,{featureId:feature.properties?.id,paths});
+  }
+  function removeLayer(id){const layer=layers.get(id);if(layer)restoreLayer(id);else removeCasing(id);if(layer&&map)map.removeLayer(layer);layers.delete(id);styles.delete(id);labelRules.delete(id);refreshLabels();if(selected?.id===id)selected=null;}
+  function setVisible(id,visible){const layer=layers.get(id);if(!map||!layer)return;if(visible){layer.addTo(map);if(selected?.id===id)applySelection(id);}else{restoreLayer(id);map.removeLayer(layer);}refreshLabels();}
   function applySelection(id){
-    const layer=layers.get(id),style=styles.get(id);if(!layer)return;
+    const layer=layers.get(id),style=styles.get(id);if(!layer)return;removeCasing(id);
+    let selectedLine;
     layer.eachLayer(item=>{
       const feature=item.feature,featureId=feature?.properties?.id||item.featureId;
       const chosen=selected?.id===id&&selected.featureId===featureId;
       const icon=item.getElement?.();if(icon){icon.dataset.featureId=String(featureId);icon.classList.toggle('is-selected',chosen);icon.setAttribute('aria-pressed',String(chosen));}
       if(feature&&style&&item.setStyle){
-        const base=typeof style==='function'?style(feature):style;
+        const base=normalStyle(style,feature);
         const polygon=/Polygon$/.test(feature.geometry?.type);
+        const line=/LineString$/.test(feature.geometry?.type);
         // Polygon selection changes relative emphasis, preserving its palette,
         // precision treatment and all tier opacity/outline ceilings.
-        const emphasis=selected?.id===id?(polygon?{fillOpacity:chosen?base.fillOpacity:Math.min(base.fillOpacity||0,.04)}:chosen?{weight:(base.weight||1)+2,opacity:1}:{}):{};
+        const emphasis=selected?.id===id?(polygon?{fillOpacity:chosen?base.fillOpacity:Math.min(base.fillOpacity||0,.04)}:line?(chosen?{weight:Math.max((base.weight||0)+3,5),opacity:1}:{opacity:Math.max(.5,(base.opacity??1)*.7)}):{}):{};
         item.setStyle({...base,...emphasis});item.options.selected=!!chosen;
+        if(chosen&&line)selectedLine={item,feature,weight:Math.max((base.weight||0)+3,5)};
       }
     });
+    if(selectedLine)addCasing(id,selectedLine.feature,selectedLine.weight,selectedLine.item);
   }
   function setSelected(id,featureId){
     cancelTap();lastTap=null;const previous=selected?.id;selected=featureId===null?null:{id,featureId};
     if(previous)applySelection(previous);if(selected)applySelection(id);
   }
-  function setStyle(id,style){styles.set(id,style);layers.get(id)?.setStyle(style);if(selected?.id===id)applySelection(id);}
+  function setStyle(id,style){removeCasing(id);styles.set(id,style);layers.get(id)?.setStyle(style);if(selected?.id===id&&map?.hasLayer(layers.get(id)))applySelection(id);}
   function setPins(id,pins){
     removeLayer(id);if(!map)return;
     const L=scope.L,group=L.layerGroup();
@@ -263,8 +292,8 @@
     cancelTap();if(resizeFrame!==undefined)scope.cancelAnimationFrame(resizeFrame);resizeFrame=undefined;
     for(const [node,name,handler,capture] of mapBindings)node.removeEventListener(name,handler,capture);mapBindings=[];
     for(const [control,handler] of controlBindings)control.removeEventListener('click',handler);
-    controlBindings=[];if(map){map.off('moveend zoomend',publishView);map.off('dblclick',doubleClick);map.remove();}
-    map=null;baseLayer=null;mouseTapZoom=undefined;mouseTapPoint=null;lastTouch=null;lastTap=null;layers.clear();handlers.clear();styles.clear();labelRules.clear();labelled.clear();selected=null;
+    controlBindings=[];for(const id of casings.keys())removeCasing(id);if(map){map.off('moveend zoomend',publishView);map.off('dblclick',doubleClick);map.remove();}
+    map=null;baseLayer=null;mouseTapZoom=undefined;mouseTapPoint=null;lastTouch=null;lastTap=null;layers.clear();handlers.clear();styles.clear();labelRules.clear();labelled.clear();casings.clear();selected=null;
   }
   const api={init,addLayer,removeLayer,setVisible,setStyle,setPins,onFeature,fit,setBasemap,destroy,setSelected,setLabels};
   if(typeof module!=='undefined')module.exports=api;
