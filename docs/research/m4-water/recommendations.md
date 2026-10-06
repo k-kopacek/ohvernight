@@ -1,5 +1,11 @@
 # Recommendations: proposed M4 architecture
 
+> Superseded in part. The owner decided the questions in section 12 on
+> 2026-10-06 (decisions D1–D12). Where this document and
+> [the M4 specification](../../specs/M4-functional-recreational-water.md)
+> differ, the specification governs. This file is kept as the record of what
+> was proposed and why.
+
 The coordinator's synthesis of the research in this directory. It is a
 proposal for the M4 specification. Nothing here is decided until the owner
 approves a specification.

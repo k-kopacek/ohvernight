@@ -33,6 +33,7 @@ Access date for all external sources: 2026-10-06.
 | [community-signals.md](community-signals.md) | Community and review sources, and what their terms allow |
 | [licensing-and-terms.md](licensing-and-terms.md) | Licence and terms findings and open questions, in one place |
 | [recommendations.md](recommendations.md) | Proposed evidence hierarchy, source architecture, selection rule, PR breakdown and the owner decisions required |
+| [nhd-selection-probe.md](nhd-selection-probe.md) | Read-only counts of what the proposed selection rule yields in each region |
 
 ## Research tracks
 
@@ -43,7 +44,13 @@ Access date for all external sources: 2026-10-06.
 | C | Official recreation signals | Hermes | [hermes/track-c-recreation-signals.md](hermes/track-c-recreation-signals.md) |
 | D | Community and review signals | Hermes | [hermes/track-d-community-signals.md](hermes/track-d-community-signals.md) |
 | E | Current Ohvernight water audit | Hermes, from facts computed by the coordinator | [hermes/track-e-current-water-audit.md](hermes/track-e-current-water-audit.md) |
+| F | CPW structured data: services, schemas, terms (follow-up for owner decision D7) | Hermes | [hermes/track-f-cpw-structured-data.md](hermes/track-f-cpw-structured-data.md) |
 | — | Repository architecture and pipeline audit; source checks | Coordinator | this directory |
 
-Tracks A to E ran in parallel. Track C stalled on its first attempt and was
+The owner decided the questions in `recommendations.md` on 2026-10-06
+(decisions D1–D12). The resulting proposal is
+[docs/specs/M4-functional-recreational-water.md](../../specs/M4-functional-recreational-water.md),
+which governs where it differs from this directory.
+
+Tracks A to E ran in parallel. Track F followed the owner's decisions. Track C stalled on its first attempt and was
 re-run with a bounded method; only the second report is kept.
