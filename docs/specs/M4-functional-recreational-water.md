@@ -1,9 +1,9 @@
 # Milestone 4 specification — Functional recreational water
 
 **For:** Codex (implementation). **Reviewer / coordinator:** Claude. **Research:** Hermes. **Base:** `main` at `b45ca59`.
-**Status:** PROPOSED. Not approved. No production implementation may start until the owner approves this document.
+**Status:** ARCHITECTURE APPROVED by the owner on 2026-10-06 (decisions D1–D12 and O1–O4, O6–O9; section 21). **Production implementation is not yet authorised:** one owner gate remains, the exact user-facing wording of section 10 (O5). Codex is not dispatched until that is resolved and recorded here.
 **Delivery:** four sequential pull requests, M4-A to M4-D (section 16). M4 is complete when A, B and C are merged. M4-D is optional.
-**Owner decisions:** D1–D12 of 2026-10-06 are recorded in section 21 and are binding on this document.
+**Owner decisions:** D1–D12 and O1–O9 of 2026-10-06 are recorded in section 21 and are binding on this document.
 
 Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/architecture/decisions/` (ADR-004, ADR-005, ADR-006), `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `v2/pipeline/docs/data-contract.md`, `docs/specs/M3-unified-mobile-explore.md` (final, with amendments A1–A14), and the research record in `docs/research/m4-water/`.
 
@@ -68,7 +68,9 @@ Rules:
 | Region | Flowlines (layer 6) | Areas (layer 9) | Waterbodies (layer 12) |
 |---|---|---|---|
 | Aspen | All, within the existing padded extent (unchanged scope; this layer also feeds setback screening) | All (unchanged) | All (unchanged) |
-| Douglas County | Features with a non-empty `gnis_name` (unchanged scope; see owner decision O1) | Not fetched (unchanged) | **All**, named or not (new: needed for D3) |
+| Douglas County | Features with a non-empty `gnis_name`, plus the minimum unnamed supporting features defined below (O1) | Not fetched (unchanged) | **All**, named or not (new: needed for D3) |
+
+**Douglas supporting features (O1).** The roughly 34,000 unnamed Douglas flowlines are not fetched. After the named features are fetched, M4-A computes the parts of each `gnis_id` (section 8.3). Where two parts of one `gnis_id` have end points within 250 m of each other, M4-A queries the service for unnamed flowlines intersecting a 300 m box around that gap and keeps an unnamed feature only when it is a *bridge*: a stream, artificial-path or connector segment, or a chain of them, whose two free ends touch members of that same `gnis_id` on either side. Each kept feature carries the derived properties `support_for` (the `gnis_id`) and `support_reason` (`bridges_named_parts`). Nothing else unnamed is kept. A supporting feature is used for connectivity only: it is never drawn, never selectable, never labelled and never a display feature. The snapshot document reports the number of named segments, the number of supporting unnamed segments by `support_reason` and `water_class`, and the rivers they support. If reliable grouping turns out to need more than this, M4-A stops and reports; it does not widen the fetch.
 
 **Snapshot record.** M4-A commits `docs/research/m4-water/nhd-snapshot.md` containing: service URL and layer IDs; the service's own `currentVersion` and any data-date text it returns; retrieval timestamp (UTC); the exact `where`, `outFields`, extent and page size of each query; feature counts returned per layer and region; and the SHA-256 of each canonical file before and after.
 
@@ -108,9 +110,10 @@ Computed by the pipeline and listed under `fields.derived`:
 | `source_namespace` | Constant `usgs_nhd` |
 | `source_layer` | `flowline`, `area` or `waterbody` (replaces Aspen's `kind`, which is kept as an alias for one milestone; see 7.3) |
 | `water_class` | `stream`, `artificial_path`, `canal_ditch`, `pipeline`, `connector`, `lake_pond`, `reservoir`, `swamp_marsh`, `other`, from `ftype` by the fixed table in 8.1 |
-| `hydro_category` | `perennial`, `intermittent`, `ephemeral`, `not_stated`, from `fcode` by the fixed table in 8.1 |
+| `hydro_category` | `perennial`, `intermittent`, `ephemeral` or `unknown`, from `fcode` by the fixed table in 8.1. `unknown` means the source code states no hydrographic category; it is never presented as perennial (O8) |
 | `group_id` | Flowlines only: the stream group this segment belongs to, or null (section 8.3) |
 | `legacy_ids` | Array of every ID this feature had before M4-A (section 7.3) |
+| `support_for`, `support_reason` | Douglas only: set on an unnamed feature kept solely to establish a named river's continuity (section 5). Null or absent on every other feature |
 
 Douglas's always-null `manager` property is removed from the water layers (it was never populated). Nothing else is removed.
 
@@ -144,11 +147,11 @@ Canonical data keeps every fetched feature. This section decides only what the b
 
 `water_class` from `ftype`: 460 → `stream`; 558 → `artificial_path`; 336 → `canal_ditch`; 428 → `pipeline`; 334 → `connector`; 390 → `lake_pond`; 436 → `reservoir`; 466 → `swamp_marsh`; anything else → `other`.
 
-`hydro_category` from `fcode`: `46006`, `39004`, `39009`, `39010`, `39011`, `39012`, `43615`, `43621` → `perennial`; `46003`, `39001`, `39005`, `39006`, `43614` → `intermittent`; `46007` → `ephemeral`; everything else → `not_stated`. These follow the service's coded-value domain, reproduced in [nhd-selection-probe.md](../research/m4-water/nhd-selection-probe.md).
+`hydro_category` from `fcode`: `46006`, `39004`, `39009`, `39010`, `39011`, `39012`, `43615`, `43621` → `perennial`; `46003`, `39001`, `39005`, `39006`, `43614` → `intermittent`; `46007` → `ephemeral`; everything else → `unknown`. These follow the service's coded-value domain, reproduced in [nhd-selection-probe.md](../research/m4-water/nhd-selection-probe.md).
 
-Reservoir eligibility from `fcode`. The domain states a reservoir type for some codes and only a construction material, or nothing, for others. Not eligible, because the source states a type that is not open water for recreation: `43601` aquaculture, `43603` decorative pool, `43604` and `43605` tailings pond, `43606`, `43625`, `43626` disposal, `43607` and `43623` evaporator, `43608` swimming pool, `43609` cooling pond, `43610` filtration pond, `43611` settling pond, `43612` sewage treatment pond, `43624` treatment. Not eligible, because the source states it is intermittent: `43614`. Eligible: `43600` (no type stated), `43613`, `43615`, `43617`, `43621` (water storage), `43618`, `43619` (construction material only). For `43600`, `43613`, `43617`, `43618` and `43619` the source does not state a hydrographic category; they are displayed with `hydro_category` `not_stated` and are never described as perennial. Rueter-Hess Reservoir is coded `43619`. This treatment of reservoirs with no stated category is owner decision O8.
+Reservoir eligibility from `fcode`. The domain states a reservoir type for some codes and only a construction material, or nothing, for others. Not eligible, because the source states a type that is not open water for recreation: `43601` aquaculture, `43603` decorative pool, `43604` and `43605` tailings pond, `43606`, `43625`, `43626` disposal, `43607` and `43623` evaporator, `43608` swimming pool, `43609` cooling pond, `43610` filtration pond, `43611` settling pond, `43612` sewage treatment pond, `43624` treatment. Not eligible, because the source states it is intermittent: `43614`. Eligible: `43600` (no type stated), `43613`, `43615`, `43617`, `43621` (water storage), `43618`, `43619` (construction material only). For `43600`, `43613`, `43617`, `43618` and `43619` the source does not state a hydrographic category; they are displayed with `hydro_category` `unknown` and are never described as perennial. Rueter-Hess Reservoir is coded `43619`. The owner approved this treatment (O8): physical existence may be displayed; the category is recorded as `unknown`; every activity and access stays unknown unless a claim says otherwise.
 
-The tables live in one committed configuration file, `v2/pipeline/config/water_display.json`, with the size threshold. The validator and the build read the same file. M4-A adds the file; if the live data contains an `fcode` not in the tables, the build maps it to `not_stated` and the snapshot document lists it.
+The tables live in one committed configuration file, `v2/pipeline/config/water_display.json`, with the size threshold. The validator and the build read the same file. M4-A adds the file; if the live data contains an `fcode` not in the tables, the build maps it to `unknown` and the snapshot document lists it.
 
 ### 8.2 Eligibility
 
@@ -168,19 +171,21 @@ The tables live in one committed configuration file, `v2/pipeline/config/water_d
 
 Threshold: `unnamed_waterbody_min_area_sqkm` = `0.02` (2 hectares), provisional (D4).
 
-A named waterbody that is intermittent is not displayed. That removes about half of the named Douglas waterbodies. It is a consequence of D3 and is called out for the owner's attention in section 22.
+A named waterbody that is intermittent is not displayed. That removes about half of the named Douglas waterbodies; the owner accepted this (O4). One may be brought back only by a reviewed inclusion (8.5) with authoritative evidence and a recorded reason. A name is never an inclusion reason.
 
 ### 8.3 Stream grouping
 
 A group is a set of canonical flowline segments shown as one display feature.
 
-**Candidates.** Segments of the region's flowline layer whose `water_class` is `stream` (any hydrographic category) or `artificial_path`, with a non-empty `gnis_id`. Canals, pipelines and connectors are never candidates.
+**Identity and geometry are separate (O2).** A group is a logical river. Its drawn geometry may be several separate lines, because reaches that are not perennial are not drawn. No geometry is ever invented: no straight connector or any other synthetic line crosses a hidden reach.
+
+**Candidates.** Segments of the region's flowline layer whose `water_class` is `stream` (any hydrographic category) or `artificial_path`, with a non-empty `gnis_id`; and, for connectivity only, supporting features whose `support_for` equals that `gnis_id` (section 5). Canals and pipelines are never candidates. A connector is a candidate only as a supporting feature.
 
 **Algorithm.**
 
 1. Partition candidates by `gnis_id`.
 2. Within one `gnis_id`, build a graph: two segments are adjacent when an end point of one equals an end point of the other, after rounding canonical coordinates to six decimals. Interior crossings do not connect.
-3. Each connected component is a *part*.
+3. Each connected component is a *part*. Two reaches of one `gnis_id` are therefore one part when source segments of that same river, drawn or not, connect them end to end. They are separate parts when nothing in the source connects them: a gap at the extent edge, disconnected source geometry, or a connection that exists only through a different `gnis_id`.
 4. A part is *displayable* when it contains at least one segment eligible under 8.2.
 5. Order the displayable parts of a `gnis_id` by total perennial length, longest first, ties broken by the smallest member `id`. The first gets the group ID `nhd-gnis-<gnis_id>`, the rest `-p2`, `-p3`, ….
 6. A group's display geometry is the MultiLineString of its eligible stream segments plus the artificial-path segments of the same part that are reachable from an eligible segment through artificial paths alone: an artificial path is drawn when at least one of its end points touches a segment already drawn, computed to a fixed point. An artificial path separated from every eligible segment by a non-perennial stream segment is not drawn. Intermittent, ephemeral and not-stated stream segments of the part are used for connectivity only and are never drawn.
@@ -196,10 +201,12 @@ A group is a set of canonical flowline segments shown as one display feature.
 - G6. Every drawn member is either an eligible stream segment or an artificial path drawn under step 6. No canal, pipeline, connector or non-perennial stream is drawn. Every group has at least one eligible perennial stream segment.
 - G7. The set of members of a group equals the set of canonical segments whose `group_id` is that group ID. Canonical `group_id` is null for every segment that is not a drawn member.
 - G8. Grouping never changes, removes or reorders anything in the canonical data except by writing `group_id`.
+- G9. Every coordinate in a group's display geometry comes from a drawn member's canonical geometry. No line is added between members.
+- G10. A supporting feature is never a drawn member and never has a `group_id`.
 
-**Wide rivers.** The probe found the South Platte River in the Douglas extent with a single perennial stream segment of 80 m; the rest of the river there is artificial path through area polygons. Under step 6 it is drawn only as far as artificial paths connect to that segment. The selection report therefore lists, per region, every named `gnis_id` whose artificial paths total more than 2 km and (a) are not drawn at all because the part has no perennial stream segment, or (b) are drawn for less than 80% of their length. If either list contains a river a user would expect to see, M4-B stops before merge and the examples go to the owner with a proposed rule that uses the area polygon's own hydrographic category. That rule is not specified here because it has not been tested on real geometry.
+**Wide rivers.** The probe found the South Platte River in the Douglas extent with a single perennial stream segment of 80 m; the rest of the river there is artificial path through area polygons. Under step 6 it is drawn only as far as artificial paths connect to that segment. The selection report therefore lists, per region, every named `gnis_id` whose artificial paths total more than 2 km and (a) are not drawn at all because the part has no perennial stream segment, or (b) are drawn for less than 80% of their length. The owner approved the connected-centre-line rule (O9). `water_display.json` also carries `expected_major_rivers`: for each region a list of `gnis_id` values with a minimum drawn fraction of the river's named length inside the extent (initially 0.8). Initial list, to be confirmed against M4-A data: Aspen — Roaring Fork River, Castle Creek, Maroon Creek, Snowmass Creek, Hunter Creek; Douglas — South Platte River, Plum Creek, East Plum Creek, West Plum Creek, Cherry Creek. The build fails when a listed river is absent, is drawn below its fraction, or contains a member with another `gnis_id`. Codex and the coordinator also inspect each listed river on the rendered map in M4-B. If a major river is missing, materially cut short or wrongly grouped, M4-B stops and reports. The rule and the fraction are not weakened to make the check pass; a different rule (for example one using the area polygon's own category) needs owner approval.
 
-**Reporting.** The build writes a grouping report (section 8.6) listing every `gnis_id` with more than one displayable part, with part lengths and the gap between parts, so that real rivers split by an undrawn intermittent reach, by the extent boundary, or by a source error are visible to the reviewer and the owner. M4 does not join parts across a gap. Whether to do so is owner decision O2.
+**Reporting.** The build writes a grouping report (section 8.6) listing every `gnis_id` with more than one displayable part, with part lengths and the gap between parts, so that real rivers split by an undrawn intermittent reach, by the extent boundary, or by a source error are visible to the reviewer and the owner. M4 never joins separate parts: not across an extent-edge gap, not across disconnected geometry, not through a different `gnis_id`, and not where a branch is ambiguous (O2). Separate parts of one `gnis_id` remain separate groups with the same name.
 
 ### 8.4 Display features
 
@@ -331,29 +338,54 @@ Future options, recorded and not built: sources whose terms clearly permit reuse
 
 ## 10. Trust wording
 
-Fixed strings, compared against literals in tests. None contains "verified", "legal", "permitted" or "open to" (M3 A4 rule). A status word is never shown without its activity.
+**Status: pending owner review (O5).** The strings below are proposed. They are not approved, and no implementation may use them until the owner approves or amends them and this section records the result.
 
-| ID | String |
-|---|---|
-| WW1 | `Mapped water. Access and allowed activities are not established.` |
-| WW2 | `A mapped water feature is not permission to enter, fish, boat, paddle, swim, park or camp.` |
-| WW3 | `Not established` |
-| WW4 | `Allowed` |
-| WW5 | `Restricted` |
-| WW6 | `Prohibited` |
-| WW7 | `Review overdue` |
-| WW8 | `Operator statement` |
-| WW9 | `From the source` |
-| WW10 | `Computed by Ohvernight` |
-| WW11 | `Reviewed` |
-| WW12 | `Perennial` |
-| WW13 | `source segments` |
-| WW14 | `Unnamed lake` |
-| WW15 | `Unnamed reservoir` |
+Fixed strings, compared against literals in tests. None contains "verified", "legal", "permitted" or "open to" (M3 A4 rule). A status word is never shown without its activity. All of them appear only in the water feature detail in the results sheet, except WW14 and WW15, which are also the feature's title in search results.
 
-Activity labels: `Fishing`, `Boating (motorised or trailered)`, `Paddling`, `Swimming`, `Access`. Type labels come from `water_class`: `River or stream`, `Lake or pond`, `Reservoir`.
+### 10.1 The fifteen fixed strings
 
-The existing manifest `limitations` sentence for each water layer is rewritten in M4-B to describe the new rule and is rendered verbatim as today. Proposed text, both regions: `Perennial rivers, streams, lakes and reservoirs selected from source type codes. Unnamed streams and intermittent water are not shown. A mapped water feature is not evidence of access or of any allowed activity.` The owner approves this sentence with the specification.
+| ID | String | Where it appears | Evidence or state that causes it |
+|---|---|---|---|
+| WW1 | `Mapped water. Access and allowed activities are not established.` | Water detail, in place of the operator-statement section | The water has no record in the recreation registry |
+| WW2 | `A mapped water feature is not permission to enter, fish, boat, paddle, swim, park or camp.` | Water detail, always the last line | Every water feature, whatever its claims |
+| WW3 | `Not established` | Water detail, operator-statement section, after an activity label or `Access` | That activity's claim is `unknown`; or its stored status is `allowed` and the review is past its maximum age |
+| WW4 | `Allowed` | Same place, after an activity label | The claim is `allowed`, with complete evidence, within its maximum age |
+| WW5 | `Restricted` | Same place, after an activity label or `Access` | The claim is `restricted`, with complete evidence; shown whether or not the review is overdue |
+| WW6 | `Prohibited` | Same place, after an activity label | The claim is `prohibited`, with complete evidence; shown whether or not the review is overdue |
+| WW7 | `Review overdue` | Same line as WW5 or WW6 | The claim is `restricted` or `prohibited` and its last confirmation is older than its maximum age |
+| WW8 | `Operator statement` | Water detail, heading of the section that lists the activities, followed by the operator's name | The water has a record in the recreation registry |
+| WW9 | `From the source` | Water detail, heading of the first section | Every water feature |
+| WW10 | `Computed by Ohvernight` | Water detail, heading of the section holding length or area | Every water feature that has a length or an area |
+| WW11 | `Reviewed` | Water detail, after each non-unknown activity line, followed by the date of last confirmation | The claim is `allowed`, `restricted` or `prohibited` |
+| WW12 | `Perennial` | Water detail, "From the source" section | The source code states the feature is perennial. Not shown when the category is unknown |
+| WW13 | `source segments` | Water detail, "From the source" section, after a number, as in `96 source segments` | The feature is a grouped stream |
+| WW14 | `Unnamed lake` | Detail title and search-result title | A lake or pond with no source name |
+| WW15 | `Unnamed reservoir` | Detail title and search-result title | A reservoir with no source name |
+
+### 10.2 Labels used with them
+
+These are also user-facing and fixed.
+
+| String | Where it appears | Evidence or state that causes it |
+|---|---|---|
+| `Fishing` | Operator-statement section, start of an activity line | The water has a record |
+| `Boating (motorised or trailered)` | Same | The water has a record |
+| `Paddling` | Same | The water has a record |
+| `Swimming` | Same | The water has a record |
+| `Access` | Same, last line of the section | The water has a record |
+| `River or stream` | "From the source" section, type line | Source type is stream or river |
+| `Lake or pond` | Same | Source type is lake or pond |
+| `Reservoir` | Same | Source type is reservoir |
+
+An activity line reads: label, status word, the reviewer's summary, a link to the operator's page, then `Reviewed` and the date, then `Review overdue` when it applies. Example, for a claim that is prohibited and within its review age: `Boating (motorised or trailered): Prohibited. All boating prohibited. Denver Water. Reviewed 2026-10-20`. The summary is written per claim by the reviewer and approved by the owner in M4-C; it is not one of the fixed strings.
+
+Reused unchanged from M3: the agency name, the source link label, the "Source fetched" line and the rendering of the layer limitation sentence.
+
+### 10.3 Water-layer limitation sentence
+
+The manifest `limitations` sentence for each water layer is rewritten in M4-B and rendered verbatim, as today, in the layer drawer row and in the "From the source" section of every water detail. Proposed text, both regions:
+
+`Perennial rivers, streams, lakes and reservoirs selected from source type codes. Unnamed streams and intermittent water are not shown. A mapped water feature is not evidence of access or of any allowed activity.`
 
 ## 11. Interaction
 
@@ -367,7 +399,14 @@ M4 adds no interaction model. It uses M3's (A14).
 
 Because a group is one display feature, the adapter's twelve exports, `setSelected`, labels and hit testing need no new concept. A stream gets one label, placed by the adapter's existing rule. The registry entry for the waterbody layer relies on the polygon default (`preserve`); the stream layer on the line default (`fit`).
 
-Fitting a long river can zoom far out. The shell caps a fit so that it never zooms out below the zoom the user is at by more than two levels; if the group does not fit within that, the map keeps its zoom and centres on the tapped point. This is a change to the shared fit path and applies to any long line; it is the one shell behaviour change in M4-B and has its own tests.
+**Fit policy (O6).** Fitting a long river can zoom far out. The shell's camera policy (M3 A14) gains an optional per-layer fit policy, read from the layer registry entry; the adapter is not changed and has no water-specific logic.
+
+| Policy field | Meaning | Water streams | Every other layer |
+|---|---|---|---|
+| `tap.max_zoom_out` | On a map-tap selection, the most zoom levels the fit may zoom out from the current zoom | 2 | not set: M3 behaviour unchanged |
+| `list.min_zoom` | On a selection from search or a results list, the lowest zoom a fit may reach | 11 | not set: M3 behaviour unchanged |
+
+Map tap: the river is selected and highlighted and its detail opens. If fitting it would zoom out more than `tap.max_zoom_out` levels, the map does not fit; it keeps its zoom and keeps the tapped point in view above the sheet. Search or list selection: the map may move to the river and fit it, but not below `list.min_zoom`; if the whole river does not fit at that zoom the map centres on the member nearest the river's midpoint. Both values live in the registry's defaults for line features of kind `water`, are configurable, and are confirmed on a device in M4-B. Trails and other lines carry no fit policy, so their M3 behaviour is unchanged. Tests cover a short feature (fits exactly as in M3) and a very long river (capped) for both origins.
 
 **Detail content**, in this order, only where the value is carried:
 
@@ -378,7 +417,7 @@ Fitting a long river can zoom far out. The shell caps a fit so that it never zoo
 5. If it has no record: WW1.
 6. Always last: WW2.
 
-No icon, colour, filter or sort implies an activity. Streams and waterbodies keep the single M3 water colour. A water with a prohibited or restricted claim is not styled differently on the map in M4; the claim is in the detail. Whether restricted waters should be marked on the map is owner decision O3.
+No icon, colour, filter or sort implies an activity. Streams and waterbodies keep the single M3 water colour. M4 adds no restriction colour, warning icon or other status symbol to the map (O3). The map communicates physical water identity and type; restriction and activity status are in the feature detail.
 
 Search: water names are added to the existing search list for both regions, as source names. Selecting one selects the group or waterbody.
 
@@ -406,7 +445,7 @@ New stable rule IDs. Each has at least one negative test on a fixture and, where
 | R67 | `water_class` and `hydro_category` equal the values computed from `ftype` and `fcode` by `water_display.json` | A |
 | R68 | `legacy_ids` is an array of distinct non-empty strings; no legacy ID appears on two features; `water_id_aliases` maps every legacy ID to an existing display ID, and nothing else | A, B |
 | R69 | The display set of a water layer equals exactly the set computed from canonical data by section 8.2, the threshold, and the reviewed lists. No eligible feature is missing and no ineligible feature is present | B |
-| R70 | Grouping invariants G1–G7 hold for every group; `water_groups` equals the canonical `group_id` membership | B |
+| R70 | Grouping invariants G1–G7, G9, G10 hold for every group; `water_groups` equals the canonical `group_id` membership | B |
 | R71 | A group display feature's geometry equals the ordered, R63-transformed geometry of its drawn members; `member_count` and `length_km` equal the computed values; `name` and `gnis_id` equal the members' | B |
 | R72 | No display feature of a water layer has a `water_class` of `canal_ditch`, `pipeline`, `connector`, `swamp_marsh` or `other`. A displayed stream group or lake has `hydro_category` `perennial`; a displayed reservoir has an eligible reservoir code; the only exceptions are listed inclusions | B |
 | R73 | `water-review.json` conforms to 8.5: IDs resolve, reason codes are in the set, evidence is complete, no community host, and no excluded feature is displayed | B |
@@ -434,9 +473,9 @@ Performance: the A10 limits and triggers R-1 to R-5 apply unchanged. M4-B is exp
 
 Offline, clock-free, nothing written inside the repository, as in M3.
 
-**Python (validator and build):** a negative fixture for every rule R66–R76; the fixed tables; ID sanitising and collision; legacy mapping by geometry (a moved row number does not match; an identical geometry does); eligibility for each row of 8.2 at, just below and just above the threshold; grouping: same `gnis_id` in two disconnected sets gives two groups; two `gnis_id` values touching end to end stay two groups; a segment with empty `gnis_id` joins nothing; same `gnis_id` with two names fails the build; an intermittent reach connects two perennial reaches into one part and is not drawn; an artificial path is drawn when it connects to a drawn segment through artificial paths alone and not when a non-perennial segment lies between; a group cannot consist of artificial paths only; each reservoir code of 8.1 is eligible or not as listed; a canal with the same `gnis_id` is neither drawn nor used for connectivity; exclusion and inclusion lists; claims: each invalid form of 9.2; freshness table of 9.3 as a pure function with an injected time.
+**Python (validator and build):** a negative fixture for every rule R66–R76; the fixed tables; ID sanitising and collision; legacy mapping by geometry (a moved row number does not match; an identical geometry does); eligibility for each row of 8.2 at, just below and just above the threshold; grouping: same `gnis_id` in two disconnected sets gives two groups; two `gnis_id` values touching end to end stay two groups; a segment with empty `gnis_id` joins nothing; same `gnis_id` with two names fails the build; an intermittent reach connects two perennial reaches into one group whose geometry is two separate lines, with no coordinate added between them (G9); two reaches of one `gnis_id` with nothing in the source between them stay two groups; a reach connected only through a different `gnis_id` is not joined; a supporting unnamed feature bridges two named parts and is never drawn or given a group; an unnamed feature that does not bridge is not kept; an expected major river that is missing, below its drawn fraction or carrying a foreign member fails the build; an artificial path is drawn when it connects to a drawn segment through artificial paths alone and not when a non-perennial segment lies between; a group cannot consist of artificial paths only; each reservoir code of 8.1 is eligible or not as listed; a canal with the same `gnis_id` is neither drawn nor used for connectivity; exclusion and inclusion lists; claims: each invalid form of 9.2; freshness table of 9.3 as a pure function with an injected time.
 
-**Node:** detail rendering for a grouped stream, a named lake, an unnamed lake, a water with claims in each status and with an overdue restriction; every WW string against a literal; no activity status rendered without evidence; fit cap.
+**Node:** detail rendering for a grouped stream, a named lake, an unnamed lake, a water with claims in each status and with an overdue restriction; every WW string against a literal; no activity status rendered without evidence; `Perennial` not rendered when the category is `unknown`; fit policy for a short feature and a very long river, from a map tap and from a list.
 
 **Browser check (both regions, four sizes):** the water layers load within budget; a real stream group selects as one feature from a tap on two different member lines and from its label, with one casing set and one label; a real waterbody selects with the camera preserved; detail shows the M4 sections and WW2; no canal or ditch name appears in the rendered water layer (asserted from `water_class`, not from names); from M4-C, Cheesman's detail shows `Prohibited` for boating with its link, and a water with no record shows WW1.
 
@@ -495,7 +534,7 @@ Until those are shown, M4 data stays on the NHD snapshot. M4-A stores no 3DHP id
 |---|---|
 | The live refresh returns data that differs from September's in ways not explained by the change | Difference report; stop and report rule in section 5 |
 | `permanent_identifier` missing or duplicated | R66; stop and report; no fallback |
-| Grouping joins or splits wrongly | Invariants G1–G8, negative tests, the multi-part report, owner check on device |
+| Grouping joins or splits wrongly | Invariants G1–G10, negative tests, the multi-part report, owner check on device |
 | A wide river is mostly artificial path in NHD and is drawn short or not at all | Step 6 draws connected artificial paths; the selection report lists every affected river; stop-and-report rule in 8.3 |
 | The perennial rule hides a stream people use that NHD codes intermittent | Selection report lists every named intermittent-only stream; the owner can ask for a reviewed inclusion mechanism for streams (not in M4) |
 | The 2 ha rule hides useful lakes, or keeps ponds | Threshold comparison with examples; owner confirms |
@@ -535,19 +574,21 @@ Stated as unknown; none blocks approval of this specification.
 | D11 | Grouping with validated invariants and negative tests; no blind "same GNIS ID is one feature" |
 | D12 | Physical water may be displayed with every recreation and access property unknown |
 
-## 22. Remaining owner decisions
+## 22. Owner decisions on O1–O9 (2026-10-06)
 
-| ID | Question | Proposal |
-|---|---|---|
-| O1 | Douglas canonical flowlines stay "named only", as today, so Douglas canonical data is not complete hydrology. Fetching all Douglas flowlines would add roughly 34,000 segments that M4 never displays | Keep named only; state the limit in the manifest |
-| O2 | A river split into parts by an undrawn intermittent reach or by the extent shows as two features with the same name | M4 does not join across gaps; the report lists them; decide after seeing the report |
-| O3 | Should a water with a prohibited or restricted claim be marked on the map, not only in its detail | Not in M4; revisit after M4-C on a device |
-| O4 | Named intermittent waterbodies are hidden by D3, which removes about half of the named Douglas waterbodies | Accept; use the inclusion list for any the owner wants back |
-| O5 | The layer limitation sentence and the WW strings in section 10 | Approve with this specification, or amend |
-| O6 | The fit cap in section 11 changes shared M3 behaviour for long lines | Approve, or keep the M3 fit unchanged |
-| O7 | Whether the owner will write to CPW about reuse terms (contacts are in track F) | Owner's call; M4-D waits on it |
-| O8 | Reservoirs whose source code states neither a type nor a hydrographic category (for example Rueter-Hess, `43619`) are not stated to be perennial. D3 speaks of perennial waterbodies | Display them as eligible reservoirs, never described as perennial (section 8.1). Without this Rueter-Hess is not shown |
-| O9 | Wide rivers drawn from artificial paths (South Platte) | Rule in 8.3 step 6 now; stop and report if the selection report shows a major river missing or cut short |
+| ID | Decision |
+|---|---|
+| O1 | Do not fetch all unnamed Douglas stream segments. Fetch named stream features, features needed for wide-river centre lines, and the minimum unnamed supporting features that continuity genuinely needs, each traceable and explainable, never shown as separate features; report the counts and reasons; stop and report if this makes reliable grouping impossible |
+| O2 | Identity and rendered geometry are separate. A river may be one group across an intervening intermittent reach when GNIS identity agrees, source topology establishes continuity, no unrelated branch is absorbed and no geometry is invented. No synthetic connector. No joining across extent-edge gaps, disconnected geometry, different GNIS IDs or ambiguous branches. Member source IDs preserved. Positive and negative tests |
+| O3 | No restriction colours, warning icons or other map-level status symbols in M4. Status belongs in the detail |
+| O4 | Named intermittent waterbodies hidden by default; included only through a reviewed inclusion with authoritative evidence and a recorded reason; a name is not a reason |
+| O5 | **Pending.** The exact wording of section 10 awaits owner review. This is the last gate before production implementation |
+| O6 | Fit cap approved: a map-tap selection never zooms out more than about two levels to fit a river; search and list selection may fit more broadly down to a configurable minimum zoom; ordinary short lines unchanged; the policy is per layer and geometry, not hard-coded in the adapter; tests for a short feature and a very long river |
+| O7 | Pursue clarification from CPW. A draft outreach message is in [cpw-outreach-draft.md](../research/m4-water/cpw-outreach-draft.md). M4-A, B and C do not wait. M4-D stays optional and needs separate written approval and a specification amendment once terms are clear |
+| O8 | Display otherwise-eligible reservoirs whose attributes establish neither perennial nor intermittent and no exclusion condition; never label them perennial; record the category as unknown; activities and access stay unknown |
+| O9 | Connected-centre-line rule approved: no invented geometry, source identity and member IDs preserved, no unrelated area or centre line absorbed, a missing or truncated major river detected by build and test; major rivers explicitly inspected in M4-B; stop and report, never weaken the rule |
+
+The four-pull-request structure is approved. M4 completes after A, B and C. M4-D is optional.
 
 ## 23. Measured and estimated counts
 
@@ -610,7 +651,7 @@ M4-A:
 M4-B:
 6. R69–R73 and the amended R61–R63 pass with negative tests and mutation proofs.
 7. No canal, ditch, pipeline, connector, intermittent or unnamed stream is in a display artifact.
-8. Every displayed stream is a group satisfying G1–G8; every group is traceable to its members.
+8. Every displayed stream is a group satisfying G1–G10; every group is traceable to its members.
 9. Selection report committed with the threshold comparison; owner has confirmed the threshold.
 10. Byte budgets hold; three performance sessions reported.
 11. Detail shows only carried fields; every WW string matches its literal; no activity wording without a claim.
