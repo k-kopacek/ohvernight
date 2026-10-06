@@ -14,7 +14,7 @@ states the exact scope.
 |---|---|---|
 | M1 | Verification Baseline / Repo Hygiene | **Complete** |
 | M2 | Regional Data Contract + Evidence Semantics | **Complete** |
-| M3 | Unified Mobile-First Explore Architecture | **In progress — A11 implemented; performance disposition, second real-device pass and merge approval owed** |
+| M3 | Unified Mobile-First Explore Architecture | **Complete** |
 | M4 | Functional Recreational Water | Planned |
 | M5 | Land Classification v1 | Planned |
 | M6 | Trails / COTREX | Planned |
@@ -56,7 +56,17 @@ Merged in pull request #3.
 - Aspen and Douglas County manifests.
 - Pinned non-conformance register (N1–N18).
 
-## M3 — Unified Mobile-First Explore Architecture — IN PROGRESS
+## M3 — Unified Mobile-First Explore Architecture — COMPLETE
+
+Merged on 2026-10-06 (PR A #6, amendment A3 #7, browser-CI hardening #8,
+PR B #9; `main` at `9868fe8`). The owner approved PR B after the final iPhone
+Safari check passed: the camera is preserved on land and bare-map taps, the
+selected trail is distinguishable, the trail colour `#d06030` is accepted for
+M3 (not the final map or brand colour system), and the land selection cue is
+a stronger fill with no outline. Release evidence is the owner's iPhone Safari
+passes plus automated viewport coverage. The paragraphs below are the record
+of how the milestone got there; where they say something is owed or awaited,
+the owner decisions of A13 and A14 in the specification settled it.
 
 Status: Phase A selected optimized Leaflet behind a narrow adapter
 ([approved specification](docs/specs/M3-unified-mobile-explore.md),
@@ -110,6 +120,9 @@ Deferred beyond M3, each recorded so it is not lost:
 - Map rotation and a compass, to be revisited when the renderer decision
   naturally reopens. No GPL rotation plugin and no renderer change in M3.
 - iPad and Android real-device validation.
+- A full visual and marketing colour-system redesign; the M3 trail colour is
+  an interim improvement.
+- The full Choose Your Adventure workflow (M8).
 
 ## M4 — Functional Recreational Water
 
@@ -139,6 +152,17 @@ Deferred beyond M3, each recorded so it is not lost:
 - Hiking, mountain biking, OHV/dirt bike, equestrian and other activities.
 - Equivalent authoritative sources elsewhere.
 - Access, closure and current-condition claims remain evidence-backed.
+- User-facing trail identity (owner requirement recorded at the close of M3,
+  2026-10-06). Source geometry and feature identity are not necessarily the
+  trail a user has in mind: in cases such as Difficult Creek, several
+  connected source features make up what a user would reasonably call one
+  trail. M6 evaluates connected source segments with the same or a similar
+  name; overlapping or duplicate geometries; segment versus route identity;
+  source jurisdiction boundaries; cross-source COTREX / USFS matching; and
+  grouping several canonical segments into one user-facing trail where
+  evidence supports it. Canonical source records stay preserved. Trail
+  features are not merged or renamed on geometric continuity or matching
+  names alone.
 
 ## M7 — Camping / Dispersed Camping
 
