@@ -97,6 +97,20 @@ dependency patches Leaflet globally; pursuing rotation is the owner's decision.
 - The rendering architecture evaluation selected optimized Leaflet with lazy
   GeoJSON; A10 keeps Leaflet, with the existing reopening triggers in force.
 
+Owner decisions after the third real-device pass (2026-10-06, A13). Release
+evidence for M3 is the owner's iPhone Safari pass plus automated viewport
+coverage; iPad is unverified and deferred, Android Chrome is unverified.
+Deferred beyond M3, each recorded so it is not lost:
+
+- Double-tap map zoom on mobile Safari is unreliable and is deferred to later
+  map UX work. Pinch, the + / − controls and page-zoom prevention work.
+- A generic "several features under one tap → chooser" interaction, for
+  coincident or overlapping selectable features. Two Douglas trails cannot be
+  selected from the line today; search selects them.
+- Map rotation and a compass, to be revisited when the renderer decision
+  naturally reopens. No GPL rotation plugin and no renderer change in M3.
+- iPad and Android real-device validation.
+
 ## M4 — Functional Recreational Water
 
 - Distinguish useful lakes, reservoirs, rivers and streams from generic
