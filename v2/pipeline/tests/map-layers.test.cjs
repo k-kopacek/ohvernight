@@ -1,31 +1,36 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const fs=require('node:fs'),path=require('node:path');
-const {describe,displayWater}=require('../../map-layers.js');
+const {displayWater}=require('../../map-layers.js');
 const root=path.resolve(__dirname,'../..');
 const bundle=JSON.parse(fs.readFileSync(path.join(root,'map-data-v2.json')));
-const coverage=JSON.parse(fs.readFileSync(path.join(root,'pipeline/config/aoi.geojson')));
+const {createRegionLoader}=require('../../explore/region-loader.js');
+const E=require('../../explore/evidence.js');
+const manifest=JSON.parse(fs.readFileSync(path.join(root,'regions/aspen/region.json')));
+const read=p=>JSON.parse(fs.readFileSync(path.join(root,p.split('?')[0])));
+const load=()=>createRegionLoader({fetch:async p=>read(p),defaultRegion:'aspen'}).loadRegion('');
 const vectors=JSON.parse(fs.readFileSync(path.join(root,'pipeline/tests/fixtures/display-water-vectors.json')));
-test('trail pilot is independently loaded and missing trail data is explicit',()=>{
-  const trails=JSON.parse(fs.readFileSync(path.join(root,'trails.geojson')));
-  const result=describe(null,null,0,0,trails).find(d=>d.id==='trails');
-  assert.equal(result.count,trails.features.length);
-  assert.ok(result.count>0);
-  assert.equal(describe(null,null,0,0).find(d=>d.id==='trails').status,'Data not loaded');
+test('trail pilot is independently loaded and missing trail data is explicit',async()=>{
+  const trails=read('trails.geojson'),region=await load();
+  assert.equal(region.layers.get('trails').state,'idle');
+  const result=await region.loadLayer('trails');
+  assert.equal(result.count,trails.features.length);assert.ok(result.count>0);
+  const missing=await createRegionLoader({fetch:async p=>{if(p.startsWith('regions/aspen/display/trails.geojson'))throw Error('missing');return read(p);},defaultRegion:'aspen'}).loadRegion('');
+  assert.equal((await missing.loadLayer('trails')).state,'failed');
 });
-test('real map data is represented independently of the trip, including wilderness and research areas',()=>{
-  const records=describe(bundle,coverage,5,4);
-  for(const [id,key] of [['roads','mvum_roads'],['candidates','dispersed_corridors'],['wilderness','wilderness']]){
-    assert.equal(records.find(d=>d.id===id).count,bundle.layers[key].features.length);
-    assert.ok(records.find(d=>d.id===id).count>0);
+test('real map data is represented independently of the trip, including wilderness and research areas',async()=>{
+  const region=await load();
+  for(const key of ['mvum_roads','dispersed_corridors','wilderness']){
+    const result=await region.loadLayer(key);assert.equal(result.count,bundle.layers[key].features.length);assert.ok(result.count>0);
   }
-  assert.equal(records.find(d=>d.id==='coverage').count,1);
+  assert.equal(region.coverage.features.length,1);
 });
 test('water display removes unnamed clutter without changing screening geometry',()=>{
   const before=JSON.stringify(bundle.layers.hydrology);
-  const water=describe(bundle,coverage,5,4).find(d=>d.id==='water');
-  assert.ok(water.count>0&&water.count<water.sourceCount);
-  assert.equal(water.sourceCount,bundle.layers.hydrology.features.length);
+  const water=bundle.layers.hydrology.features.filter(displayWater);
+  assert.ok(water.length>0&&water.length<bundle.layers.hydrology.features.length);
+  assert.equal(water.length,read('regions/aspen/display/index.json').artifacts.find(x=>x.layer_id==='hydrology').feature_count);
+  assert.equal(bundle.layers.hydrology.features.length,6926);
   assert.equal(JSON.stringify(bundle.layers.hydrology),before);
   const feature=(name,kind='flowline',type='LineString')=>({properties:{name,kind},geometry:{type,coordinates:[]}});
   assert.equal(displayWater(feature('River')),true);
@@ -42,16 +47,16 @@ test('display-water vectors remain in parity with the Python artifact builder',(
  }
 });
 test('missing, empty, and failed sources produce different explanations',()=>{
-  const get=b=>describe(b,null,0,0).find(d=>d.id==='roads');
-  assert.equal(get(null).status,'Data not loaded');
-  const empty={layers:{mvum_roads:{features:[]}},source_status:{'02_fetch_mvum_roads':{status:'available'}}};
-  assert.equal(get(empty).status,'No features in this dataset');
-  empty.source_status['02_fetch_mvum_roads'].status='unavailable';
-  assert.equal(get(empty).status,'Source unavailable');
+  const roads=manifest.layers.find(x=>x.id==='mvum_roads');
+  const get=(transport,count=0)=>E.layer(manifest,roads,{transport:{mvum_roads:transport}},count,Date.parse('2026-10-04T00:00:00Z'));
+  assert.ok(get(null).lines.includes('No retrieval status is recorded for this layer'));
+  assert.deepEqual(get({status:'available'}).lines,[roads.limitations]);
+  assert.ok(get({status:'unavailable'}).lines.includes('Source unavailable'));
+  assert.ok(get({status:'unavailable'},1).lines.includes('latest fetch failed'));
 });
-test('an unconfirmed fire monitor without geometry does not count as a mapped restriction',()=>{
-  const records=describe({layers:{fire_restriction_stage:{features:[{geometry:null,properties:{status:'unknown'}}]}}},null,0,0);
-  const restrictions=records.find(d=>d.id==='restrictions');
-  assert.equal(restrictions.count,0);
-  assert.match(restrictions.status,/coverage incomplete/);
+test('an unconfirmed fire monitor without geometry does not count as a mapped restriction',async()=>{
+  const region=await load(),result=await region.loadLayer('fire_restriction_stage');
+  assert.equal(result.data.features.filter(f=>f.geometry).length,0);
+  assert.ok(E.region(manifest).lines.includes(manifest.fact_coverage.closures.statement));
+  assert.match(manifest.fact_coverage.closures.statement,/No mapped closure does not mean no closure/);
 });

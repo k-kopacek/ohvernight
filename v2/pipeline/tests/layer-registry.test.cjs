@@ -10,7 +10,7 @@ const readJson=relative=>JSON.parse(fs.readFileSync(path.join(root,relative),'ut
 test('T2: registry joins every displayed manifest layer to presentation metadata',()=>{
   for(const id of ['aspen','douglas-co']){
     const manifest=readJson(`regions/${id}/region.json`);
-    const config={layers:manifest.layers.map((layer,index)=>({layer_id:layer.id,title:'Configured '+layer.id,order:index,default_on:true,min_zoom:null}))};
+    const config=readJson(`regions/${id}/explore.json`);
     const registry=buildLayerRegistry(manifest,config);
     assert.equal(registry.length,manifest.layers.length);
     assert.equal(new Set(registry.map(layer=>layer.id)).size,registry.length);

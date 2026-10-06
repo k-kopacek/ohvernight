@@ -89,7 +89,7 @@ class RegionContractTests(unittest.TestCase):
 
     def test_confidence_is_not_consumed_by_browser_code(self):
         pattern = re.compile(r"\.confidence(?![-\w])|\[['\"]confidence['\"]\]")
-        for path in list((V2).glob("*.js")) + list((V2 / "regions").glob("*/*.js")):
+        for path in list((V2).glob("*.js")) + list((V2 / "regions").glob("*/*.js")) + list((V2 / "explore").glob("*.js")):
             self.assertIsNone(pattern.search(path.read_text()), str(path))
 
     def test_validator_is_clock_independent(self):
@@ -153,8 +153,51 @@ class RegionContractTests(unittest.TestCase):
                             "canonical_sha256": hashlib.sha256(encoded(docs[canonical_path])).hexdigest()})
         docs["regions/synthetic/display/water.geojson"] = display
         docs["regions/synthetic/display/coverage.geojson"] = coverage_display
-        docs["regions/synthetic/display/index.json"] = {"region_id": "synthetic", "artifacts": entries}
+        docs["regions/synthetic/display/index.json"] = {"region_id": "synthetic", "artifacts": entries,
+                                                       "transport": {"water": copy.deepcopy(docs["data.json"]["status"])}}
         return manifest, docs
+
+    def test_display_transport_R65_changed_value(self):
+        manifest, docs = self.display_base()
+        self.valid(manifest, docs)
+        docs["regions/synthetic/display/index.json"]["transport"]["water"]["count"] = 2
+        with self.assertRaises(ContractError) as raised:
+            self.valid(manifest, docs)
+        self.assertEqual(raised.exception.rule, "R65")
+
+    def test_display_transport_R65_missing_key(self):
+        manifest, docs = self.display_base()
+        docs["regions/synthetic/display/index.json"]["transport"].pop("water")
+        with self.assertRaises(ContractError) as raised:
+            self.valid(manifest, docs)
+        self.assertEqual(raised.exception.rule, "R65")
+
+    def test_display_transport_R65_scalar_type_change(self):
+        for value in (True, 1.0):
+            with self.subTest(value=value):
+                manifest, docs = self.display_base()
+                docs["regions/synthetic/display/index.json"]["transport"]["water"]["count"] = value
+                with self.assertRaises(ContractError) as raised:
+                    self.valid(manifest, docs)
+                self.assertEqual(raised.exception.rule, "R65")
+
+    def test_display_properties_R62_scalar_type_change(self):
+        manifest, docs = self.display_base()
+        docs["data.json"]["layers"]["water"]["features"][0]["properties"]["numeric_property"] = 1
+        docs["regions/synthetic/display/water.geojson"]["features"][0]["properties"]["numeric_property"] = True
+        entry = docs["regions/synthetic/display/index.json"]["artifacts"][0]
+        entry["canonical_sha256"] = hashlib.sha256((json.dumps(docs["data.json"], ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode()).hexdigest()
+        self.refresh_display_hash(docs, "water")
+        with self.assertRaises(ContractError) as raised:
+            self.valid(manifest, docs)
+        self.assertEqual(raised.exception.rule, "R62")
+
+    def test_display_transport_R65_extra_null_status_key(self):
+        manifest, docs = self.display_base()
+        manifest["layers"][0]["status_ref"] = None
+        with self.assertRaises(ContractError) as raised:
+            self.valid(manifest, docs)
+        self.assertEqual(raised.exception.rule, "R65")
 
     def refresh_display_hash(self, docs, layer_id):
         value = docs[f"regions/synthetic/display/{layer_id}.geojson"]

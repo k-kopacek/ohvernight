@@ -7,8 +7,13 @@
   untracked staging bundle at `data/processed/map-data-v2.json`; after
   validation, copy/promote it to the canonical app-facing
   `v2/map-data-v2.json`. It does not deploy or modify the website automatically.
-- `v2/regions/` contains region-specific field-test experiences. Keep a
-  region's app, styles, research data, and README together.
+- `v2/explore/` contains the shared mobile-first Explore shell, region loader,
+  renderer adapter, evidence presentation and capability modules. Only
+  `map-adapter.js` uses Leaflet directly.
+- `v2/regions/` contains each region's manifest, presentation configuration,
+  generated display artifacts, canonical regional data and README. Douglas
+  `extras.js` holds the preserved region-specific listing and coverage note;
+  its old entry page forwards to the shared shell.
 - Each region has `v2/regions/<id>/region.json`, validated against
   `v2/pipeline/docs/data-contract.md`.
 - The repository root retains the original site for comparison. Do not
@@ -62,9 +67,14 @@ python3 -m venv v2/pipeline/.venv
 v2/pipeline/.venv/bin/pip install -r v2/pipeline/requirements.txt
 v2/pipeline/.venv/bin/python v2/pipeline/scripts/00_selftest.py
 node --test v2/pipeline/tests/*.test.cjs
+node v2/pipeline/tests/browser/run.mjs
 ```
 
-CI runs the same commands on every pull request; a PR must be green before merge.
+CI runs the offline Python, Node and `browser` checks on every pull request;
+a PR must be green before merge. The browser harness needs local Chrome and
+blocks non-local requests. Performance comparisons are reported separately
+with `node v2/pipeline/tests/browser/measure.mjs`; real-device checks remain
+a human gate.
 
 The pipeline's live refresh commands contact external sources and may require
 `RIDB_API_KEY`; do not run them as part of ordinary code review. Read the

@@ -2,7 +2,26 @@
 
 The region declaration is [region.json](region.json), validated against the [normative regional data contract](../../pipeline/docs/data-contract.md).
 
-Field-test edition. See ../../DOUGLAS-TESTING.md for publishing, testing, inventory and limitations. County data remains separate from Aspen. Refresh from v2 with `python3 pipeline/scripts/fetch_douglas.py`, then `python3 pipeline/scripts/enrich_douglas.py` using the pipeline dependencies. Base refresh preserves enrichment and original timestamps; failed enrichment retains old data with a failed status. Nearby camping is proximity only, never a verified riding connection or access approval.
+The old `/v2/regions/douglas-co/` entry forwards directly to
+`/v2/?region=douglas-co&view=map`, with a plain fallback link. Shared Explore
+uses the existing USGS imagery/topographic pair, progressively loads only
+this region, and keeps all layers on by default.
+
+`explore.json` configures trail search, published-season checks, GPX export
+and saved research. The Rampart listing and coverage note moved verbatim to
+`extras.js`; no listing semantics were cleaned up. Saved IDs, notes, trip
+inputs and the exported-plan shape retain the existing storage keys and
+compatibility fixtures. GPX serializes six-decimal display geometry without
+further transformation; a real trail affected by a dropped degenerate part
+is explicitly pinned. Nearby entries, order and displayed distances match
+the base commit for every real feature.
+
+Canonical `research.json` stays unchanged and downloadable. The browser
+never fetches it: `display/` contains reproducible delivery artifacts and
+index transport copies. Rebuild from the repository root with
+`v2/pipeline/.venv/bin/python v2/pipeline/scripts/build_display.py`.
+The former `preview.js`, `discovery.js` and `county.css` are replaced by shared
+modules. The source audit below records the existing inventory and gaps.
 
 ## Source audit — September 27, 2026
 
@@ -21,5 +40,5 @@ Field-test edition. See ../../DOUGLAS-TESTING.md for publishing, testing, invent
 1. Add reviewed campground/designated-dispersed inventory via region-aware RIDB import; maintain source-level exclusions for day use.
 2. Add current federal/county restriction evidence, precise parcel context and reviewed facility rules. Source timestamps and failed-refresh messages already accompany imported context.
 3. Add county/state trails after source and reuse review.
-4. Integrate region selection into the main app only when regional rules and coverage messages are isolated from Aspen.
+4. Complete real-device checks of both regions in shared Explore before merge.
 5. Test cross-boundary trips explicitly; never assume county-clipped segments describe complete Rampart routes.

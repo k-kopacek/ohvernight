@@ -250,7 +250,7 @@ inferred from that repair.
 
 ## Display delivery contract (M3 PR A)
 
-The optional `display` declarations and rules R60–R64 are additive to contract
+The optional `display` declarations and rules R60–R65 are additive to contract
 version 1. The canonical region and source files remain authoritative. A
 display artifact is a derived delivery product, not a second source of truth;
 it is reproducible from committed files by `build_display.py` and the rebuild
@@ -258,6 +258,14 @@ check detects drift. Evidence is carried by reference only to reduce payload:
 nothing is dropped, merged or flattened, and restoring the reference gives
 the canonical evidence object exactly. The validator checks display artifacts
 against canonical data, never the reverse.
+
+The display index has a top-level `transport` object keyed by layer ID. For
+every manifest layer of either format with a non-null `status_ref`, it carries
+a verbatim, un-normalised copy of the referenced canonical record. Layers
+with a null reference have no key. Shared records are copied for each layer;
+place-list records are included. Legacy aliases and any legacy confirmation
+field are preserved, but retrieval never becomes confirmation. The browser
+normalises these copies without fetching a canonical geometry bundle.
 
 The stable display rules are:
 
@@ -268,6 +276,7 @@ The stable display rules are:
 | R62 | For every display feature, restoring `evidence` from `evidence_table` gives an object equal to the canonical feature's `evidence`, and every other property equals the canonical property. |
 | R63 | Every display geometry equals the canonical geometry transformed by 12.1 step 2: coordinates rounded to six decimals, consecutive duplicates removed, degenerate parts dropped (A1). Geometry type is unchanged. The geometry is non-empty and structurally well-formed: every line has at least two positions and every ring is closed with at least four. This is checked for every feature, whether or not the coordinates match. The index entry's `dropped_degenerate_parts` equals the number of parts dropped. Topological validity is not required of display geometry. |
 | R64 | The canonical-file `sha256` recorded in `index.json` equals the current file's. A canonical data change without regenerating display files fails. |
+| R65 | The key set of `index.json` `transport` equals the layer IDs whose `status_ref` is non-null, for both feature collections and place lists. Each value equals the referenced canonical object exactly, without normalisation. A region with no display artifact has no index and is not subject to this rule. |
 
 ## Known non-conformance register
 
@@ -282,17 +291,17 @@ runtime regressions retained as markers.
 | N4 | `evidence.confidence` differs for the same source across regions. | T7 |
 | N5 | Aspen `land_ownership` says ownership although data is limited-scale management context. | kind/R28 |
 | N6 | Staleness ordering hid restrictions in v2 and `Trust.applyRules`; fixed in M2. | T10–T14 |
-| N7 | Rampart designated-dispersed listing, including a paraphrased seasonal closure and date-only retrieval, is hard-coded in `preview.js`. | M7 (deferred) |
+| N7 | Rampart designated-dispersed listing, including a paraphrased seasonal closure and date-only retrieval, is hard-coded in `v2/regions/douglas-co/extras.js` after a verbatim move. | M7 (deferred) |
 | N8 | Aspen MVUM publishes `access_status: designated_open` on 51 features for a past trip. | R27 |
-| N9 | The v2 trip evaluator reads the manifest policy; the 7-day `preview.js` and root 30-day legacy thresholds remain until their later migrations. | Milestone 3 PR A partial; PR B completes v2 |
+| N9 | Freshness thresholds in v2 come from the active region manifest; the root legacy trip evaluator retains its 30-day constant. | Retired for v2 in M3 PR B; root legacy remains |
 | N10 | Douglas recreation `seasonal_operational_status` can be historical. | manifest fields |
 | N11 | Place-list per-record source URLs are not checked against declared sources. | Deferred |
 | N12 | Douglas snapshot predates current fetch status for trails and roads. | T5 |
 | N13 | `v2/map-data.json` legacy extract is outside any manifest. | Retired in Milestone 3 PR A |
-| N14 | Per-feature evidence is duplicated for payload size in the canonical files; display delivery deduplicates it for M3 PR B. | M3 PR B (deferred) |
+| N14 | Per-feature evidence remains duplicated in canonical files. The browser consumes per-layer display evidence tables. | Retired for browser delivery in M3 PR B; canonical data unchanged |
 | N15 | Root legacy site had the same staleness ordering; fixed in M2. | T15 |
 | N16 | Motorhome clearance caution can precede vehicle-season exclusion, and conflicting rules are not applied. | Retired in Milestone 3 PR A |
-| N17 | Land styling exceeds generalized evidence. | spatial precision declaration; Milestone 3 PR B (deferred) |
+| N17 | Land styling exceeded generalized evidence; tier-G presentation and exact wording now follow spatial precision. | Retired in M3 PR B; T4/B10 regression marker |
 | N18 | Water lacks recreational-use semantics; names are not usefulness evidence. | limitations and fact coverage |
 
 All checks are offline and time-independent. Adding or changing a layer,

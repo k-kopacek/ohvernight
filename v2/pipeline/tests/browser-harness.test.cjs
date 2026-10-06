@@ -160,3 +160,12 @@ test('DevTools failure before the handshake rejects ready and later commands',{t
   await assert.rejects(client.command('Network.enable'),/Network.enable: DevTools connection closed/);
   await assert.rejects(client.command('Runtime.enable'),/Runtime.enable: DevTools connection closed/);
 });
+
+test('R1: readiness waits for the loaded destination loader, ignoring the forwarding and previous documents',async()=>{
+ const {destinationLoaded}=await import('./browser/explore-checks.mjs');
+ const loaded=new Set(['previous','forwarder']),url='http://127.0.0.1/v2/?region=test&view=map';
+ assert.equal(destinationLoaded({url:'about:blank',loaderId:'previous'},url,loaded),false);
+ assert.equal(destinationLoaded({url:'http://127.0.0.1/v2/regions/test/',loaderId:'forwarder'},url,loaded),false);
+ assert.equal(destinationLoaded({url,loaderId:'destination'},url,loaded),false);
+ loaded.add('destination');assert.equal(destinationLoaded({url,loaderId:'destination'},url,loaded),true);
+});

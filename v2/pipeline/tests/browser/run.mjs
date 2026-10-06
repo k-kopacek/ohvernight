@@ -6,6 +6,7 @@ import {extname,join,normalize,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
+import {runExploreChecks} from './explore-checks.mjs';
 
 const root=resolve(fileURLToPath(new URL('../../../../',import.meta.url)));
 const chromeCandidates=[process.env.CHROME,'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','google-chrome','chromium'].filter(Boolean);
@@ -15,7 +16,7 @@ export const CDP_COMMAND_TIMEOUT_MS=20000;
 const CHROME_STOP_GRACE_MS=1500;
 const CHROME_EXIT_DIAGNOSTIC_GRACE_MS=250;
 
-async function freePort(){
+export async function freePort(){
   const server=createTcpServer();
   await new Promise((resolvePromise,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolvePromise);});
   const port=server.address().port;
@@ -54,7 +55,7 @@ export async function waitFor(url,{
   }
   throw diagnostic(processState().exited?'Chrome exited before readiness':'Timed out');
 }
-function trackProcess(child){
+export function trackProcess(child){
   const state={exited:false,exitCode:null,signal:null,error:null,closed:false};
   const controller=new AbortController();
   child.once('exit',(code,signal)=>{Object.assign(state,{exited:true,exitCode:code,signal});controller.abort();});
@@ -67,18 +68,18 @@ async function settlesWithin(promise,timeoutMs){
   try{return await Promise.race([promise.then(()=>true),new Promise(resolvePromise=>{timer=setTimeout(()=>resolvePromise(false),timeoutMs);})]);}
   finally{clearTimeout(timer);}
 }
-async function closeSocket(socket){
+export async function closeSocket(socket){
   if(socket.readyState===WebSocket.CLOSED) return;
   const closed=new Promise(resolvePromise=>socket.addEventListener('close',resolvePromise,{once:true}));
   socket.close();
   await settlesWithin(closed,CHROME_STOP_GRACE_MS);
 }
-async function stopChrome(browser,lifecycle){
+export async function stopChrome(browser,lifecycle){
   if(!lifecycle.state.exited) browser.kill('SIGTERM');
   if(!await settlesWithin(lifecycle.closed,CHROME_STOP_GRACE_MS)) browser.kill('SIGKILL');
   await lifecycle.closed;
 }
-async function closeServer(server){
+export async function closeServer(server){
   const closed=new Promise((resolvePromise,reject)=>server.close(error=>error?reject(error):resolvePromise()));
   server.closeAllConnections?.();
   await closed;
@@ -124,7 +125,7 @@ export function cdpClient(url,{commandTimeoutMs=CDP_COMMAND_TIMEOUT_MS}={}){
   };
   return {command,events,socket,signal:connection.signal};
 }
-async function findChrome(){
+export async function findChrome(){
   for(const candidate of chromeCandidates){
     const child=spawn(candidate,['--version'],{stdio:['ignore','pipe','ignore']});
     const output=await new Promise(resolvePromise=>{let text='';child.stdout.on('data',chunk=>text+=chunk);child.on('close',()=>resolvePromise(text));child.on('error',()=>resolvePromise(''));});
@@ -137,50 +138,15 @@ async function staticServer(){
     try{
       const requestPath=decodeURIComponent((request.url||'/').split('?')[0]);
       const relative=normalize(requestPath).replace(/^([.][.][/\\])+/, '').replace(/^[/\\]+/,'')||'index.html';
-      const file=resolve(root,relative);
+      let file=resolve(root,relative);
       if(file!==root&&!file.startsWith(root+'/')) throw new Error('path outside checkout');
-      const info=await stat(file);if(!info.isFile()) throw new Error('not a file');
+      let info=await stat(file);if(info.isDirectory()){file=join(file,'index.html');info=await stat(file);}if(!info.isFile()) throw new Error('not a file');
       response.writeHead(200,{'content-type':mime[extname(file)]||'application/octet-stream','cache-control':'no-store'});
       response.end(await readFile(file));
     }catch(error){response.writeHead(error.message==='not a file'?404:400);response.end(error.message);}
   });
   await new Promise(resolvePromise=>server.listen(0,'127.0.0.1',resolvePromise));
   return {server,port:server.address().port};
-}
-async function inspectPage(client,url,localOrigin,signal){
-  signal.throwIfAborted();
-  const state={url,sameOriginRequests:[],failedSameOrigin:[],externalUrls:[],externalBlocked:0,exceptions:[],consoleErrors:[]};
-  await client.command('Network.enable');
-  await client.command('Runtime.enable');
-  await client.command('Page.enable');
-  await client.command('Log.enable');
-  await client.command('Fetch.enable',{patterns:[{urlPattern:'*',requestStage:'Request'}]});
-  const finishAt=Date.now()+12000;
-  const navigation=client.command('Page.navigate',{url});
-  navigation.catch(()=>{}); // Navigation is awaited after processing intercepted requests.
-  while(Date.now()<finishAt){
-    signal.throwIfAborted();
-    const message=client.events.shift();
-    if(!message){await delay(20,undefined,{signal});continue;}
-    if(message.method==='Fetch.requestPaused'){
-      const requestUrl=message.params.request.url;
-      if(requestUrl.startsWith(localOrigin)) await client.command('Fetch.continueRequest',{requestId:message.params.requestId});
-      else {state.externalBlocked++;await client.command('Fetch.failRequest',{requestId:message.params.requestId,errorReason:'BlockedByClient'});}
-    }else if(message.method==='Network.responseReceived'){
-      const response=message.params.response;
-      if(response.url.startsWith(localOrigin)){state.sameOriginRequests.push({url:response.url,status:response.status});if(response.status>=400)state.failedSameOrigin.push(response.url);}
-      else if(!response.url.startsWith('data:')) state.externalUrls.push(response.url);
-    }else if(message.method==='Network.loadingFailed'&&message.params.type!=='Other'&&message.params.errorText){
-      if((message.params.errorText||'').includes('net::ERR_FAILED')) state.externalBlocked++;
-    }else if(message.method==='Runtime.exceptionThrown') state.exceptions.push(message.params.exceptionDetails.text||'uncaught exception');
-    else if(message.method==='Log.entryAdded'&&message.params.entry.level==='error'&&!message.params.entry.text.includes('ERR_BLOCKED_BY_CLIENT')) state.consoleErrors.push(message.params.entry.text);
-    if(message.method==='Page.loadEventFired') state.loaded=true;
-    if(state.loaded&&Date.now()>finishAt-2500) break;
-  }
-  state.dom=await client.command('Runtime.evaluate',{expression:`JSON.stringify({scrollWidth:document.documentElement.scrollWidth,innerWidth:innerWidth,hasLegacyLink:!!document.querySelector('a[href="./map-data.json"]'),title:document.title})`,returnByValue:true});
-  await navigation;
-  state.dom=JSON.parse(state.dom.result.value);
-  return state;
 }
 async function main(){
   let site,profile,browser,lifecycle,client;
@@ -207,7 +173,7 @@ async function main(){
         if(lifecycle.signal.aborted) onExit();
         else lifecycle.signal.addEventListener('abort',onExit,{once:true});
       });
-      const inspect=async()=>[await inspectPage(client,`${origin}/v2/index.html`,origin,inspectionSignal),await inspectPage(client,`${origin}/v2/regions/douglas-co/index.html`,origin,inspectionSignal)];
+      const inspect=()=>runExploreChecks(client,origin,inspectionSignal,root);
       pages=await Promise.race([inspect(),exited]);
     }catch(error){
       // Socket closure can precede the child exit event; observe it before cleanup sends SIGTERM.
@@ -216,18 +182,7 @@ async function main(){
       if(inspectionSignal.aborted&&error.name==='AbortError') throw inspectionSignal.reason;
       throw error;
     }finally{lifecycle.signal.removeEventListener('abort',onExit);}
-    for(const page of pages){
-      if(!page.loaded) throw new Error(`page did not load: ${page.url}`);
-      if(page.exceptions.length||page.consoleErrors.length) throw new Error(`browser errors on ${page.url}: ${JSON.stringify({exceptions:page.exceptions,consoleErrors:page.consoleErrors})}`);
-      if(page.failedSameOrigin.length) throw new Error(`same-origin request failed on ${page.url}: ${page.failedSameOrigin.join(',')}`);
-      if(page.externalUrls.length) throw new Error(`non-local request escaped blocking on ${page.url}: ${page.externalUrls.join(',')}`);
-      if(page.dom.scrollWidth>page.dom.innerWidth) throw new Error(`horizontal overflow on ${page.url}`);
-    }
-    if(pages[0].dom.hasLegacyLink) throw new Error('removed legacy download link is still present');
-    if(!pages[0].sameOriginRequests.some(request=>request.url.endsWith('/regions/aspen/region.json'))){
-      throw new Error('Aspen page did not load its manifest policy');
-    }
-    console.log(JSON.stringify({chrome:chrome.version,server:`127.0.0.1:${site.port}`,pages},null,2));
+    console.log(JSON.stringify({chrome:chrome.version,node:process.version,server:`127.0.0.1:${site.port}`,pages},null,2));
   }finally{
     const cleanupErrors=[];
     const cleanup=async action=>{try{await action();}catch(error){cleanupErrors.push(error);}};

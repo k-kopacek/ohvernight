@@ -30,6 +30,20 @@ choose MapLibre:
 - **R-4** | Statewide browsing | An approved product requirement needs one continuous view that draws detailed geometry from more than one region at once, or needs more than one region's budget loaded together.
 - **R-5** | Browser memory | JS heap after load and garbage collection exceeds 66 MB (twice the M3 Aspen baseline of 33.4 MB) in three separate sessions of the committed script; or the manual matrix records a reproducible tab reload or crash on a real device while using Explore.
 
+## Reopening record
+
+- **2026-10-05 — R-2: triggered, reviewed, resolved by the owner.** During M3
+  PR B the Douglas time until all default-on layers are drawn exceeded the
+  base page in three separate sessions, before and after the loading change
+  A8. The owner reopened the rendering decision as this ADR requires and
+  resolved it: **Leaflet is kept.** Layer construction on the unified shell
+  was level with or faster than on the base page; the difference came from
+  shell start-up and deliberate progressive scheduling, and the map became
+  usable substantially earlier. The 16.4 timing and heap acceptance
+  thresholds were amended by specification amendment A10. The triggers
+  below the decision are unchanged in wording and remain in force; R-2
+  now refers to the amended timing thresholds, and R-5 stays at 66 MB.
+
 ## Consequences
 
 The M3 budgets and drift checks are binding, and PR A records measurements

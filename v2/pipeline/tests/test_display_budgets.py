@@ -1,5 +1,6 @@
 import gzip
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -18,7 +19,16 @@ class DisplayBudgetTests(unittest.TestCase):
                 str((region_dir.parent / "region.json").relative_to(V2)),
                 str((region_dir / "index.json").relative_to(V2)),
             ])
-            # explore.json is not present in PR A; PR B will add it to this measure.
+            config = json.loads((region_dir.parent / "explore.json").read_text())
+            map_usable += (region_dir.parent / "explore.json").stat().st_size
+            html = (V2 / "index.html").read_text()
+            boot_paths = set(re.findall(r'(?:src|href)="\./([^"?#]+)', html))
+            map_usable += (V2 / "index.html").stat().st_size
+            map_usable += sum((V2 / relative).stat().st_size for relative in boot_paths)
+            if manifest.get("rules"):
+                map_usable += (V2 / manifest["rules"]["path"]).stat().st_size
+            if config["capabilities"].get("region_extras"):
+                map_usable += (region_dir.parent / "extras.js").stat().st_size
             place_paths = [layer["path"] for layer in manifest["layers"] if layer["format"] == "place_list"]
             map_usable += sum((V2 / relative).stat().st_size for relative in place_paths)
             coverage_entry = next(item for item in index["artifacts"] if item["layer_id"] == "coverage")

@@ -1,63 +1,109 @@
-# ohvernight v2 — pipeline kickoff
+# Ohvernight v2 — unified Explore
 
-## Douglas County field testing
+`/v2/` opens the Aspen / Snowmass trip planner. **Explore the open map** skips
+trip entry; `/v2/?region=aspen&view=map` opens the map directly.
+`/v2/?region=douglas-co&view=map` opens Douglas County. Existing bookmarks to
+`/v2/regions/douglas-co/` forward with `location.replace` and retain a plain
+link when scripts are off.
 
-The September 27 field-test release adds a dedicated dirt-bike/camping explorer at `regions/douglas-co/`. See [DOUGLAS-TESTING.md](DOUGLAS-TESTING.md) for inventory, upload steps, testing and coverage limits. All county layers start enabled; trail-season badges are source comparisons, not live access verdicts.
+The map is the page. On phones the results sheet has three states —
+collapsed, half and expanded — moved by dragging the handle/header, with
+independently scrolling content. Search, browse and planner results and
+feature detail live in the sheet; Back returns to the retained list and
+filters. Tapping a feature selects, highlights and fits it. The layer drawer
+and the sheet are mutually exclusive on phones: opening one collapses or
+closes the other. Source-name labels appear from zoom 14 with a global cap
+of 32; unnamed features receive no invented label. Double-tap zooms the map,
+and local zoom-control handling prevents page zoom without blocking page
+zoom globally. These changes have automated Chrome coverage; real-device
+retesting is still owed. Every layer starts on and loads
+progressively; dates, vehicle and list filters never remove map features.
+Approved and kept amendment A8 starts eligible default-on requests together,
+then parses and draws one layer per task in order with the existing yields.
+Source details are built when selected. **Sources & coverage** carries the
+manifest's statements and limitations verbatim, with per-layer retrieval
+status from the display index. A stale source does not remove a feature or
+weaken a restriction.
 
+## Preserved capabilities
 
-Satellite website with the alpine-night logo, source freshness warnings, independently controlled map layers, manual rule registry and an independent RIDB import. The header uses assets/logo-mark.svg; browser icons use favicon.svg and favicon.png. All current work and pipeline source are inside this v2 folder.
+Aspen keeps the planner, Plan A / backup, trail search, nearby lists and the
+Choose Your Adventure pilot. The pilot's inputs and ranking are unchanged;
+it pairs a published trail activity with nearby camping listings and does
+not establish a connecting route. Trip conflicts remain visible.
 
-## Publish alongside the original
+Douglas keeps trails/camping/trailheads browsing, published-season checks,
+saved research, field-test notes, plan export and segment GPX export. The
+Rampart area listing and coverage note live verbatim in `extras.js`. GPX
+uses the approved six-decimal display geometry, including any parts removed
+by the display builder after rounding; it performs no further transformation.
 
-**Choose Your Adventure** combines one selected trail activity with nearby campground/dispersed listings. Dates and vehicle affect camping conflict labels, while original trail activity dates remain visible for review. Suggestions are sorted by camping conflicts then approximate trail proximity; they are not verified itineraries or connecting routes. Choose no activity for the original overnight search, or use Explore for unrestricted map browsing. Coverage remains the Aspen-area pilot.
+Existing browser storage keys are preserved: `ohvernight-trip-v1`,
+`ohvernight-douglas-plan-v1`, `ohvernight-douglas-plan-v1-notes` and
+`ohvernight-douglas-plan-v1-trip`. Saved IDs that no longer resolve are dropped.
 
-**Find trails** searches trail names/numbers and published activities in a separate drawer. Selecting a result locates that segment and opens its details. Activity matches require a managed or accepted source record; displayed restrictions and dates still need review. Search never hides map geometry.
+## Code and data
 
-Trail popups link to up to three campground/dispersed listings within approximately five straight-line miles of the clipped trail segment. Distance is to the nearest line segment, not a trailhead or a travel route; it does not establish legal access. Empty results describe the current inventory, not the absence of camping in that area.
+- `index.html` and `app.js` host the shared shell and declare its default region.
+- `explore/` contains shared loading, UI, renderer and capability modules.
+  `map-adapter.js` is the only module that calls vendored Leaflet 1.9.4.
+  Its original ten exports plus `setSelected` and `setLabels` are pinned by
+  the exact adapter-surface test; no Leaflet object leaves it.
+- `regions/<id>/region.json` declares data, sources, freshness and limitations;
+  `explore.json` declares presentation and capabilities under a closed schema.
+- `regions/<id>/display/` contains reproducible delivery artifacts: selected
+  geometry rounded to six decimals, evidence tables and verbatim transport
+  copies in `index.json`. Canonical published files remain unchanged.
+- `map-layers.js` retains the pinned `displayWater` selection rule for the
+  builder/tests. The displayed Aspen water subset remains 1,555 features from
+  6,926 canonical hydrology features. Names do not establish recreational use.
 
-**Forest trails** adds 123 official USFS trail segments in the Aspen study area. Pink lines open trail details and published activity dates on tap. These are partial trail segments, not navigable routes; missing activity records remain unknown. The refresh script and source decision are documented in `pipeline/TRAIL-PILOT.md`. No COTREX data or API key is used for this layer.
+Both regions use the existing USGS imagery/topographic pair. Land is
+**Generalized land management context — not parcels**. Unshaded land remains
+unknown; source management classes do not establish access or camping permission.
+Map tiles need a connection. See [DATA-LICENSE.md](DATA-LICENSE.md), the
+[regional contract](pipeline/docs/data-contract.md) and the
+[system overview](../docs/architecture/system-overview.md).
 
-Explore opens with the legend closed. Use **Layers & legend** for switches and explanations; all layers still start enabled. On phones, **Explore stays** opens the results panel, which otherwise occupies about 13% of the screen.
+The map is north-up. Rotation and compass were not implemented: Leaflet
+1.9.4 has no bearing API, and the evaluated GPL-3.0 `leaflet-rotate` dependency
+patches Leaflet globally. Whether to pursue rotation remains the owner's
+decision under A11; landscape layout has separate automated coverage.
 
-The water display includes 1,555 named waterbody/flowline features from the current dataset. All 6,926 hydrology features remain in the pipeline bundle for screening. Named water is not a verified recreation-access or perennial-water dataset; unnamed lakes are also hidden by this initial cleanup.
+## Verify and publish
 
-The working folder includes `ridb-options.json` recovered from the successful September 25 GitHub import. Four campground records are retained; three overlap researched listings, so the combined inventory has six locations including Silver Queen Campground. Two day-use/ambiguous records are excluded, with the original import retained under `pipeline/data/raw/` for audit. Preserve a newer reviewed import if one exists when publishing.
+From the repository root:
 
-1. Unzip the latest ohvernight v2 delivery ZIP.
-2. Open https://github.com/k-kopacek/ohvernight → Add file → Upload files.
-3. Drag the entire v2 folder into the repository root, then commit. Do not move its contents into the root.
-4. After Pages deploys, compare:
-   - Original: https://k-kopacek.github.io/ohvernight/
-   - V2: https://k-kopacek.github.io/ohvernight/v2/
+```sh
+v2/pipeline/.venv/bin/python v2/pipeline/scripts/00_selftest.py
+node --test v2/pipeline/tests/*.test.cjs
+node v2/pipeline/tests/browser/run.mjs
+v2/pipeline/.venv/bin/python v2/pipeline/scripts/build_display.py
+```
 
-If the browser retains an older favicon, close and reopen the tab or try a private tab.
+The browser check blocks all non-local requests and checks both regions at
+four viewport sizes. Timing comparisons and the human real-device matrix
+are separate; see [browser instructions](pipeline/tests/browser/README.md).
+The app has no build step, package manager, backend or runtime dependency
+beyond vendored Leaflet. Requests use normal HTTP caching and display hashes.
 
-This is a separate static copy for comparison. All assets and data load using relative paths. Current changes apply to v2 only. Trip selections and saved plans share this browser's existing local storage.
+R-2 was triggered, reviewed and resolved by the owner on 2026-10-05; Leaflet
+is kept (A10). The original threshold misses remain recorded. The local
+benchmark is CPU/main-thread dominated; concurrent fetching showed no
+measurable local timing improvement. A8 avoids deliberately serialising
+independent network requests in real use; its benefit under real network
+latency remains unmeasured. The PR B heap threshold (115% of same-session
+base) and architecture trigger R-5 (66 MB) are different controls. The first
+iPhone Safari pass on 2026-10-05 failed several mobile-UX items; A11
+remediation is implemented. Required A11 performance session 2 missed the
+Douglas all-layers limit at 136.4954% against 135%; this is not a pass and
+awaits the owner's disposition. Four diagnostic sessions identified no
+specific inefficiency in the A11 code and do not replace the required
+sessions. PR B is not merged; a second real-device pass and merge approval
+are still owed by the owner.
 
-Current data is a five-location research inventory, not verified winter camping availability. Map tiles require an internet connection. See DATA-LICENSE.md for source and library attribution.
-
-## How the v2 interface is organized
-
-The first screen is the trip planner. A user chooses a mountain, dates and vehicle, then opens the results map. “Explore the open map” skips the planner and lets a user research the area directly. All 11 legend switches start on: overnight listings, mountains, land management, wilderness, water, forest roads, research areas, restrictions, community leads, reviewed sites and research boundary. Empty or missing layers say so; enabling them does not invent features. Each populated layer has a View button to fit its extent.
-
-Trip dates, vehicle choices and list filters never remove map features. Trip conflicts still appear in listing details. Roads use a neutral color instead of reusing an earlier trip's open/closed classification. Research areas retain the dates and vehicle used to generate them, clearly labeled as a historical screening snapshot. Tap/click a road or shaded feature for its description and source; overlay explanations do not follow the cursor. Use the independent switches to control map visibility. On phones, collapse the legend with its minus button to free map space.
-
-## Connect RIDB once
-
-Both workflows are installed under `.github/workflows/` and run from the repository's Actions tab. GitHub only discovers workflows at that repository-level path.
-
-1. Confirm the repository Actions secret is named `RIDB_API_KEY`. No need to paste the key into chat or source files.
-2. Open Actions → Check RIDB and export Aspen camping → Run workflow.
-3. A green run confirms authentication and produces the `ridb-options` artifact. Download and unzip it; upload `ridb-options.json` into v2. The app loads the imported facilities automatically, avoiding duplicates with the manually reviewed inventory. The `ohvernight-with-ridb` artifact also contains a complete website ZIP with the imported data. That ZIP uses the website files currently on GitHub; upload the latest local v2 first if you want the latest interface included.
-
-Verified September 25: repository secret `RIDB_API_KEY` exists, but only the Pages workflow was installed at the time of inspection. Secret presence alone does not verify its value. Authentication and live inventory still require the import workflow to finish successfully. Never put the key in browser JavaScript, JSON or a downloadable artifact.
-
-The workflow runs only on request, uses no AI calls, and does not publish or commit automatically. GitHub Actions has its own usage terms. A facility listing does not confirm campsite availability, fees or sleeping permission. An official search link is used when RIDB supplies no usable booking link.
-
-## Build the map bundle
-
-The map refresh workflow is installed under `.github/workflows/refresh-map.yml`; run it from the Actions tab with your dates and vehicle. Download its artifact and put `map-data-v2.json` in v2. Roads and research polygons remain visible for any trip, with the screening snapshot dates explained in the legend and feature details. The full source pipeline is in `pipeline/`.
-
-The browser always displays unconfirmed fire/closure coverage. A successful notice-page fetch is not a confirmed fire stage. The native BLM adapter clips and repairs geometry without simplifying coordinates. It remains generalized land management context, not a county parcel survey.
-
-See `ROADMAP.md` for completion status and `pipeline/docs/data-contract.md` for evidence rules.
+GitHub Pages publishes the repository from `main`. A reviewed pull request,
+green CI and explicit human approval are required before merging. The root
+legacy site remains available for comparison. Manual RIDB and map refresh
+workflows produce artifacts for review; they do not publish automatically.
+Never put `RIDB_API_KEY` in browser code or published data.

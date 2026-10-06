@@ -29,5 +29,5 @@
   const lines=feature.geometry.type==='LineString'?[feature.geometry.coordinates]:feature.geometry.type==='MultiLineString'?feature.geometry.coordinates:[];
   return '<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="ohvernight" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>'+escape(feature.properties.name||'Trail segment')+'</name><desc>County-clipped source geometry, not a navigable route or access approval.</desc>'+lines.map(line=>'<trkseg>'+line.map(p=>'<trkpt lat="'+Number(p[1])+'" lon="'+Number(p[0])+'"/>').join('')+'</trkseg>').join('')+'</trk></gpx>';
  }
- const api={activities,windows,days,season,camping,gpx};if(typeof module!=='undefined')module.exports=api;scope.DouglasDiscovery=api;
+ const api={activities,windows,days,season,camping,gpx};if(typeof module!=='undefined')module.exports=api;scope.ExploreSeasons=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
