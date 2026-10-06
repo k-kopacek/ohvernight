@@ -25,6 +25,15 @@ test('T4: every current layer has the specified tier, with no tier A and conserv
   if(tier==='C'){assert.ok(style.fillOpacity<=.10);assert.ok(style.dashArray);}
  }
 });
+test('A14 trail color uses one shared constant and leaves water and generic styling unchanged',()=>{
+ const trail={kind:'trails'},water={kind:'water'},other={kind:'other'};
+ assert.equal(S.style(trail,14).color,S.trailColor);assert.equal(S.trailColor,'#d06030');
+ assert.equal(S.style(trail,14).opacity,.85);assert.equal(S.style(trail,14).weight,2.25);
+ assert.equal(S.style(water,14).color,'#73c5dc');assert.equal(S.style(water,14).opacity,.85);assert.equal(S.style(water,14).weight,1.5);
+ assert.equal(S.style(other,14).color,'#b1a58a');assert.equal(S.style(other,14).opacity,.85);assert.equal(S.style(other,14).weight,2.25);
+ for(const name of fs.readdirSync(path.join(root,'explore')).filter(name=>name.endsWith('.js')))
+  assert.doesNotMatch(fs.readFileSync(path.join(root,'explore',name),'utf8'),/#b4a4ad/i,'old trail color removed from runtime '+name);
+});
 test('T4: class order follows data, Unknown is last even when unloaded, and palette is shared',()=>{
  const colors=[];
  for(const rid of ['aspen','douglas-co']){

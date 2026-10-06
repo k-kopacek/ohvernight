@@ -1,6 +1,16 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'../..'),source=fs.readFileSync(path.join(root,'explore/map-adapter.js'),'utf8');
 const names=['init','addLayer','removeLayer','setVisible','setStyle','setPins','onFeature','fit','setBasemap','destroy','setSelected','setLabels'];
+const shell=require('../../explore/shell.js');
+test('A14 selection camera policy fits lines and points, preserves polygons, and honors a registry override',()=>{
+ assert.equal(shell.selectionCameraPolicy({},'LineString'),'fit');
+ assert.equal(shell.selectionCameraPolicy({},'MultiLineString'),'fit');
+ assert.equal(shell.selectionCameraPolicy({},'Point'),'fit');
+ assert.equal(shell.selectionCameraPolicy({},'Polygon'),'preserve');
+ assert.equal(shell.selectionCameraPolicy({},'MultiPolygon'),'preserve');
+ assert.equal(shell.selectionCameraPolicy({selectionCameraPolicy:'preserve'},'LineString'),'preserve');
+ assert.equal(shell.selectionCameraPolicy({selectionCameraPolicy:'fit'},'Polygon'),'fit');
+});
 function predicates(){const context={};vm.runInNewContext(source.replace('const api={init,','scope.testPredicates={hitGeometry,chooseHit,resolveTap,HIT_TOLERANCE,layers,handlers,labelled,matchingTouch,pinActivation,isDoubleTap,withinTapSlop,TAP_MOVEMENT_SLOP,setMap:value=>{map=value;}}; const api={init,'),context);return context.testPredicates;}
 const project=([x,y])=>({x,y});
 test('A12 hit tolerance includes the boundary for lines and points, including multipart lines',()=>{
@@ -47,7 +57,7 @@ test('adapter absence returns false; plain view payload, control lifecycle and r
  A.destroy();assert.equal(listeners.size,0);assert.equal(removed,1);
  assert.equal(A.init('map',{center:[2,3],zoom:12}),true);A.destroy();assert.equal(removed,2);
 });
-test('A11 selection emphasizes one feature, clears it, and preserves generalized polygon limits',()=>{
+test('A14 selection emphasizes polygons without outlines and clears to exact base styling',()=>{
  const context={module:{exports:{}}},groups=[];let fitted;
  const map={createPane(){},getPane:()=>({style:{}}),on(){},off(){},setView(){},getZoom:()=>14,getCenter:()=>({lng:0,lat:0}),getBounds:()=>({getWest:()=>0,getSouth:()=>0,getEast:()=>1,getNorth:()=>1}),remove(){},removeLayer(){},invalidateSize(){},fitBounds(bounds,options){fitted={bounds,options};}};
  context.L={map:()=>map,control:{scale:()=>({addTo(){}})},tileLayer:()=>({addTo(){return this;}}),geoJSON(data){
@@ -57,7 +67,7 @@ test('A11 selection emphasizes one feature, clears it, and preserves generalized
  vm.runInNewContext(source,context);const A=context.module.exports;A.init('map',{center:[0,0],zoom:14});
  const features=['one','two'].map(id=>({properties:{id},geometry:{type:'Polygon'}}));
  A.addLayer('context',{features},{fillOpacity:.12,weight:0,opacity:0,stroke:false,dashArray:'5 5'});A.setSelected('context','one');
- assert.equal(groups[0].items[0].options.selected,true);assert.equal(groups[0].items[0].options.fillOpacity,.12);
+ assert.equal(groups[0].items[0].options.selected,true);assert.equal(groups[0].items[0].options.fillOpacity,.22);
  assert.equal(groups[0].items[1].options.fillOpacity,.04);assert.equal(groups[0].items[0].options.stroke,false);
  A.setSelected('context',null);assert.equal(groups[0].items[1].options.fillOpacity,.12);assert.equal(groups[0].items[0].options.selected,false);
  A.addLayer('line',{features:[{properties:{id:'trail'},geometry:{type:'LineString'}}]},{weight:3,opacity:.85});A.setSelected('line','trail');assert.equal(groups[1].items[0].options.weight,6);
@@ -74,26 +84,27 @@ test('A13 selected line uses a two-tone casing and every lifecycle path restores
  }};
  vm.runInNewContext(source.replace('const api={init,','scope.__a13Test={layers,casings,resolveTap,setMap:value=>{map=value;}};const api={init,'),context);const A=context.module.exports;A.init('map',{center:[0,0],zoom:14});
  const features=['one','two','three'].map(id=>({type:'Feature',properties:{id},geometry:{type:'LineString',coordinates:[[0,0],[1,1]]}}));
- const normal=feature=>({color:feature.properties.id==='two'?'#b4a4ad':'#73c5dc',weight:feature.properties.id==='two'?2.25:3,opacity:.85,dashArray:'5 2'});
+ const normal=feature=>({color:feature.properties.id==='two'?'#d06030':'#73c5dc',weight:feature.properties.id==='two'?2.25:3,opacity:.85,dashArray:'5 2'});
  A.addLayer('lines',{type:'FeatureCollection',features},normal);const lines=groups[0],base=lines.items.map(item=>({...normal(item.feature)}));
  const casingGroups=()=>groups.filter(group=>mapLayers.has(group)&&String(group.options.style?.className||'').startsWith('explore-selection-casing-'));
  const assertNormal=()=>lines.items.forEach((item,index)=>{for(const key of Object.keys(base[index]))assert.equal(item.options[key],base[index][key]);assert.equal(item.options.selected,false);});
  A.setSelected('lines','one');
  const selected=lines.items[0];assert.equal(selected.options.weight,6);assert.equal(selected.options.opacity,1);assert.equal(selected.options.color,base[0].color);assert.equal(selected.options.dashArray,base[0].dashArray);
- for(const item of lines.items.slice(1)){assert.equal(item.options.opacity,Math.max(.5,base[lines.items.indexOf(item)].opacity*.7));assert.ok(item.options.opacity>=.5);assert.equal(item.options.color,base[lines.items.indexOf(item)].color);assert.equal(item.options.weight,base[lines.items.indexOf(item)].weight);assert.equal(item.options.dashArray,base[lines.items.indexOf(item)].dashArray);assert.ok(mapLayers.has(lines));}
+ for(const item of lines.items.slice(1)){const normal=base[lines.items.indexOf(item)];assert.equal(item.options.opacity,Math.max(.4,normal.opacity*.5));assert.equal(item.options.weight,Math.max(1.5,normal.weight-.75));assert.ok(item.options.opacity>=.4);assert.equal(item.options.color,normal.color);assert.equal(item.options.dashArray,normal.dashArray);assert.ok(mapLayers.has(lines));}
  let cases=casingGroups();assert.equal(cases.length,2);assert.ok(cases.every(group=>group.items.length===1&&group.items[0].feature===features[0]&&group.options.interactive===false));
  const halo=cases.find(group=>group.options.style.className==='explore-selection-casing-halo'),edge=cases.find(group=>group.options.style.className==='explore-selection-casing-edge');
  assert.equal(halo.options.style.weight,selected.options.weight+4);assert.equal(edge.options.style.weight,selected.options.weight+6);assert.notEqual(halo.options.style.color,selected.options.color);assert.notEqual(edge.options.style.color,selected.options.color);
  assert.deepEqual(front.slice(-3),[edge.items[0],halo.items[0],selected],'casing is above other lines and selected line sits directly above both casing tones');
  assert.deepEqual([...context.__a13Test.layers.keys()],['lines'],'casing stays outside the selectable layer registry');A.onFeature('lines',()=>{});context.__a13Test.setMap(map);const resolverScanCounts=cases.map(group=>group.eachCalls);assert.equal(context.__a13Test.resolveTap({x:.5,y:.5})?.featureId,'one','resolver returns the source feature, never a casing path');assert.deepEqual(cases.map(group=>group.eachCalls),resolverScanCounts,'tap resolver does not inspect adapter-owned casing paths');
- A.setSelected('lines','two');cases=casingGroups();assert.equal(cases.length,2);assert.ok(cases.every(group=>group.items[0].feature===features[1]));assert.equal(lines.items[1].options.weight,5.25);assert.ok(lines.items[1].options.weight>=5);assert.equal(lines.items[0].options.weight,base[0].weight);assert.equal(lines.items[0].options.opacity,Math.max(.5,base[0].opacity*.7));
+ A.setSelected('lines','two');cases=casingGroups();assert.equal(cases.length,2);assert.ok(cases.every(group=>group.items[0].feature===features[1]));assert.equal(lines.items[1].options.weight,5.25);assert.ok(lines.items[1].options.weight>=5);assert.equal(lines.items[0].options.weight,Math.max(1.5,base[0].weight-.75));assert.equal(lines.items[0].options.opacity,Math.max(.4,base[0].opacity*.5));
  A.setSelected('lines',null);assert.equal(casingGroups().length,0);assertNormal();
  A.setSelected('lines','one');A.setVisible('lines',false);assert.equal(casingGroups().length,0);assertNormal();
  const restyled=feature=>({...normal(feature),weight:feature.properties.id==='one'?4:2.5,opacity:.8});A.setStyle('lines',restyled);assert.equal(casingGroups().length,0);assert.equal(lines.items[0].options.weight,4);assert.equal(lines.items[0].options.opacity,.8);assert.equal(lines.items[0].options.selected,false);
  A.setVisible('lines',true);assert.equal(casingGroups().length,2);assert.equal(lines.items[0].options.weight,7);
  A.setStyle('lines',restyled);assert.equal(casingGroups().length,2);assert.equal(lines.items[0].options.weight,7);assert.equal(casingGroups().find(g=>g.options.style.className==='explore-selection-casing-halo').options.style.weight,11);
  A.removeLayer('lines');assert.equal(casingGroups().length,0);assert.equal(mapLayers.size,0);
- const polygons=[{type:'Feature',properties:{id:'land-one'},geometry:{type:'Polygon',coordinates:[]}}];A.addLayer('land',{type:'FeatureCollection',features:polygons},{color:'#8f9f89',fillColor:'#8f9f89',fillOpacity:.12,weight:0,opacity:0,stroke:false,dashArray:'5 5'});A.setSelected('land','land-one');assert.equal(casingGroups().length,0,'polygon selection never creates line casing');assert.equal(groups.at(-1).items[0].options.fillOpacity,.12);A.setSelected('land',null);
+ const polygons=[{type:'Feature',properties:{id:'land-one'},geometry:{type:'Polygon',coordinates:[]}}];A.addLayer('land',{type:'FeatureCollection',features:polygons},{color:'#8f9f89',fillColor:'#8f9f89',fillOpacity:.12,weight:0,opacity:0,stroke:false,dashArray:'5 5'});A.setSelected('land','land-one');assert.equal(casingGroups().length,0,'polygon selection never creates line casing');assert.equal(groups.at(-1).items[0].options.fillOpacity,.22);A.setVisible('land',false);assert.equal(groups.at(-1).items[0].options.fillOpacity,.12,'hiding selected polygon restores exact base fill');A.setVisible('land',true);assert.equal(groups.at(-1).items[0].options.fillOpacity,.22,'showing selected polygon reapplies approved fill cue');assert.equal(casingGroups().length,0);A.setSelected('land',null);assert.equal(groups.at(-1).items[0].options.fillOpacity,.12,'clearing polygon selection restores exact base fill');
+ A.addLayer('capped',{type:'FeatureCollection',features:polygons}, {fillOpacity:.2,weight:1,opacity:.6,stroke:true,color:'#888'});A.setSelected('capped','land-one');assert.equal(groups.at(-1).items[0].options.fillOpacity,.25,'selected polygon fill is capped at .25');assert.equal(groups.at(-1).items[0].options.weight,1);assert.equal(groups.at(-1).items[0].options.opacity,.6);
  A.addLayer('again',{type:'FeatureCollection',features},normal);A.setSelected('again','one');assert.equal(casingGroups().length,2);A.destroy();assert.equal(casingGroups().length,0);assert.equal(mapLayers.size,0);
 });
 test('A11 labels use carried names only, respect zoom, clear, and share a global cap',()=>{
@@ -132,6 +143,16 @@ test('A12 regression samples include shortest, longest, real crossings and eight
   assert.equal(samples.length,8);assert.equal(new Set(ids).size,8);for(const id of [shortest,longest,...pair])assert.ok(ids.includes(id));
   assert.equal(crosses(features.find(f=>f.properties.id===pair[0]),features.find(f=>f.properties.id===pair[1])),true,'real source crossing');
  }
+});
+test('A14 resolved map tap reports hit or empty after resolution',()=>{
+ const surface=new EventTarget();surface.getBoundingClientRect=()=>({left:0,top:0});const context={module:{exports:{}},CustomEvent:class extends Event{constructor(name,options){super(name,options);this.detail=options.detail;}}};
+ vm.runInNewContext(source.replace('const api={init,','scope.__a14Test={layers,handlers,selectTap,setMap:value=>{map=value;}};const api={init,'),context);
+ const probe=context.__a14Test,events=[];surface.addEventListener('exploremaptap',event=>events.push(event.detail));let selected;
+ const map={getContainer:()=>surface,hasLayer:()=>true,latLngToContainerPoint:ll=>({x:Array.isArray(ll)?ll[1]:ll.lng,y:Array.isArray(ll)?ll[0]:ll.lat}),containerPointToLatLng:p=>({lng:p.x,lat:p.y})};probe.setMap(map);
+ probe.selectTap({x:500,y:500});assert.equal(events.pop()?.hit,false);
+ const feature={properties:{id:'road'},geometry:{type:'LineString',coordinates:[[0,50],[100,50]]}},item={feature,getBounds:()=>({getNorthWest:()=>({lat:0,lng:0}),getSouthEast:()=>({lat:100,lng:100})})};
+ probe.layers.set('trails',{eachLayer(fn){fn(item);}});probe.handlers.set('trails',f=>{selected=f.properties.id;});
+ probe.selectTap({x:50,y:50});assert.equal(events.pop()?.hit,true);assert.equal(selected,'road');
 });
 test('A12 touch selection uses fractional touch coordinates rather than the rounded compatibility click',()=>{
  const surface=new EventTarget();surface.getBoundingClientRect=()=>({left:0,top:0});surface.closest=()=>null;

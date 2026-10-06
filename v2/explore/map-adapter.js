@@ -82,8 +82,10 @@
     return chooseHit(candidates);
   }
   function selectTap(point){
-    const hit=resolveTap(point);if(!hit)return;
-    const ll=map.containerPointToLatLng(point);notify(hit.layerId,hit.feature,[ll.lng,ll.lat]);
+    const hit=resolveTap(point);
+    if(hit){const ll=map.containerPointToLatLng(point);notify(hit.layerId,hit.feature,[ll.lng,ll.lat]);}
+    const surface=map?.getContainer?.();
+    if(surface&&scope.CustomEvent)surface.dispatchEvent(new scope.CustomEvent('exploremaptap',{bubbles:true,detail:{hit:!!hit}}));
   }
   function cancelTap(){if(pendingTap)scope.clearTimeout(pendingTap);pendingTap=null;}
   function isDoubleTap(previous,current){
@@ -150,7 +152,6 @@
           map.setZoomAround(map.containerPointToLatLng(point),Math.min(19,map.getZoom()+1),{animate:false});return;
         }
         lastTap=lastTouch;
-        if(scope.CustomEvent)surface.dispatchEvent(new scope.CustomEvent('exploremaptap',{bubbles:true}));
         pendingTap=scope.setTimeout(()=>{pendingTap=null;selectTap(target);},TOUCH_TAP_WINDOW);
       };
       const touchCancel=()=>{gesture=null;lastTap=null;lastTouch=null;cancelTap();};
@@ -231,7 +232,7 @@
         const line=/LineString$/.test(feature.geometry?.type);
         // Polygon selection changes relative emphasis, preserving its palette,
         // precision treatment and all tier opacity/outline ceilings.
-        const emphasis=selected?.id===id?(polygon?{fillOpacity:chosen?base.fillOpacity:Math.min(base.fillOpacity||0,.04)}:line?(chosen?{weight:Math.max((base.weight||0)+3,5),opacity:1}:{opacity:Math.max(.5,(base.opacity??1)*.7)}):{}):{};
+        const emphasis=selected?.id===id?(polygon?{fillOpacity:chosen?Math.min((base.fillOpacity||0)+.10,.25):Math.min(base.fillOpacity||0,.04)}:line?(chosen?{weight:Math.max((base.weight||0)+3,5),opacity:1}:{weight:Math.max(1.5,(base.weight||0)-.75),opacity:Math.max(.4,(base.opacity??1)*.5)}):{}):{};
         item.setStyle({...base,...emphasis});item.options.selected=!!chosen;
         if(chosen&&line)selectedLine={item,feature,weight:Math.max((base.weight||0)+3,5)};
       }

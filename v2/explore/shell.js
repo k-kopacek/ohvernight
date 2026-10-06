@@ -11,6 +11,12 @@
     for(const [lon,lat] of points){west=Math.min(west,lon);south=Math.min(south,lat);east=Math.max(east,lon);north=Math.max(north,lat);}
     return [[west,south],[east,north]];
   }
+  function selectionCameraPolicy(entry,geometryType){
+    const geometryPolicy=/Polygon$/.test(geometryType||'')?'preserve':'fit';
+    const override=entry?.selectionCameraPolicy;
+    if(override==='fit'||override==='preserve')return override;
+    return geometryPolicy;
+  }
   function createShell(host,options){
     const M=scope.ExploreMap,E=scope.ExploreEvidence;
     host.classList.add('explore-root');
@@ -29,9 +35,13 @@
     const phone=()=>!scope.matchMedia('(min-width:768px)').matches||scope.ExploreSheet.shortLandscape();
     const drawerState=event=>{if(phone()&&event.detail.open)sheet.setState('collapsed');};
     const sheetState=event=>{if(phone()&&event.detail.state!=='collapsed')drawer.close(false);};
-    const mapTap=()=>drawer.close();
+    const bottomSheetViewport=()=>!scope.matchMedia('(min-width:768px)').matches&&!scope.ExploreSheet.shortLandscape();
+    const mapTap=event=>{
+      drawer.close();
+      if(event.detail?.hit===false&&bottomSheetViewport()&&sheet.state!=='collapsed')sheet.setState('collapsed');
+    };
     $('drawer').addEventListener('drawerstatechange',drawerState);
-    $('sheet').addEventListener('sheetstatechange',sheetState);$('map').addEventListener('click',mapTap);$('map').addEventListener('exploremaptap',mapTap);
+    $('sheet').addEventListener('sheetstatechange',sheetState);$('map').addEventListener('exploremaptap',mapTap);
     let region,manifest,mapAvailable=false,zoom=options.initialView?.zoom||10;
     const visibleLayers=new Set(),rows=new Map(),state={mapUsable:false,defaultLayersLoaded:false,view:null};
       const active={state,visibleLayers,sheet,drawer,get region(){return region;},showSources,showDetail,select,showList,isListActive,openDialog,$,element,button,drawLayer};
@@ -91,10 +101,12 @@
       const geometry=feature.geometry||(feature.coordinates?{type:'Point',coordinates:feature.coordinates}:null);
       if(mapAvailable&&geometry){
         visibleLayers.add(entry.id);const row=rows.get(entry.id);if(row){row.check.checked=true;row.mode.textContent='On';}M.setVisible(entry.id,true);
-        const phone=!scope.matchMedia('(min-width:768px)').matches&&!scope.ExploreSheet.shortLandscape();
-        const mapRect=$('map').getBoundingClientRect(),panelRect=$('sheet').getBoundingClientRect(),safeBottom=parseFloat(scope.getComputedStyle(host).getPropertyValue('--safe-bottom'))||0;
-        const panelWidth=scope.ExploreSheet.shortLandscape()?Math.min(320,host.clientWidth*.4):340;
-        M.fit(bounds({features:[{geometry}]}),{topLeft:[phone?24:panelRect.left-mapRect.left+panelWidth+24,$('zoom-in').getBoundingClientRect().bottom-mapRect.top+8],bottomRight:[24,phone?Math.round(scope.ExploreSheet.panelViewport(host)*.4)+safeBottom+24:safeBottom+24]});
+        if(selectionCameraPolicy(entry,geometry.type)==='fit'){
+          const phone=!scope.matchMedia('(min-width:768px)').matches&&!scope.ExploreSheet.shortLandscape();
+          const mapRect=$('map').getBoundingClientRect(),panelRect=$('sheet').getBoundingClientRect(),safeBottom=parseFloat(scope.getComputedStyle(host).getPropertyValue('--safe-bottom'))||0;
+          const panelWidth=scope.ExploreSheet.shortLandscape()?Math.min(320,host.clientWidth*.4):340;
+          M.fit(bounds({features:[{geometry}]}),{topLeft:[phone?24:panelRect.left-mapRect.left+panelWidth+24,$('zoom-in').getBoundingClientRect().bottom-mapRect.top+8],bottomRight:[24,phone?Math.round(scope.ExploreSheet.panelViewport(host)*.4)+safeBottom+24:safeBottom+24]});
+        }
       }
       showFeatureDetail(entry,feature);
     }
@@ -212,8 +224,8 @@
       }
     }
     active.start=start;active.renderResults=renderResults;active.renderSearch=renderSearch;
-    active.destroy=()=>{for(const name of ['resize','orientationchange'])scope.removeEventListener(name,viewportChanged);for(const name of ['resize','scroll'])viewport?.removeEventListener(name,viewportChanged);$('drawer').removeEventListener('drawerstatechange',drawerState);$('sheet').removeEventListener('sheetstatechange',sheetState);$('map').removeEventListener('click',mapTap);$('map').removeEventListener('exploremaptap',mapTap);sheet.destroy();drawer.destroy();M.destroy();host.replaceChildren();};
+    active.destroy=()=>{for(const name of ['resize','orientationchange'])scope.removeEventListener(name,viewportChanged);for(const name of ['resize','scroll'])viewport?.removeEventListener(name,viewportChanged);$('drawer').removeEventListener('drawerstatechange',drawerState);$('sheet').removeEventListener('sheetstatechange',sheetState);$('map').removeEventListener('exploremaptap',mapTap);sheet.destroy();drawer.destroy();M.destroy();host.replaceChildren();};
     return active;
   }
-  const api={createShell,bounds};if(typeof module!=='undefined')module.exports=api;scope.ExploreShell=api;
+  const api={createShell,bounds,selectionCameraPolicy};if(typeof module!=='undefined')module.exports=api;scope.ExploreShell=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

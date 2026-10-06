@@ -16,6 +16,7 @@
     W11:'Source classification: <code>'
   };
   const palette=['#8f9f89','#8d9da7','#a59e88','#a49ba9','#91a6a0','#9ea3a6'];
+  const TRAIL_COLOR='#d06030';
   const codes=['USFS','BLM','OTHFE','ST','LG','PVT'];
   function color(code){const index=codes.indexOf(code);return index<0?'#b8b9b6':palette[index];}
   const precision=layer=>layer.spatial_precision||layer.spatialPrecision;
@@ -32,7 +33,7 @@
     if(level==='G')return {color:tint,fillColor:tint,fillOpacity:.12,weight:zoom>=14?0:1,opacity:zoom>=14?0:.5,stroke:zoom<14,dashArray:'5 5'};
     if(level==='C')return {color:palette[3],fillColor:palette[3],fillOpacity:.10,weight:1,opacity:.5,dashArray:'7 5'};
     if(level==='P')return {color:tint,fillColor:tint,fillOpacity:.12,weight:1.3,opacity:.6,dashArray:null};
-    return {color:layer.kind==='water'?'#73c5dc':layer.kind==='trails'?'#b4a4ad':'#b1a58a',weight:layer.kind==='water'?1.5:2.25,opacity:.85,fillOpacity:.10};
+    return {color:layer.kind==='water'?'#73c5dc':layer.kind==='trails'?TRAIL_COLOR:'#b1a58a',weight:layer.kind==='water'?1.5:2.25,opacity:.85,fillOpacity:.10};
   }
   function legend(layer,features=[],title='',agency=''){
     const level=tier(layer),entries=[];
@@ -54,6 +55,6 @@
     items.push({text:wording.W7},{text:wording.W3},{text:manifest.fact_coverage.ownership.statement},{text:manifest.fact_coverage.public_access.statement},{text:layer.limitations});
     return {title:label(code),items};
   }
-  const api={wording,palette,color,tier,label,style,legend,detail};
+  const api={wording,palette,color,tier,label,style,legend,detail,trailColor:TRAIL_COLOR};
   if(typeof module!=='undefined')module.exports=api;scope.ExploreLand=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
