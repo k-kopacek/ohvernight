@@ -115,10 +115,10 @@
     return x>=mapRect.left&&x<=mapRect.right&&y>=mapRect.top&&y<=mapRect.bottom&&
       !(x>=sheetRect.left&&x<=sheetRect.right&&y>=sheetRect.top&&y<=sheetRect.bottom);
   }
-  function cappedTapCameraPlan(currentZoom,pointVisible,coordinate,size,padding){
+  function cappedTapCameraPlan(currentZoom,pointVisible,coordinate,size){
     if(currentZoom>15||pointVisible||!Array.isArray(coordinate))return {action:'none',bounds:null,zoom:currentZoom};
-    const fitBounds=viewportBoundsAt(coordinate,currentZoom,size,padding);
-    return {action:'recenter',bounds:fitBounds,zoom:fitZoomForBounds(fitBounds,size,padding)};
+    const fitBounds=viewportBoundsAt(coordinate,currentZoom,size,{});
+    return {action:'recenter',bounds:fitBounds,zoom:fitZoomForBounds(fitBounds,size,{})};
   }
   function createShell(host,options){
     const M=scope.ExploreMap,E=scope.ExploreEvidence;
@@ -220,8 +220,8 @@
               sheetRect=phone?{left:mapRect.left+safeLeft,right:mapRect.right-safeRight,top:mapRect.bottom-safeBottom-halfHeight,bottom:mapRect.bottom-safeBottom}:
                 {left:mapRect.left+safeLeft+8,right:mapRect.left+safeLeft+8+(shortLandscape?Math.min(320,host.clientWidth*.4):340),
                   top:mapRect.bottom-safeBottom-(shortLandscape?12:8)-halfHeight,bottom:mapRect.bottom-safeBottom-(shortLandscape?12:8)},
-              visible=tapPointVisible(coordinate,state.view.center,currentZoom,mapRect,sheetRect),plan=cappedTapCameraPlan(currentZoom,visible,coordinate,size,padding);
-            if(plan.action==='recenter')M.fit(plan.bounds,padding);
+              visible=tapPointVisible(coordinate,state.view.center,currentZoom,mapRect,sheetRect),plan=cappedTapCameraPlan(currentZoom,visible,coordinate,size);
+            if(plan.action==='recenter')M.fit(plan.bounds,[0,0]);
           }else if(action==='list-cap'){
             const midpoint=waterMidpointMember(feature),minimum=policy.list.min_zoom;
             if(midpoint)M.fit(viewportBoundsAt(midpoint.point,minimum,size,padding),padding);

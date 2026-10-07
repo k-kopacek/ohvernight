@@ -23,12 +23,12 @@ test('long water line from a list uses its minimum zoom and polygons preserve th
 
 test('capped water taps preserve zoom and recenter only when the tapped point is hidden',()=>{
   const coordinate=[-105,39];
-  assert.deepEqual(cappedTapCameraPlan(17,false,coordinate,size,padding),{action:'none',bounds:null,zoom:17});
-  assert.deepEqual(cappedTapCameraPlan(15,true,coordinate,size,padding),{action:'none',bounds:null,zoom:15});
-  const hidden=cappedTapCameraPlan(14,false,coordinate,size,padding);
+  assert.deepEqual(cappedTapCameraPlan(17,false,coordinate,size),{action:'none',bounds:null,zoom:17});
+  assert.deepEqual(cappedTapCameraPlan(15,true,coordinate,size),{action:'none',bounds:null,zoom:15});
+  const hidden=cappedTapCameraPlan(14,false,coordinate,size);
   assert.equal(hidden.action,'recenter');
   assert.equal(hidden.zoom,14);
-  assert.equal(fitZoomForBounds(hidden.bounds,size,padding),14);
+  assert.equal(fitZoomForBounds(hidden.bounds,size,{}),14);
 });
 
 test('fit zoom uses the padded viewport and midpoint follows ordered drawn geodesic length',()=>{
