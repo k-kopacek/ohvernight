@@ -299,6 +299,16 @@ def _validate_water_contract(manifest, resolve):
             display.extend((layer["id"], feature) for feature in displayed)
     if not canonical:
         return
+    # Older contract fixtures can declare a water layer without the M4 source
+    # identity fields. Only M4-enriched data has the deferred alias artifact.
+    any_enriched = any(
+        any(key in (feature.get("properties") or {}) for key in
+            ("source_id", "source_namespace", "ftype", "fcode", "water_class", "hydro_category", "legacy_ids"))
+        for _, feature in canonical
+    )
+    if not any_enriched:
+        validate_water_contract_data(manifest, canonical, WATER_DISPLAY_CONFIG, {}, display)
+        return
     index_path = f"regions/{manifest['region']['id']}/display/index.json"
     index = resolve(index_path) if any(layer.get("display") for layer in manifest["layers"] if layer.get("kind") == "water") else {}
     aliases = {}
