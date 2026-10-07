@@ -1,4 +1,5 @@
 import copy
+import csv
 import hashlib
 import json
 import re
@@ -6,6 +7,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 
 V2 = Path(__file__).resolve().parents[2]
@@ -41,6 +43,29 @@ class RegionContractTests(unittest.TestCase):
                 mislabeled = [feature.get("properties", {}).get("id") for feature in features
                               if "elevation_ft" in feature.get("properties", {})]
                 self.assertEqual(mislabeled, [], f"{manifest['region']['id']}/{layer['id']}")
+
+    def test_committed_pre_m4_water_ids_are_pinned_once_in_canonical_data(self):
+        with (V2.parent / "docs/research/m4-water/nhd-snapshot-id-map.csv").open() as handle:
+            pins = list(csv.DictReader(handle))
+        pinned_by_region = {}
+        for row in pins:
+            if row["legacy_id"]:
+                pinned_by_region.setdefault(row["region"], Counter())[row["legacy_id"]] += 1
+        manifests = sorted((V2 / "regions").glob("*/region.json"))
+        for manifest_path in manifests:
+            manifest = json.loads(manifest_path.read_text())
+            region = manifest["region"]["id"]
+            actual = Counter()
+            for layer in manifest["layers"]:
+                if layer.get("kind") != "water":
+                    continue
+                document = self.load(layer["path"])
+                features = document["layers"][layer["id"]]["features"]
+                for feature in features:
+                    actual.update(feature["properties"].get("legacy_ids", []))
+            expected = pinned_by_region.get(region, Counter())
+            self.assertTrue(all(count == 1 for count in expected.values()), region)
+            self.assertEqual(actual, expected, region)
 
     def test_real_regions_validate_and_pin_status_gaps(self):
         manifests = sorted((V2 / "regions").glob("*/region.json"))
@@ -269,6 +294,13 @@ class RegionContractTests(unittest.TestCase):
 
     def test_water_R68_rejects_legacy_id_on_two_canonical_features(self):
         self.assert_water_rule("R68", lambda m, c, cfg, a, d: c[1][1]["properties"].update(legacy_ids=["old-a"]))
+
+    def test_water_R68_rejects_legacy_id_equal_to_current_water_id(self):
+        manifest, canonical, config, aliases, display = self.water_contract_base()
+        canonical[0][1]["properties"]["legacy_ids"] = ["nhd-B"]
+        with self.assertRaisesRegex(ContractError, "legacy ID nhd-B equals the ID of a current water feature") as raised:
+            validate_water_contract_data(manifest, canonical, config, aliases, display)
+        self.assertEqual(raised.exception.rule, "R68")
 
     def test_water_R68_rejects_stale_alias_file_hash(self):
         document = {"region_id": "synthetic", "water_id_aliases": {"old-a": "nhd-A"}}

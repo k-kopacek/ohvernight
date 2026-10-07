@@ -234,6 +234,7 @@ def validate_water_contract_data(manifest, canonical, config, aliases, display_f
     )
     if not any_enriched:
         return
+    current_water_ids = {(feature.get("properties") or {}).get("id") for _, feature in canonical}
     for layer_id, feature in canonical:
         props = feature.get("properties") or {}
         source_id = props.get("source_id")
@@ -258,6 +259,9 @@ def validate_water_contract_data(manifest, canonical, config, aliases, display_f
                 or len(legacy) != len(set(legacy))):
             _error("R68", manifest, layer_id, "legacy_ids must be distinct non-empty strings")
         for legacy_id in legacy:
+            if legacy_id in current_water_ids:
+                _error("R68", manifest, layer_id,
+                       f"legacy ID {legacy_id} equals the ID of a current water feature")
             if legacy_id in by_legacy:
                 _error("R68", manifest, layer_id, f"legacy ID {legacy_id} occurs on multiple water features")
             by_legacy[legacy_id] = props["id"]

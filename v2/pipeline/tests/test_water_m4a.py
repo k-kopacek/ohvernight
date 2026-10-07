@@ -8,7 +8,7 @@ V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
 from lib.water import (  # noqa: E402
-    SOURCE_FIELDS, classify, ensure_supported_ftype, ensure_unique_feature_ids, enrich_properties, feature_id, legacy_geometry_matches,
+    SOURCE_FIELDS, attach_legacy_ids, classify, ensure_supported_ftype, ensure_unique_feature_ids, enrich_properties, feature_id, legacy_geometry_matches,
     normalize_source_fields, splice_layer, support_bridges, support_gap_boxes,
     water_display_config,
 )
@@ -143,6 +143,47 @@ class WaterM4ATests(unittest.TestCase):
         self.assertEqual(matches, {})
         self.assertEqual(unmatched_old, ["old-1", "old-2"])
         self.assertEqual(unmatched_new, ["new-1"])
+
+    def test_legacy_ids_survive_a_second_fetch(self):
+        geometry = {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}
+        old = [{"type": "Feature", "geometry": geometry,
+                "properties": {"id": "pre-m4-row"}}]
+        first = [{"type": "Feature", "geometry": copy.deepcopy(geometry),
+                  "properties": {"id": "nhd-current", "legacy_ids": []}}]
+        attach_legacy_ids(old, first)
+        self.assertEqual(first[0]["properties"]["legacy_ids"], ["pre-m4-row"])
+        second = copy.deepcopy(first)
+        attach_legacy_ids(first, second)
+        self.assertEqual(second[0]["properties"]["legacy_ids"], first[0]["properties"]["legacy_ids"])
+
+    def test_legacy_ids_survive_geometry_change_when_id_is_stable(self):
+        old = [{"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+                "properties": {"id": "nhd-current", "legacy_ids": ["pre-m4-row"]}}]
+        new = [{"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[0, 0], [2, 2]]},
+                "properties": {"id": "nhd-current", "legacy_ids": []}}]
+        attach_legacy_ids(old, new)
+        self.assertEqual(new[0]["properties"]["legacy_ids"], ["pre-m4-row"])
+
+    def test_legacy_ids_never_include_their_own_feature_id(self):
+        geometry = {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}
+        old = [{"type": "Feature", "geometry": geometry,
+                "properties": {"id": "nhd-current", "legacy_ids": ["pre-m4-row", "nhd-current"]}}]
+        new = [{"type": "Feature", "geometry": copy.deepcopy(geometry),
+                "properties": {"id": "nhd-current", "legacy_ids": []}}]
+        attach_legacy_ids(old, new)
+        self.assertEqual(new[0]["properties"]["legacy_ids"], ["pre-m4-row"])
+
+    def test_legacy_id_cannot_be_assigned_to_two_new_features(self):
+        old = [{"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+                "properties": {"id": "nhd-old-a", "legacy_ids": ["pre-m4-row"]}},
+               {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[2, 2], [3, 3]]},
+                "properties": {"id": "nhd-old-b", "legacy_ids": ["pre-m4-row"]}}]
+        new = [{"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+                "properties": {"id": "nhd-new-a", "legacy_ids": []}},
+               {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[2, 2], [3, 3]]},
+                "properties": {"id": "nhd-new-b", "legacy_ids": []}}]
+        with self.assertRaisesRegex(ValueError, "legacy water ID pre-m4-row would be assigned to multiple features"):
+            attach_legacy_ids(old, new)
 
     def test_support_bridge_is_kept_but_non_bridge_is_not(self):
         def line(ident, coords, name, gnis_id="42", water_class="stream"):

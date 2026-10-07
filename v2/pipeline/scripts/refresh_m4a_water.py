@@ -428,9 +428,6 @@ def main():
         for source_layer, features in normalized_by_layer.items():
             old_layer = old.get(source_layer, [])
             features, unmatched_old, unmatched_new = attach_legacy_ids(old_layer, features)
-            if source_layer == "flowline" and supporting:
-                for feature in supporting:
-                    feature["properties"]["legacy_ids"] = []
             ensure_unique_feature_ids(features)
             report = difference_report(region, source_layer, old_layer, features, raw_by_source_id)
             displayed = [feature for feature in features if display_water(feature)]

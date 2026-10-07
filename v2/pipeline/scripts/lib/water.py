@@ -172,8 +172,31 @@ def normalize_feature(layer: str, raw_feature: dict[str, Any], geometry: dict[st
 
 def attach_legacy_ids(old_features: list[dict[str, Any]], new_features: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str], list[str]]:
     legacy_by_new, unmatched_old, unmatched_new = legacy_geometry_matches(old_features, new_features)
+    old_by_id = {feature["properties"]["id"]: feature for feature in old_features}
+    assigned_legacy: dict[str, str] = {}
     for feature in new_features:
-        feature["properties"]["legacy_ids"] = legacy_by_new.get(feature["properties"]["id"], [])
+        feature_id = feature["properties"]["id"]
+        matched_ids = set(legacy_by_new.get(feature_id, []))
+        if feature_id in old_by_id:
+            matched_ids.add(feature_id)
+        aliases = []
+        seen = set()
+        for old in old_features:
+            old_id = old["properties"]["id"]
+            if old_id not in matched_ids:
+                continue
+            prior = old["properties"].get("legacy_ids", [])
+            if not isinstance(prior, list):
+                raise ValueError(f"legacy_ids on old water feature {old_id} must be a list")
+            for legacy_id in [*prior, old_id]:
+                if legacy_id == feature_id or legacy_id in seen:
+                    continue
+                if legacy_id in assigned_legacy:
+                    raise ValueError(f"legacy water ID {legacy_id} would be assigned to multiple features")
+                seen.add(legacy_id)
+                aliases.append(legacy_id)
+        feature["properties"]["legacy_ids"] = aliases
+        assigned_legacy.update({legacy_id: feature_id for legacy_id in aliases})
     ensure_unique_feature_ids(new_features)
     return new_features, unmatched_old, unmatched_new
 
