@@ -1,6 +1,6 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {fitZoomForBounds,waterMidpointMember,selectionFitAction,cappedTapCameraPlan}=require('../../explore/shell.js');
+const {fitZoomForBounds,viewportBoundsAt,waterMidpointMember,selectionFitAction,cappedTapCameraPlan}=require('../../explore/shell.js');
 
 const stream={fitPolicy:{tap:{max_zoom_out:2},list:{min_zoom:11}}};
 const padding={topLeft:[24,70],bottomRight:[24,120]};
@@ -23,9 +23,9 @@ test('long water line from a list uses its minimum zoom and polygons preserve th
 
 test('capped water taps preserve zoom and recenter only when the tapped point is hidden',()=>{
   const coordinate=[-105,39];
-  assert.deepEqual(cappedTapCameraPlan(17,false,coordinate,size),{action:'none',bounds:null,zoom:17});
-  assert.deepEqual(cappedTapCameraPlan(15,true,coordinate,size),{action:'none',bounds:null,zoom:15});
-  const hidden=cappedTapCameraPlan(14,false,coordinate,size);
+  assert.deepEqual(cappedTapCameraPlan(17,false,coordinate,null,size),{action:'none',bounds:null,zoom:17});
+  assert.deepEqual(cappedTapCameraPlan(15,true,coordinate,null,size),{action:'none',bounds:null,zoom:15});
+  const hidden=cappedTapCameraPlan(14,false,coordinate,viewportBoundsAt(coordinate,14,size,{}),size);
   assert.equal(hidden.action,'recenter');
   assert.equal(hidden.zoom,14);
   assert.equal(fitZoomForBounds(hidden.bounds,size,{}),14);
