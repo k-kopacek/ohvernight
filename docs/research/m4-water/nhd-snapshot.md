@@ -119,7 +119,7 @@ Before: 2359 total (2359 named, 0 unnamed); baseline retained no ftype/fcode val
 
 ### douglas-co/waterbody
 
-Before: 2135 total (33 named, 2102 unnamed); baseline retained no ftype/fcode values. After: 2135 total (33 named, 2102 unnamed).
+Before: 33 total (33 named, 0 unnamed); baseline retained no ftype/fcode values. After: 2135 total (33 named, 2102 unnamed).
 
 | ftype | fcode | count | water_class | hydro_category |
 |---:|---:|---:|---|---|
