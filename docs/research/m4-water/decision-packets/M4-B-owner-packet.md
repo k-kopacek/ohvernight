@@ -1,6 +1,26 @@
 # M4-B owner decision packet (consolidated)
 
-Prepared by the coordinator on 2026-10-07, after M4-A merged (`main` at `f2c2de2`, PR #12). **Nothing here is decided.** Production M4-B does not start until the owner answers items 1 to 7. Each item has an approval line the owner can answer with a letter.
+Prepared by the coordinator on 2026-10-07, after M4-A merged (`main` at `f2c2de2`, PR #12).
+
+## Owner decisions recorded on 2026-10-07
+
+The owner answered this packet the same day. Items 1 to 5 and 7 are decided. Item 6 is pending exact wording. The sections below are kept as the evidence the decisions were made on.
+
+| # | Decision | Status |
+|---|---|---|
+| 1 | Pad the Douglas **water** source extent by 0.005 degrees. One additional controlled NHD request is authorized for Douglas layers 6 and 12, under the controlled-fetch requirements M4 already uses (endpoint and parameters, retrieval time, source metadata, before and after counts, additions and removals explained, stable identifiers preserved, no unexplained difference silently overwritten). The saved M4-A pages are not to be used for the padded strip, because they leave 63.4 km² of it uncovered. Water shown about 500 m outside the county is accepted for this water-specific rule. No other regional dataset is expanded. The coverage exception is to be documented accurately. | **Approved (option D1)** |
+| 2 | A connector may take part in stream grouping and connectivity only, when it carries the same GNIS identity as the river it joins, source topology supports the connection, it absorbs no unrelated branch and it joins no different GNIS ID. It is never drawn, never a separate water feature and never adds visible geometry. Canonical records stay preserved and traceable. Positive and negative tests required. Aspen going from 71 to 69 groups is acceptable if the production implementation reproduces it. | **Approved (option B)** |
+| 3 | Accept the Granite Creek split for M4. No wider region-padding architecture to remove it. A source segment clipped by the region boundary stays one canonical member; no cross-boundary connector is manufactured. Recorded as an M4 limitation and a future regional-continuity consideration. | **Approved (option A)** |
+| 4 | Keep 2 hectares. Not lowered to 0.5 ha in M4. The inspection material is kept for later reconsideration. Named, otherwise-eligible waterbodies still follow the named-water rule regardless of this threshold. | **Approved (option A)** |
+| 5 | Layer titles: `Rivers and streams` and `Lakes and reservoirs`, used consistently in both regions. | **Approved (option A)** |
+| 6 | Source-scope and coverage wording. | **Not yet approved.** The owner approves exact strings before any lands. This gate does not block the data and grouping work; it blocks the M4-B merge. |
+| 7 | The length shown for a grouped river is a derived Ohvernight value computed from the drawn geometry, shown under `Computed by Ohvernight`. Hidden, undrawn or out-of-display source length is never shown as the group's length. The same drawn-geometry basis is used for part ordering and for the major-river drawn-fraction check. Source segment lengths stay in canonical data. The derived length is never implied to be an official agency route length. Deterministic tests required. | **Approved (option B)** |
+
+M4-B implementation may proceed from `main` at `f2c2de2` once these are written into the specification. M4-B does not merge until item 6 is approved and the owner approves the exact head.
+
+---
+
+The packet as submitted follows. Each item has an approval line the owner could answer with a letter.
 
 This packet replaces nothing. It gathers the four detailed packets in this directory ([south-platte.md](south-platte.md), [connectors.md](connectors.md), [extent-edge.md](extent-edge.md), [threshold.md](threshold.md)), [source-scope-wording.md](source-scope-wording.md) and [open-questions-for-m4b.md](../m4b-preparation/open-questions-for-m4b.md), and adds what Codex's independent recomputation found. Codex's work is on the local branch `codex/autonomous-technical-prep` at `d7837f8` (`docs/research/codex-autonomous/2026-10-07/WATER-TECHNICAL-VALIDATION.md`); it is not on GitHub yet.
 
@@ -159,6 +179,8 @@ The evidence still supports every one of the owner's leanings. Item 1 carries a 
 ## 6. Source-scope wording
 
 **Question.** What do the two `sources.usgs_nhd.scope` sentences say from M4-B?
+
+**Correction, 2026-10-07 (coordinator, read in code at `f2c2de2`).** The earlier wording packet says these sentences are shown in the Sources dialog. They are not. No file under `v2/` reads `sources.<id>.scope`. The sentences exist only in each region's published manifest, `v2/regions/<id>/region.json`, which GitHub Pages serves as a file. What a user sees in the Sources and coverage dialog is the region's coverage statement, the fact-coverage statements, the known gaps and each layer's limitation sentence. The limitation sentence for water is already approved (specification 10.3). The scope sentences are still published trust text and still need exact approval, but they are not on screen. Because decision 1 puts water outside the county line, the on-screen Douglas coverage statement also needs a decision; it currently reads `County boundary used to clip sources. It is not a land-ownership or access boundary. Nothing is known outside it.`
 
 **Evidence.** M4-A kept both sentences byte-identical and pinned them. The Aspen sentence now says "Feature type, flow permanence and size are not carried", which is untrue since M4-A. The Douglas sentence says "Named waterbodies and flowlines only, selected by name", which is untrue for waterbodies since M4-A and for selection from M4-B. Neither overclaims anything about access.
 
