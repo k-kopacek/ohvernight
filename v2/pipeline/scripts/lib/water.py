@@ -97,6 +97,90 @@ def ensure_supported_ftype(ftype: Any, config: dict[str, Any] | None = None) -> 
     return water_class
 
 
+def _reviewed_ids(review: dict[str, Any] | None, key: str) -> set[str]:
+    if not review:
+        return set()
+    result = set()
+    for item in review.get(key, []):
+        if isinstance(item, dict) and isinstance(item.get("feature_id"), str):
+            result.add(item["feature_id"])
+    return result
+
+
+def select_water_features(features: list[dict[str, Any]], config: dict[str, Any] | None = None,
+                          review: dict[str, Any] | None = None, *,
+                          threshold_sqkm: float | None = None) -> list[dict[str, Any]]:
+    """Return the 8.2 eligibility decision for each canonical water feature.
+
+    The optional threshold is for offline comparison reports only; contract
+    validation calls this without it and therefore always uses configuration.
+    No name content is inspected, only whether a source name is non-empty.
+    """
+    config = config or water_display_config()
+    threshold = (config["unnamed_waterbody_min_area_sqkm"] if threshold_sqkm is None
+                 else threshold_sqkm)
+    if isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or threshold < 0:
+        raise ValueError("waterbody threshold must be a non-negative number")
+    exclusions = _reviewed_ids(review, "exclusions")
+    inclusions = _reviewed_ids(review, "inclusions")
+    results = []
+    for feature in features:
+        props = feature.get("properties") or {}
+        ident = props.get("id")
+        source_layer = props.get("source_layer") or props.get("kind")
+        try:
+            water_class, hydro_category = classify(props.get("ftype"), props.get("fcode"), config)
+        except (KeyError, TypeError, ValueError):
+            water_class, hydro_category = "other", "unknown"
+        named = isinstance(props.get("name"), str) and bool(props["name"].strip())
+        eligible, reason = False, "unsupported_layer"
+
+        if ident in exclusions:
+            reason = "reviewed_exclusion"
+        elif source_layer in {"flowline", "stream"}:
+            if water_class != "stream":
+                reason = "non_stream_flowline"
+            elif not named:
+                reason = "unnamed_stream"
+            elif not isinstance(props.get("gnis_id"), str) or not props["gnis_id"].strip():
+                reason = "stream_without_gnis_id"
+            elif hydro_category != "perennial":
+                reason = f"stream_{hydro_category}"
+            else:
+                eligible, reason = True, "eligible_perennial_stream"
+        elif source_layer in {"waterbody", "lake", "reservoir"}:
+            allowed_review_inclusion = (
+                ident in inclusions and hydro_category in {"intermittent", "unknown"}
+                and water_class in {"lake_pond", "reservoir"}
+            )
+            reservoir_code_ok = (water_class != "reservoir" or
+                                 props.get("fcode") in config["reservoir_eligible_fcodes"])
+            if allowed_review_inclusion:
+                eligible, reason = True, "reviewed_inclusion"
+            elif water_class not in {"lake_pond", "reservoir"} or not reservoir_code_ok:
+                reason = "ineligible_waterbody_class_or_code"
+            elif hydro_category == "intermittent":
+                reason = "intermittent_waterbody"
+            elif water_class == "lake_pond" and hydro_category != "perennial":
+                reason = "unstated_lake_category"
+            elif water_class == "reservoir" and hydro_category not in {"perennial", "unknown"}:
+                reason = "ineligible_reservoir_category"
+            elif named:
+                eligible, reason = True, "eligible_named_waterbody"
+            else:
+                area = props.get("area_sqkm")
+                if (isinstance(area, (int, float)) and not isinstance(area, bool)
+                        and area >= threshold):
+                    eligible, reason = True, "eligible_unnamed_waterbody_at_threshold"
+                elif area is None:
+                    reason = "unnamed_waterbody_area_unknown"
+                else:
+                    reason = "unnamed_waterbody_below_threshold"
+        results.append({"feature": feature, "eligible": eligible, "reason": reason,
+                        "water_class": water_class, "hydro_category": hydro_category})
+    return results
+
+
 def normalize_source_fields(layer: str, source_properties: dict[str, Any]) -> dict[str, Any]:
     if layer not in SOURCE_FIELDS:
         raise ValueError(f"unsupported NHD layer {layer}")
