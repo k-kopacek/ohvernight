@@ -24,15 +24,13 @@ Source: `https://www.denverwater.org/recreation/cheesman-reservoir`
 
 | Activity | Proposed status | Sentence relied on | Draft summary | Mark |
 |---|---|---|---|---|
-| Fishing | restricted | "Fishing: Allowed only on the Goose Creek Arm." | Fishing only on the Goose Creek Arm. | CONFIRMED |
+| Fishing | restricted | "Allowed only on the Goose Creek Arm, a half-hour before sunrise and half-hour after sunset." and "Prohibited: Oct. 1 to April 30; on dam and around reservoir. Ice fishing." | Goose Creek Arm only; closed 1 Oct to 30 Apr; no ice fishing. | CONFIRMED |
 | Boating | prohibited | "Prohibited: All boating and camping." | All boating prohibited. | CONFIRMED |
 | Paddling | prohibited | Same sentence | All boating prohibited, including hand-powered craft. | CONFIRMED |
 | Swimming | prohibited | "Prohibited: Water contact sports (swimming, wading, scuba diving, wind surfing, water-skiing)" | Swimming, wading and other water contact prohibited. | CONFIRMED |
 | Access | restricted | "Cheesman is accessible by foot only." | Foot access only. | CONFIRMED |
 
-Notes: Hermes reports a seasonal closure from 1 October to 30 April (HERMES
-ONLY); if confirmed it belongs in the fishing and access summaries and
-shortens the maximum age. Suggested maximum age 90 days.
+Notes: the page states "Seasons and hours: Closed Oct. 1 to April 30" (CONFIRMED on 2026-10-07). The access summary should carry it: "Foot access only; closed 1 Oct to 30 Apr." The site is closed on the date of this draft. Suggested maximum age 90 days, with a re-read at each season change.
 
 Flag: SAFE TO DRAFT.
 
@@ -42,7 +40,7 @@ Source: `https://www.denverwater.org/recreation/waterton-canyon-strontia-springs
 
 | Activity | Proposed status | Sentence relied on | Draft summary | Mark |
 |---|---|---|---|---|
-| Fishing | restricted | Hermes: fishing rules vary by South Platte reach; reservoir fishing referred to CPW rules | To be written after re-reading | HERMES ONLY |
+| Fishing | unknown | For the reservoir the page says only: "Strontia Springs Reservoir: Check Colorado Parks and Wildlife regulations." The stated gear and bag rules are for two river reaches below the dam | — | CONFIRMED that the page states no reservoir fishing status |
 | Boating | prohibited | "Boating regulations: Not permitted on Strontia Springs Reservoir or on the South Platte River through Waterton Canyon." | Boating not permitted. | CONFIRMED |
 | Paddling | prohibited | "Prohibited uses: Canoeing, kayaking, tubing and rafting are prohibited." | Canoeing, kayaking, tubing and rafting prohibited. | CONFIRMED |
 | Swimming | prohibited | "Body contact with water is prohibited (e.g., swimming and wading)." | Swimming and wading prohibited. | CONFIRMED |
@@ -52,8 +50,7 @@ Notes: the boating sentence also covers the South Platte River through
 Waterton Canyon, which matters once that river is drawn. Suggested maximum
 age 90 days.
 
-Flag: SAFE TO DRAFT for boating, paddling and swimming; fishing AMBIGUOUS
-until re-read.
+Flag: SAFE TO DRAFT. Fishing is `unknown` for the reservoir: the operator refers the reader to another agency and states no status. The river-reach fishing rules on the same page belong to the South Platte, not to this record (see section 8).
 
 ## 3. Rueter-Hess Reservoir — `nhd-C4A03B96-2738-484A-995F-2B66C36738E0` — Douglas County (recreation); Parker Water and Sanitation District (owner)
 
@@ -62,7 +59,7 @@ Sources: `https://www.douglas.co.us/rueter-hess-recreation/` and
 
 | Activity | Proposed status | Sentence relied on | Draft summary | Mark |
 |---|---|---|---|---|
-| Fishing | restricted | Page section "Fishing Rules and Regulations"; Hermes: authorised areas, artificial flies and lures, one pole | To be written after re-reading | HERMES ONLY for the conditions; the section's existence CONFIRMED |
+| Fishing | restricted | "Fishing is allowed in authorized areas only"; "Artificial flies & lures only"; "Single pole fishing only"; "No live bait" | Authorized areas only; artificial flies and lures; single pole; no live bait. | CONFIRMED |
 | Boating | restricted | "Only approved watercraft, such as paddleboards, canoes, kayaks, river pontoons, and johnboats, may use an electric trolling motor." and "Online Reservations Required" | Reservation required; approved small craft only; electric trolling motor only. | CONFIRMED |
 | Paddling | restricted | "Online Reservations Required"; "All watercraft will be subject to ANS inspections" | Reservation required; set days and hours; inspection required. | CONFIRMED |
 | Swimming | prohibited | "No. Swimming or wading is not permitted in order to maintain the water quality of the reservoir." | Swimming and wading not permitted. | CONFIRMED |
@@ -73,7 +70,7 @@ reservoir, so its detail shows "Hydrographic category not stated by the
 source" (owner decision O8). Days and hours are seasonal: suggested maximum
 age 45 days.
 
-Flag: SAFE TO DRAFT; fishing conditions need re-reading.
+Flag: SAFE TO DRAFT.
 
 ## 4. Chatfield Lake — `nhd-117822739` — Colorado Parks and Wildlife (Chatfield State Park); US Army Corps of Engineers (owner)
 
@@ -81,16 +78,16 @@ Source: `https://cpw.state.co.us/state-parks/chatfield-state-park/chatfield-stat
 
 | Activity | Proposed status | Sentence relied on | Draft summary | Mark |
 |---|---|---|---|---|
-| Fishing | allowed | Hermes: the page lists fishing among the park's activities | To be written after re-reading. If the page attaches any condition specific to the lake, this is restricted | HERMES ONLY |
-| Boating | restricted | Hermes: registration, inspection before launch, and closure to all boats from 1 December to ice-off | To be written after re-reading | HERMES ONLY |
-| Paddling | restricted | Same | To be written after re-reading | HERMES ONLY |
+| Fishing | open question | The page describes fishing at the park ("the park's trout fishing is some of the best in the Denver area") but the coordinator found no sentence that states fishing is allowed or its conditions | — | CONFIRMED that the page describes fishing; no status sentence found. Whether a description of an offered activity on the operator's own page supports `allowed` is for the owner |
+| Boating | restricted | "To boat on the reservoir, a pre-launch boat inspection for Aquatic Nuisance Species (ANS), an ANS stamp, and a current boat registration are required." Hermes also reports a closure to all boats from 1 December to ice-off, which the coordinator did not find on this page | Pre-launch inspection, ANS stamp and registration required. | CONFIRMED for the inspection sentence; the winter closure is HERMES ONLY |
+| Paddling | unknown until re-read | The inspection sentence speaks of boats; whether it applies to hand-launched paddlecraft, and the winter closure for paddlecraft, were not confirmed | — | HERMES ONLY |
 | Swimming | restricted | "The swim beach is open seasonally from Memorial Day through Labor Day." | Designated swim beach only, Memorial Day to Labor Day. | CONFIRMED |
 | Access | unknown | A state park entry fee is general, not a rule specific to this water; no access rule quoted | — | Coordinator's reading; owner to confirm |
 
 Notes: this would be the first `allowed` claim. It deserves the closest
 reading. Seasonal closures: suggested maximum age 45 days.
 
-Flag: SAFE TO DRAFT for swimming; the rest needs re-reading before drafting.
+Flag: SAFE TO DRAFT for swimming and boating. Fishing and paddling are AMBIGUOUS: see the cells.
 
 ## 5. Maroon Lake — `nhd-72971124` — White River National Forest, Aspen-Sopris Ranger District
 
@@ -128,9 +125,7 @@ Flag: SAFE TO DRAFT.
 
 ## 7. What the owner would approve in M4-C
 
-Records 1, 2, 3 and 5 can be drafted from confirmed sentences today, with the
-HERMES ONLY cells either confirmed or set to `unknown`. Record 4 needs a
-careful re-read because it would carry the first `allowed` claim. Every
+Records 1, 2, 3 and 5 can be drafted entirely from sentences the coordinator has read. Record 4 can carry swimming and boating; its fishing cell raises a question of principle for the owner: does an operator's description of an activity it offers count as stating that the activity is allowed, when no sentence says so? The coordinator's recommendation is no for M4-C: `allowed` needs a sentence about permission, and Chatfield fishing stays `unknown` until one is found (the park's regulations page is the place to look). Every
 record is re-read on the day the M4-C pull request is opened, and that date
 becomes its review date.
 
