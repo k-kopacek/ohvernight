@@ -4,6 +4,7 @@
 **Status:** APPROVED by the owner on 2026-10-06: architecture (decisions D1–D12, O1–O9) and the exact wording of section 10 (O5, with the owner's edits). Production implementation may begin in the approved order M4-A, then M4-B, then M4-C. M4-D remains optional and separately gated.
 **Delivery:** four sequential pull requests, M4-A to M4-D (section 16). M4 is complete when A, B and C are merged. M4-D is optional.
 **Owner decisions:** D1–D12 and O1–O9 of 2026-10-06 are recorded in section 21 and are binding on this document.
+**M4-B owner decisions:** B1–B7 of 2026-10-07 are recorded in section 25. Where section 25 differs from an earlier section, section 25 governs.
 
 Governing documents: `AGENTS.md`, `ROADMAP.md`, `docs/architecture/agent-stack.md`, `docs/architecture/system-overview.md`, `docs/architecture/decisions/` (ADR-004, ADR-005, ADR-006), `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `v2/pipeline/docs/data-contract.md`, `docs/specs/M3-unified-mobile-explore.md` (final, with amendments A1–A14), and the research record in `docs/research/m4-water/`.
 
@@ -674,3 +675,79 @@ M4-C:
 16. A water with no record shows WW1 and WW2 and nothing about activities.
 
 All: no M5–M8 functionality; no community data; no CPW structured data; no merge without owner approval of the specific pull request and head SHA.
+
+## 25. M4-B owner decisions and amendments (2026-10-07)
+
+Decided by the owner on 2026-10-07 after M4-A merged (`main` at `f2c2de2`), on the evidence in [the consolidated packet](../research/m4-water/decision-packets/M4-B-owner-packet.md). They are numbered B1–B7 here because D1–D12 are already used in section 21. Where this section differs from an earlier section, this section governs.
+
+| ID | Decision |
+|---|---|
+| B1 | Pad the Douglas **water** source extent by 0.005 degrees. One additional controlled NHD request is authorized, for Douglas layers 6 and 12 only. Water shown about 500 m outside the county is accepted for this water-specific rule. No other regional dataset is expanded. The coverage exception is documented accurately |
+| B2 | A connector that carries the river's own GNIS identity may take part in grouping and connectivity only. It is never drawn |
+| B3 | The Granite Creek split at the Aspen extent edge is accepted for M4. No wider region-padding architecture is added to remove it |
+| B4 | The unnamed-waterbody threshold stays 2 hectares |
+| B5 | Layer titles are `Rivers and streams` and `Lakes and reservoirs`, in both regions |
+| B6 | Source-scope and coverage wording is **not yet approved**. The owner approves exact strings before any lands. This does not block the data, grouping or display work; it blocks the M4-B merge |
+| B7 | The length shown for a grouped river is computed by Ohvernight from the drawn geometry |
+
+### 25.1 Douglas water extent and the second NHD request (B1; amends section 5)
+
+**A5.** The two Douglas water layers (`waterways` from NHD layer 6, `waterbodies` from NHD layer 12) are fetched for, and clipped to, the Douglas County coverage polygon enlarged by 0.005 degrees: `county.buffer(0.005)` in geographic coordinates, the same water padding Aspen already declares. Each of the two layers declares `extent_padding_deg` 0.005. Every other Douglas layer stays clipped to the county polygon and is byte-identical before and after. The scope fetched is otherwise unchanged from section 5: named flowlines plus the supporting features of O1, and all waterbodies. The selection and grouping rules are unchanged by the padding.
+
+Section 5 said M4-A's refresh was the only live fetch authorized in M4. The owner has authorized **exactly one more**: one controlled session against `https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer`, layers 6 and 12, for Douglas County at the padded extent. No Aspen request, no other layer, no other host, no `RIDB_API_KEY`. Its requirements are those of the M4-A refresh:
+
+- every response page is saved before anything is derived from it;
+- the snapshot document gains an addendum with the endpoint, the exact `where`, `outFields`, extent and page size of each query, the UTC retrieval time, the service's own version and any data-date text, and the feature counts returned;
+- a difference report compares canonical data before and after: counts by `ftype` and `fcode`, features added, removed, changed in geometry and changed in name, and the ID mapping;
+- every feature that existed before keeps its ID, and its `legacy_ids` carry forward under A4;
+- a difference not explained by the padding stops the work: Codex reports it and waits. Nothing unexplained is overwritten.
+
+Expected and explained differences are: features added in the padded strip; existing features cut at the county line becoming longer or larger; and, for those, a changed geometry with an unchanged ID. A removed feature, a changed name, a changed `ftype` or `fcode`, or a changed ID on an existing feature is not explained by the padding.
+
+The saved M4-A response pages are not used to fill the padded strip. Their query box leaves 63.4 km² of the padded shape uncovered.
+
+The South Platte River (`gnis_id` `00201759`) stays in `expected_major_rivers` for Douglas at 0.8. The "Wide rivers" paragraph of 8.3 is corrected: the perennial South Platte segment is 76 m long and lies 11.5 m outside the county line, inside the padded extent.
+
+### 25.2 Same-GNIS connectors (B2; amends 8.3)
+
+**A6.** This replaces "A connector is a candidate only as a supporting feature" in 8.3.
+
+A connector segment (`water_class` `connector`) that carries a non-empty `gnis_id` is a connectivity-only candidate for that `gnis_id` and for no other. Within its own `gnis_id` it takes part in the adjacency of step 2 exactly as a non-perennial stream segment does. It is never drawn, never selectable, never labelled and never a display feature; it is not counted in `member_count` or in any length, does not make a part displayable, does not pass drawn status to an artificial path, and never has a `group_id`. It cannot connect segments of a different `gnis_id`. A connector with an empty `gnis_id` is used only as a supporting feature under section 5. Canals, ditches and pipelines are never candidates, whatever `gnis_id` they carry.
+
+New invariant, checked by R70 with G1–G10:
+
+- G11. Connector participation never changes the set of drawn segments. The drawn members of a region computed with and without connectivity-only connectors are identical; only the assignment of drawn segments to groups of the same `gnis_id` may differ. Every connectivity-only connector has the same `gnis_id` and `name` as its group, and the grouping report lists each one with its length.
+
+G6 and G10 apply to connectivity-only connectors as they do to supporting features. The measured effect in preparation was Aspen 71 groups to 69 (Hunter Creek `00180061` and Galena Creek `00180317` each one group). The production build must reproduce that; if it does not, Codex reports the difference.
+
+### 25.3 Extent edge (B3; amends 8.3)
+
+**A7.** Grouping uses only source geometry held inside the region's water extent. Two reaches of one `gnis_id` that connect only through source geometry outside the extent are separate parts, and separate groups with the same name. M4 does not fetch geometry beyond the extent to join them and never infers continuity from nearness along the edge. One source segment (one `source_id`) that clipping has cut into several lines remains one segment and one member; its lines are drawn as clipped and nothing is drawn across the gap. The grouping report lists every `gnis_id` divided at the extent edge, with its groups, the number of separate drawn lines, their drawn lengths and the gaps between them.
+
+Granite Creek (`00179785`) in Aspen is three groups under this rule. That is an accepted M4 limitation and is recorded for a later decision on regional continuity.
+
+### 25.4 Threshold and titles (B4, B5)
+
+`unnamed_waterbody_min_area_sqkm` stays `0.02`. The comparison is made on the exact stored `area_sqkm`; stored areas are not all at 0.1 ha precision. The named-waterbody rule of 8.2 is unaffected. The gate in 16 still applies: the owner reads the selection report before M4-B merges.
+
+The two water layers are titled `Rivers and streams` and `Lakes and reservoirs` in both regions. These are exact strings, compared against literals in a test.
+
+### 25.5 Wording gate (B6)
+
+Until the owner approves exact strings, M4-B changes none of these: either region's `sources.usgs_nhd.scope` sentence, and either region's `coverage.statement`. The M4-A test that pins the two scope sentences stays as it is. The approved limitation sentence of 10.3 and the WW strings are not affected by this gate and are implemented as approved.
+
+Note for the record: no file under `v2/` renders `sources.<id>.scope`. The scope sentences are published in the manifest but are not shown in the application. The coverage statement is shown.
+
+### 25.6 Group length (B7; amends 8.3 step 5, 8.3 "Wide rivers", 8.4 and R71)
+
+**A8.** One measure is used wherever M4 needs the length of drawn water: the geodesic length on the WGS84 ellipsoid of canonical geometry held in the region, in kilometres. It is computed from the canonical coordinates, not from the rounded display coordinates, and is deterministic.
+
+- A group display feature's `length_km` is that measure over its drawn members, rounded to three decimals in the artifact and shown to one decimal under `Computed by Ohvernight`. It replaces the sum of source `length_km` in 8.4.
+- Parts of one `gnis_id` are ordered (8.3 step 5) by that measure over each part's drawn members, longest first. The tie-break is unchanged.
+- The expected-major-rivers fraction is, per `gnis_id`, that measure over all its drawn members in every group, divided by that measure over all its perennial stream and artificial-path segments held in the region.
+- The source `length_km` stays on every canonical segment, unchanged, and is not shown for a group. No hidden, undrawn or out-of-extent source length is presented as a group's length, and the derived length is never described as an agency or official length.
+- R71 checks the stored value against the computed one.
+
+### 25.7 Corrections to estimates (coordinator)
+
+Section 23's estimates are superseded by measured values from the M4-A data, before the changes above: 71 Aspen and 35 Douglas stream groups; Roaring Fork River 111 drawn members; 46 Aspen and 32 Douglas waterbodies at 2 ha. The selection report states the final numbers. Seven Douglas streams are drawn as two lines because one short segment is coded intermittent; the rule has no exception.
