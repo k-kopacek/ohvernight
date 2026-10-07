@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 
 from build_display import build_region
@@ -30,6 +31,35 @@ def read_json(path: Path):
 def write_json(path: Path, value, *, indent=None):
     path.write_text(json.dumps(value, ensure_ascii=False, separators=None if indent else (",", ":"),
                                 indent=indent, allow_nan=False) + "\n", encoding="utf-8")
+
+
+def write_region_manifest(path: Path, manifest, water_layer_ids):
+    """Update only the source and water-layer lines in the compact manifests."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    source_found = False
+    layer_ids_found = set()
+    for index, line in enumerate(lines):
+        if '"usgs_nhd":' in line:
+            indent = line[:len(line) - len(line.lstrip())]
+            comma = "," if line.rstrip().endswith(",") else ""
+            value = json.dumps(manifest["sources"]["usgs_nhd"], ensure_ascii=False,
+                               separators=(", ", ": "))
+            lines[index] = f'{indent}"usgs_nhd": {value}{comma}'
+            source_found = True
+            continue
+        for layer in manifest["layers"]:
+            layer_id = layer.get("id")
+            if layer_id not in water_layer_ids or not re.match(
+                    r'^\s*\{"id":\s*"' + re.escape(layer_id) + r'"', line):
+                continue
+            indent = line[:len(line) - len(line.lstrip())]
+            comma = "," if line.rstrip().endswith(",") else ""
+            lines[index] = indent + json.dumps(layer, ensure_ascii=False, separators=(", ", ": ")) + comma
+            layer_ids_found.add(layer_id)
+            break
+    if not source_found or layer_ids_found != set(water_layer_ids):
+        raise ValueError("manifest is not in the expected compact line format; no manifest written")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def set_retrieved_at(features, retrieved_at):
@@ -86,7 +116,7 @@ def apply_refresh(report_path: Path, v2_root: Path = V2):
     aspen_manifest["sources"]["usgs_nhd"]["scope"] = (
         "NHD source geometry and retained source attributes for flowlines, areas and waterbodies. "
         "Source classification does not establish recreation, access or permission.")
-    write_json(aspen_manifest_path, aspen_manifest, indent=2)
+    write_region_manifest(aspen_manifest_path, aspen_manifest, {"hydrology"})
     changed.append(str(aspen_manifest_path))
 
     douglas_manifest_path = v2_root / "regions/douglas-co/region.json"
@@ -102,7 +132,7 @@ def apply_refresh(report_path: Path, v2_root: Path = V2):
         "NHD source geometry and retained source attributes; Douglas flowlines are named with only "
         "reviewed supporting bridges, and all waterbodies are retained. Classification does not "
         "establish recreation, access or permission.")
-    write_json(douglas_manifest_path, douglas_manifest, indent=2)
+    write_region_manifest(douglas_manifest_path, douglas_manifest, {"waterways", "waterbodies"})
     changed.append(str(douglas_manifest_path))
 
     for region_id in ("aspen", "douglas-co"):

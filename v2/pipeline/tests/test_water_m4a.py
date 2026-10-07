@@ -1,4 +1,5 @@
 import copy
+import tempfile
 import sys
 import unittest
 from pathlib import Path
@@ -11,9 +12,29 @@ from lib.water import (  # noqa: E402
     normalize_source_fields, splice_layer, support_bridges, support_gap_boxes,
     water_display_config,
 )
+from apply_m4a_water import write_region_manifest  # noqa: E402
 
 
 class WaterM4ATests(unittest.TestCase):
+    def test_manifest_update_preserves_every_non_water_line(self):
+        text = ('{\n  "sources": {\n    "usgs_nhd": {"scope": "old"},\n'
+                '    "other": {"scope": "untouched"}\n  },\n  "layers": [\n'
+                '    {"id": "other", "fields": {"source": ["keep"]}},\n'
+                '    {"id": "water", "fields": {"source": [], "derived": []}}\n  ]\n}\n')
+        manifest = {
+            "sources": {"usgs_nhd": {"scope": "new"}},
+            "layers": [{"id": "other", "fields": {"source": ["keep"]}},
+                       {"id": "water", "fields": {"source": ["source_id"], "derived": ["source_layer"]}}],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "region.json"
+            path.write_text(text)
+            write_region_manifest(path, manifest, {"water"})
+            updated = path.read_text()
+        self.assertIn('    "other": {"scope": "untouched"}', updated)
+        self.assertIn('    {"id": "other", "fields": {"source": ["keep"]}},', updated)
+        self.assertIn('"source": ["source_id"]', updated)
+
     def test_feature_id_sanitizes_but_source_id_is_preserved(self):
         self.assertEqual(feature_id("{A0-b_C}"), "nhd-A0-bC")
         values = normalize_source_fields("flowline", {

@@ -5,6 +5,7 @@ import hashlib
 import json
 import time
 import argparse
+import subprocess
 from datetime import datetime, timezone
 from collections import Counter
 from pathlib import Path
@@ -133,13 +134,21 @@ def controlled_layer_query(client, region, layer_name, layer_id, extent, where, 
     return {"type": "FeatureCollection", "features": features}, query_record
 
 
-def _old_layers(region):
+def _old_layers(region, baseline_ref=None):
     if region == "aspen":
-        document = json.loads((V2 / "map-data-v2.json").read_text(encoding="utf-8"))
+        relative = "v2/map-data-v2.json"
+        document = (json.loads(subprocess.run(
+            ["git", "show", f"{baseline_ref}:{relative}"], cwd=V2.parent,
+            check=True, stdout=subprocess.PIPE).stdout) if baseline_ref else
+            json.loads((V2 / "map-data-v2.json").read_text(encoding="utf-8")))
         old = document["layers"]["hydrology"]["features"]
         return {name: [feature for feature in old if (feature.get("properties") or {}).get("kind") == name]
                 for name in ("flowline", "area", "waterbody")}
-    document = json.loads((V2 / "regions/douglas-co/research.json").read_text(encoding="utf-8"))
+    relative = "v2/regions/douglas-co/research.json"
+    document = (json.loads(subprocess.run(
+        ["git", "show", f"{baseline_ref}:{relative}"], cwd=V2.parent,
+        check=True, stdout=subprocess.PIPE).stdout) if baseline_ref else
+        json.loads((V2 / "regions/douglas-co/research.json").read_text(encoding="utf-8")))
     return {"flowline": document["layers"]["waterways"]["features"],
             "waterbody": document["layers"]["waterbodies"]["features"]}
 
@@ -272,7 +281,7 @@ def review_staged(staging: Path, raw_root: Path) -> dict:
     config = water_display_config()
     for (region, source_layer), filename in layer_files.items():
         staged = json.loads((staging / filename).read_text(encoding="utf-8"))["features"]
-        old = _old_layers(region)[source_layer]
+        old = _old_layers(region, baseline_ref="origin/main")[source_layer]
         report = difference_report(region, source_layer, old, staged, raw_by_source_id)
         if region == "douglas-co" and source_layer == "flowline":
             gap_queries = [query for query in existing["queries"] if query.get("support_for_query")]
