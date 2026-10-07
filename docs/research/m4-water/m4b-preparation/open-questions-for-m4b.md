@@ -52,9 +52,30 @@ Alternatives:
 Recommendation: 1 with 2, as a small amendment to M4-B, with the extra
 request authorised explicitly.
 
-The same mechanism would also restore Happy Canyon Creek (7.2 km, artificial
-path only), Kinney Creek (4.7 km) and the truncated East Cherry Creek and
-Willow Creek, where they run through perennial areas.
+Evidence for alternative 1 (coordinator's read-only attribute probe of NHD
+layer 9 on 2026-10-07; no geometry fetched, nothing stored): the 255 Douglas
+centre-line segments reference 113 distinct waterbodies or areas. 87 are
+waterbodies already in the data. The other 26 are all found in the NHD area
+layer: 4 are coded `46006`, stream or river, perennial; 22 are coded
+`48400`, wash.
+
+| River | Centre-line segments | Source km | What they run through |
+|---|---:|---:|---|
+| South Platte River | 75 | 22.9 | 55 through perennial stream-or-river areas (`46006`); 20 through lakes and reservoirs in the data |
+| Happy Canyon Creek | 9 | 7.2 | 8 through wash areas (`48400`); 1 through a waterbody |
+| Kinney Creek | 13 | 4.7 | 10 through wash areas; 3 through waterbodies |
+| East Cherry Creek | 8 | 2.6 | 7 through wash areas; 1 through a waterbody |
+
+So a rule that draws a centre line when the area it runs through is coded as
+a perennial stream or river, or is a displayed lake or reservoir, would draw
+the whole South Platte from the source's own classification, and would leave
+the washes undrawn. This contradicts the sentence below about Happy Canyon
+Creek and Kinney Creek being restored: on this evidence they would not be,
+because the source codes their areas as washes.
+
+Happy Canyon Creek (7.2 km, artificial path only), Kinney Creek (4.7 km) and
+the truncated East Cherry Creek run mostly through areas the source codes as
+washes, as the table above shows, and would stay undrawn under alternative 1.
 
 ## Q2 — Named connectors carrying the river's own GNIS id (coordinator; reported to owner)
 
