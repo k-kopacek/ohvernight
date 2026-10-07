@@ -59,7 +59,7 @@
     }
     function appendEvidence(box,output){
       if(output.items){for(const item of output.items){
-        const node=element(item.url?'a':'p',item.text);if(item.url){node.href=item.url;node.target='_blank';node.rel='noopener noreferrer';}box.append(node);
+        const node=element(item.heading?'h3':item.url?'a':'p',item.text);if(item.url){node.href=item.url;node.target='_blank';node.rel='noopener noreferrer';}box.append(node);
       }return;}
       for(const line of output.lines)box.append(element('p',line));
       for(const item of output.links){const link=element('a',item.label);link.href=item.url;link.target='_blank';link.rel='noopener noreferrer';box.append(link);}
@@ -115,7 +115,7 @@
       if($('detail-view').hidden){listScroll=$('sheet-body').scrollTop;listOpener=document.activeElement;}
       for(const dialog of host.querySelectorAll('dialog[open]'))dialog.close();
       const declaration=manifest.layers.find(layer=>layer.id===entry.id),body=$('detail-body');body.replaceChildren();
-      const output=scope.ExploreLand?.tier(declaration)==='G'?scope.ExploreLand.detail(manifest,declaration,feature):E.feature(manifest,declaration,feature,entry.title,Date.now());
+      const output=entry.kind==='water'?scope.ExploreWaterDetail.feature(manifest,declaration,feature):scope.ExploreLand?.tier(declaration)==='G'?scope.ExploreLand.detail(manifest,declaration,feature):E.feature(manifest,declaration,feature,entry.title,Date.now());
       $('detail-title').textContent=output.title;const actions=element('div',undefined,'explore-detail-actions');body.append(actions);appendEvidence(body,output);
       body.append(button('Sources & coverage',showSources));
       options.onDetail?.(active,entry,feature,body);
