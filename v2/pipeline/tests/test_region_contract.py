@@ -30,6 +30,18 @@ class RegionContractTests(unittest.TestCase):
                 manifest = self.load(f"regions/{region_id}/region.json")
                 self.assertEqual(manifest["sources"]["usgs_nhd"]["scope"], scope)
 
+    def test_real_water_features_do_not_carry_mislabeled_elevation(self):
+        for manifest_path in (V2 / "regions").glob("*/region.json"):
+            manifest = json.loads(manifest_path.read_text())
+            for layer in manifest["layers"]:
+                if layer.get("kind") != "water":
+                    continue
+                document = self.load(layer["path"])
+                features = document["layers"][layer["id"]]["features"]
+                mislabeled = [feature.get("properties", {}).get("id") for feature in features
+                              if "elevation_ft" in feature.get("properties", {})]
+                self.assertEqual(mislabeled, [], f"{manifest['region']['id']}/{layer['id']}")
+
     def test_real_regions_validate_and_pin_status_gaps(self):
         manifests = sorted((V2 / "regions").glob("*/region.json"))
         self.assertEqual({p.parent.name for p in manifests}, {"aspen", "douglas-co"})

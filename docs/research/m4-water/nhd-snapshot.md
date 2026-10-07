@@ -135,6 +135,10 @@ Before: 33 total (33 named, 0 unnamed); baseline retained no ftype/fcode values.
 | 436 | 43624 | 20 | reservoir | unknown |
 | 466 | 46600 | 1 | swamp_marsh | unknown |
 
+### Elevation unit
+
+The NHD layer 12 source field is `ELEVATION`. Its service range domain is `[-400, 9000]`; the service metadata includes no unit. The retained values are exact multiples of 0.3048: Whites Lake 2827.9344 (9,278 ft × 0.3048), Crater Lake 3071.1648 (10,076 ft × 0.3048), and Maroon Lake 2919.984 (9,580 ft × 0.3048). This confirms the source values are metres. There are 10 non-null elevations among Aspen's 514 waterbodies and 10 among Douglas's 2,135 waterbodies. The canonical property is `elevation_m`; each value is stored unconverted at the source value and precision.
+
 
 ### Douglas supporting-feature review
 

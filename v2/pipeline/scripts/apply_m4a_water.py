@@ -15,11 +15,11 @@ PIPELINE = SCRIPTS.parent
 V2 = PIPELINE.parent
 SOURCE_FIELDS = {
     "aspen": ["gnis_id", "source_id", "ftype", "fcode", "reach_code", "length_km", "area_sqkm",
-               "elevation_ft", "visibility_filter", "waterbody_source_id", "source_date"],
+               "elevation_m", "visibility_filter", "waterbody_source_id", "source_date"],
     "flowline": ["gnis_id", "source_id", "ftype", "fcode", "reach_code", "length_km",
                   "visibility_filter", "waterbody_source_id", "source_date"],
     "waterbody": ["gnis_id", "source_id", "ftype", "fcode", "reach_code", "area_sqkm",
-                   "elevation_ft", "visibility_filter", "source_date"],
+                   "elevation_m", "visibility_filter", "source_date"],
 }
 DERIVED_FIELDS = ["source_namespace", "source_layer", "water_class", "hydro_category", "legacy_ids"]
 

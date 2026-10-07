@@ -179,7 +179,7 @@ carry `name`, `gnis_id`, `source_id`, `ftype`, `fcode`, `reach_code`,
 `length_km`, `visibility_filter`, `waterbody_source_id` and `source_date`.
 Areas carry `name`, `gnis_id`, `source_id`, `ftype`, `fcode`, `area_sqkm`,
 `visibility_filter` and `source_date`. Waterbodies carry `name`, `gnis_id`,
-`source_id`, `ftype`, `fcode`, `reach_code`, `area_sqkm`, `elevation_ft`,
+`source_id`, `ftype`, `fcode`, `reach_code`, `area_sqkm`, `elevation_m`,
 `visibility_filter` and `source_date`.
 
 Every water feature declares `source_namespace`, `source_layer`,

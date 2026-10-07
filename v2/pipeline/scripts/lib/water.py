@@ -24,21 +24,21 @@ SOURCE_FIELDS = {
     "flowline": {
         "name": "gnis_name", "gnis_id": "gnis_id", "source_id": "permanent_identifier",
         "ftype": "ftype", "fcode": "fcode", "reach_code": "reachcode",
-        "length_km": "lengthkm", "area_sqkm": None, "elevation_ft": None,
+        "length_km": "lengthkm", "area_sqkm": None, "elevation_m": None,
         "visibility_filter": "visibilityfilter", "waterbody_source_id": "wbarea_permanent_identifier",
         "source_date": "fdate",
     },
     "area": {
         "name": "gnis_name", "gnis_id": "gnis_id", "source_id": "permanent_identifier",
         "ftype": "ftype", "fcode": "fcode", "reach_code": None,
-        "length_km": None, "area_sqkm": "areasqkm", "elevation_ft": None,
+        "length_km": None, "area_sqkm": "areasqkm", "elevation_m": None,
         "visibility_filter": "visibilityfilter", "waterbody_source_id": None,
         "source_date": "fdate",
     },
     "waterbody": {
         "name": "gnis_name", "gnis_id": "gnis_id", "source_id": "permanent_identifier",
         "ftype": "ftype", "fcode": "fcode", "reach_code": "reachcode",
-        "length_km": None, "area_sqkm": "areasqkm", "elevation_ft": "elevation",
+        "length_km": None, "area_sqkm": "areasqkm", "elevation_m": "elevation",
         "visibility_filter": "visibilityfilter", "waterbody_source_id": None,
         "source_date": "fdate",
     },
@@ -111,7 +111,7 @@ def normalize_source_fields(layer: str, source_properties: dict[str, Any]) -> di
     fields["fcode"] = _as_integer(fields["fcode"], "fcode")
     if fields["visibility_filter"] is not None:
         fields["visibility_filter"] = _as_integer(fields["visibility_filter"], "visibility_filter")
-    for field in ("length_km", "area_sqkm", "elevation_ft"):
+    for field in ("length_km", "area_sqkm", "elevation_m"):
         if field in fields and fields[field] is not None:
             value = fields[field]
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):

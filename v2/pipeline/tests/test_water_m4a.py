@@ -8,7 +8,7 @@ V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
 from lib.water import (  # noqa: E402
-    classify, ensure_supported_ftype, ensure_unique_feature_ids, enrich_properties, feature_id, legacy_geometry_matches,
+    SOURCE_FIELDS, classify, ensure_supported_ftype, ensure_unique_feature_ids, enrich_properties, feature_id, legacy_geometry_matches,
     normalize_source_fields, splice_layer, support_bridges, support_gap_boxes,
     water_display_config,
 )
@@ -16,6 +16,15 @@ from apply_m4a_water import write_region_manifest  # noqa: E402
 
 
 class WaterM4ATests(unittest.TestCase):
+    def test_waterbody_elevation_mapping_preserves_the_source_value_in_metres(self):
+        self.assertEqual(SOURCE_FIELDS["waterbody"]["elevation_m"], "elevation")
+        values = normalize_source_fields("waterbody", {
+            "permanent_identifier": "water-1", "ftype": 390, "fcode": 39004,
+            "elevation": 3071.1648,
+        })
+        self.assertEqual(values["elevation_m"], 3071.1648)
+        self.assertNotIn("elevation_ft", values)
+
     def test_manifest_update_preserves_every_non_water_line(self):
         text = ('{\n  "sources": {\n    "usgs_nhd": {"scope": "old"},\n'
                 '    "other": {"scope": "untouched"}\n  },\n  "layers": [\n'
@@ -43,7 +52,7 @@ class WaterM4ATests(unittest.TestCase):
         self.assertEqual(values["source_id"], "{A0-b_C}")
         self.assertEqual(values["gnis_id"], "0012")
         self.assertNotIn("area_sqkm", values)
-        self.assertNotIn("elevation_ft", values)
+        self.assertNotIn("elevation_m", values)
 
     def test_missing_source_id_stops_normalization(self):
         with self.assertRaisesRegex(ValueError, "no permanent source_id"):
