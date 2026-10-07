@@ -263,3 +263,101 @@ These are the snapshot-observed fcodes that map to `hydro_category: unknown`; th
 - The NHD service response included currentVersion `11.3` and documentInfo Version `3.3.0`; it did not include a source data-date. Values are source-fetched context and do not establish recreation, access or permission.
 - No 3DHP identifiers were requested or stored. No selection rule, geometry, non-water layer, UI wording, styling or map interaction was changed.
 - Aspen canonical hydrology still contains all 6,926 features; geometry matches all current features. Stage 07 was not re-run, and identical Aspen hydrology geometries mean its setback-screening corridors need no change.
+
+## M4-B section 1 — BLOCKED_EXTERNAL: USGS NHD SERVICE DEGRADED
+
+The owner-authorized Douglas padded-water refresh did not obtain any feature
+response pages. The only saved source response is the service metadata; three
+attempts reached repeated read-timeout or HTTP 504 failures before a complete
+layer-6 count and object-ID plan could be saved. By owner decision, attempt 3
+was the final attempt. No fourth attempt was made, no M4-A response page was
+used, and canonical data, manifests and display artifacts were not changed.
+
+### Service and query scope
+
+- Endpoint: `https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer`.
+- Saved service metadata: `currentVersion` `11.3`, documentInfo Version
+  `3.3.0`; the metadata contains no source data-date text.
+- Requested layers: 6 (flowline) and 12 (waterbody). No layer 9 or Aspen
+  request was made.
+- Geographic clip: `county.buffer(0.005)`. Query envelope, WGS84
+  minX,minY,maxX,maxY: `-105.33444166966446,39.1244790184437,-104.65558407460871,39.57119268762119`.
+- Intended layer 6 query: `where=gnis_name IS NOT NULL AND gnis_name <> ''`;
+  `outFields=permanent_identifier,gnis_id,gnis_name,ftype,fcode,reachcode,lengthkm,visibilityfilter,wbarea_permanent_identifier,fdate,OBJECTID`;
+  feature page size 250.
+- Intended layer 12 query: `where=1=1`;
+  `outFields=PERMANENT_IDENTIFIER,GNIS_ID,GNIS_NAME,FTYPE,FCODE,AREASQKM,ELEVATION,REACHCODE,VISIBILITYFILTER,FDATE,OBJECTID`;
+  feature page size 250.
+- O1 support query where-clause, if qualifying gap boxes had been derived:
+  `gnis_name IS NULL OR gnis_name = ''`; its boxes were never computed because
+  no layer-6 features were retrieved. Supporting-feature count is therefore
+  **not determined**, not zero.
+- Count-only and ID-only requests carry no `outFields` and no feature page
+  size. The first count-only request used a 90 second read timeout. Attempts 2
+  and 3 configured 180 seconds for count and ID requests; page size and query
+  logic were unchanged.
+
+### Attempt record (UTC)
+
+| Attempt | Request reached | Outcome |
+|---|---|---|
+| 1 — metadata response saved at `2026-10-07T20:52:11.910813Z`; the feature query followed immediately | Layer 6 count-only query with the intended named-flowline where-clause and padded envelope | Read timeout after the 90 second timeout policy and configured retries; failed, observed by the worker at `2026-10-07T21:01:17Z`. No count, ID plan or feature page was saved. |
+| 2 — started `2026-10-07T21:03:10.791689Z` | Layer 6 metadata endpoint `/6?f=json` | Repeated HTTP 504 responses; failed at `2026-10-07T21:03:24.193607Z`, before the count query. |
+| 3 — started `2026-10-07T21:21:13.336794Z` | Layer 6 count-only query with the same named-flowline where-clause and padded envelope; the layer-6 metadata response was saved | Repeated HTTP 504 responses; failed at `2026-10-07T21:21:29.489422Z`. This was the final owner-authorized attempt. |
+
+The saved service metadata and all three attempt records remain under the
+ignored `v2/pipeline/data/raw/m4b-douglas-water/` directory. No count or ID
+request completed, so returned feature counts are unavailable for both layers;
+layer 12 and O1 support queries were not reached. No staging difference report
+was produced. Additions, removals, geometry changes, name changes, and the list
+of lengthened IDs are **not evaluated**; these are not inferred to be zero.
+
+### Canonical state left unchanged
+
+The current canonical Douglas counts below are both the pre-attempt and
+post-attempt counts because apply was never run. The values are canonical
+NHD-source counts, not results from the failed refresh.
+
+| Layer | Features | ftype | fcode | Count |
+|---|---:|---:|---:|---:|
+| waterways | 2,359 | 334 | 33400 | 1 |
+| waterways | 2,359 | 336 | 33600 | 73 |
+| waterways | 2,359 | 428 | 42803 | 6 |
+| waterways | 2,359 | 428 | 42807 | 3 |
+| waterways | 2,359 | 428 | 42813 | 3 |
+| waterways | 2,359 | 460 | 46003 | 504 |
+| waterways | 2,359 | 460 | 46006 | 1,514 |
+| waterways | 2,359 | 558 | 55800 | 255 |
+| waterbodies | 2,135 | 390 | 39001 | 1,402 |
+| waterbodies | 2,135 | 390 | 39004 | 685 |
+| waterbodies | 2,135 | 390 | 39005 | 2 |
+| waterbodies | 2,135 | 390 | 39009 | 8 |
+| waterbodies | 2,135 | 390 | 39011 | 7 |
+| waterbodies | 2,135 | 436 | 43601 | 1 |
+| waterbodies | 2,135 | 436 | 43612 | 6 |
+| waterbodies | 2,135 | 436 | 43613 | 2 |
+| waterbodies | 2,135 | 436 | 43619 | 1 |
+| waterbodies | 2,135 | 436 | 43624 | 20 |
+| waterbodies | 2,135 | 466 | 46600 | 1 |
+
+`v2/regions/douglas-co/research.json` SHA-256 before/after this work:
+`cf7e6852a8549c5e63e12ef07ddbe9a30ace7323a3e874219eb6a7c9d03969ab`.
+The South Platte source ID `117795757` is not present in the current canonical
+water layers; the failed refresh could not establish whether it is now
+available from the source. The lengthened-feature count and O1 supporting
+feature count remain undetermined.
+
+No canonical bundle, manifest, or display artifact changed. The unchanged
+`v2/map-data-v2.json` SHA-256 is
+`d244adea6d600f6530b2cbcb3b859ea5647c448c1737e1f9508e3d1e9a0143fe`; the
+combined SHA-256 over all 18 files in `v2/regions/aspen/` (sorted relative
+paths and each file's SHA-256) is
+`1eb72f89701553509a13807248b5760be01cb2339678fedbcaeb589025e782a5`.
+The aggregate SHA-256 of canonical non-water layer hashes is
+`0e9efb81f456682c87d23bf8c292f7b396161db88e766cf453f9704b1d089e16` for the
+Aspen bundle and
+`737ad420382d161e22bcab28e1f18a33007442fa0e64da78885dabbca9c669e9` for
+Douglas; these digests use sorted layer names and canonical JSON layer
+content.
+Douglas currently uses 413,116 bytes to map-usable resources and 3,643,449
+bytes for the default-on total, below the 500,000 and 4,500,000 limits.
