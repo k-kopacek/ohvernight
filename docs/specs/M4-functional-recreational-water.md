@@ -137,6 +137,8 @@ A waterbody is never grouped. Its display ID is its feature ID.
 
 Every water feature that existed before M4-A carries its old ID in `legacy_ids`. Old and new features are matched by exact canonical geometry equality within the same layer; a row-number match alone is not accepted. Old features with no match, and new features with none, are listed in the snapshot document.
 
+**A1 — alias scope clarification (coordinator, 2026-10-06).** Canonical `legacy_ids` covers every matched pre-M4 water feature, whether or not it is displayed. `index.json` `water_id_aliases` covers only displayed features: its keys equal the legacy IDs of features in the region's water display artifacts and each value is that feature's current display ID. Legacy IDs for undisplayed canonical features remain on the canonical feature and are omitted from the display index. R68 checks these scopes separately and verifies that every displayed alias agrees with canonical data.
+
 The browser resolves an ID through the display index: `index.json` gains `water_id_aliases`, an object mapping each legacy ID to the current display ID (a group ID for a grouped segment). No saved state stores water IDs today (verified: no storage key, test or config references one), so the alias map exists for external references and for future use, and costs one small object. Aspen's `kind` property is kept alongside `source_layer` through M4 and removed in a later milestone.
 
 ## 8. Display selection and grouping (D2, D3, D4, D5, D11)
@@ -444,7 +446,7 @@ New stable rule IDs. Each has at least one negative test on a fixture and, where
 |---|---|---|
 | R66 | Every water feature has non-empty `source_id`, `source_namespace` equal to `usgs_nhd`, integer `ftype` and `fcode`, and `id` equal to `nhd-` plus the sanitised `source_id`. IDs are unique within a region | A |
 | R67 | `water_class` and `hydro_category` equal the values computed from `ftype` and `fcode` by `water_display.json` | A |
-| R68 | `legacy_ids` is an array of distinct non-empty strings; no legacy ID appears on two features; `water_id_aliases` maps every legacy ID to an existing display ID, and nothing else | A, B |
+| R68 | `legacy_ids` is an array of distinct non-empty strings; no legacy ID appears on two features; `water_id_aliases` keys equal the legacy IDs of displayed water features, map to their existing display IDs, agree with canonical data and contain nothing else (A1) | A, B |
 | R69 | The display set of a water layer equals exactly the set computed from canonical data by section 8.2, the threshold, and the reviewed lists. No eligible feature is missing and no ineligible feature is present | B |
 | R70 | Grouping invariants G1–G7, G9, G10 hold for every group; `water_groups` equals the canonical `group_id` membership | B |
 | R71 | A group display feature's geometry equals the ordered, R63-transformed geometry of its drawn members; `member_count` and `length_km` equal the computed values; `name` and `gnis_id` equal the members' | B |
