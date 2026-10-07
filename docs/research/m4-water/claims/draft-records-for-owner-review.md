@@ -133,3 +133,22 @@ HERMES ONLY cells either confirmed or set to `unknown`. Record 4 needs a
 careful re-read because it would carry the first `allowed` claim. Every
 record is re-read on the day the M4-C pull request is opened, and that date
 becomes its review date.
+
+## 8. Open question for M4-C: rules that apply to a reach, not a whole river
+
+The second dossier set shows operators stating rules for a reach of a river:
+Denver Water's rules cover the South Platte through Waterton Canyon; the
+Forest Service's cover the Deckers and Cheesman Canyon corridor; CPW's cover
+Cherry Creek inside Castlewood Canyon State Park. The approved specification
+attaches one record to one water, and a grouped stream is a whole river in
+the region. A record that says "boating prohibited" for the South Platte
+would overstate a rule that applies to one reach.
+
+This is a question for the owner before any river record is written.
+Alternatives: (a) river records carry the reach in each claim's summary and
+scope, for example "Waterton Canyon reach: boating not permitted", and a
+river may carry several claims for one activity; (b) no river records in M4-C,
+waterbodies only; (c) a later milestone models reaches as their own features.
+The coordinator's recommendation is (b) for M4-C, with (a) or (c) decided
+when rivers are taken up, because the specification's one-claim-per-activity
+shape cannot express two reaches honestly.
