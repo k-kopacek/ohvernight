@@ -11,8 +11,11 @@ V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
 from lib.water import (  # noqa: E402
-    select_water_features, water_display_config,
+    classify, group_flowlines, geodesic_length_km, select_water_features,
+    validate_expected_major_rivers, water_display_config,
 )
+from lib.region_contract import _json_pointer  # noqa: E402
+from build_display import build_water_report  # noqa: E402
 
 
 CONFIG = water_display_config()
@@ -29,6 +32,7 @@ def water_feature(ident="water-1", *, layer="waterbody", ftype=390, fcode=39004,
              "name": name, "gnis_id": gnis, "area_sqkm": area,
              "length_km": 1.0, "water_class": "", "hydro_category": "",
              "legacy_ids": [], "evidence": {"source_url": "https://example.test"}}
+    props["water_class"], props["hydro_category"] = classify(ftype, fcode, CONFIG)
     props.update(extra)
     return {"type": "Feature", "geometry": {"type": geometry_type, "coordinates": coords},
             "properties": props}
@@ -130,6 +134,9 @@ class WaterSelectionFixtures(unittest.TestCase):
         self.assertTrue(got["intermittent"]["eligible"])
         self.assertFalse(got["not-stated"]["eligible"])
         self.assertFalse(got["stream"]["eligible"])
+        unknown = decisions([features[1]], inclusions=[
+            {"feature_id": "not-stated", "reason_code": "reviewed_intermittent_waterbody"}])
+        self.assertTrue(unknown["not-stated"]["eligible"])
 
     def test_reviewed_exclusion_removes_only_its_exact_target(self):
         features = [water_feature("target", name="Lake", area=0.001),
@@ -144,6 +151,293 @@ class WaterSelectionFixtures(unittest.TestCase):
         got = decisions([water_feature(f"n-{index}", name=name, area=0.001)
                          for index, name in enumerate(names)])
         self.assertTrue(all(row["eligible"] for row in got.values()))
+
+
+def flow(ident, coords, *, gnis="00000001", name="River", ftype=460, fcode=46006,
+         length_km=999.0, source_layer="flowline", **extra):
+    feature = water_feature(ident, layer=source_layer, ftype=ftype, fcode=fcode,
+                            name=name, gnis=gnis, coords=coords,
+                            length_km=length_km, group_id=None, **extra)
+    feature["geometry"] = {"type": "MultiLineString" if coords and isinstance(coords[0][0], list)
+                           else "LineString", "coordinates": coords}
+    return feature
+
+
+def group(features, *, config=None, region_id="fixture", review=None, coverage=None):
+    return group_flowlines(features, config or CONFIG, region_id=region_id,
+                           review=review or {"inclusions": [], "exclusions": []},
+                           coverage=coverage, enforce_major=False)
+
+
+class WaterGroupingFixtures(unittest.TestCase):
+    def test_offline_dry_run_report_matches_approved_current_counts(self):
+        report = build_water_report(V2)
+        self.assertEqual(report["aspen"]["group_count"], 69)
+        self.assertEqual(report["aspen"]["members_per_expected_river"]["00174812"]["member_counts"], [111])
+        self.assertEqual(report["aspen"]["waterbodies_displayed_at_0_02_sqkm"], 46)
+        self.assertEqual(report["douglas-co"]["group_count"], 35)
+        self.assertEqual(report["douglas-co"]["members_per_expected_river"]["00201759"]["state"],
+                         "PENDING_EXTERNAL_SOURCE_REFRESH")
+        self.assertEqual(report["douglas-co"]["waterbodies_displayed_at_0_02_sqkm"], 32)
+
+    def test_same_gnis_endpoints_form_one_group_and_member_order_is_by_id(self):
+        result = group([flow("nhd-b", [[1, 0], [2, 0]]), flow("nhd-a", [[0, 0], [1, 0]])])
+        self.assertEqual(len(result["groups"]), 1)
+        self.assertEqual(result["groups"][0]["properties"]["id"], "nhd-gnis-00000001")
+        self.assertEqual(result["water_groups"]["nhd-gnis-00000001"], ["nhd-a", "nhd-b"])
+        self.assertEqual(result["groups"][0]["properties"]["member_count"], 2)
+
+    def test_same_gnis_disconnected_parts_get_stable_suffixes_and_length_order(self):
+        result = group([flow("long", [[0, 0], [3, 0]]), flow("short", [[5, 0], [6, 0]])])
+        self.assertEqual([f["properties"]["id"] for f in result["groups"]],
+                         ["nhd-gnis-00000001", "nhd-gnis-00000001-p2"])
+        self.assertEqual(result["water_groups"]["nhd-gnis-00000001"], ["long"])
+        self.assertEqual(result["water_groups"]["nhd-gnis-00000001-p2"], ["short"])
+        self.assertEqual(result["multi_part_gnis_ids"], ["00000001"])
+
+    def test_touching_different_gnis_and_same_name_never_merge(self):
+        result = group([flow("one", [[0, 0], [1, 0]], name="Creek"),
+                        flow("two", [[1, 0], [2, 0]], gnis="00000002", name="Creek")])
+        self.assertEqual(len(result["groups"]), 2)
+        self.assertEqual({g["properties"]["gnis_id"] for g in result["groups"]},
+                         {"00000001", "00000002"})
+
+    def test_two_names_under_one_gnis_fail_with_both_members_and_names(self):
+        with self.assertRaisesRegex(ValueError, "multiple names under GNIS 00000001") as raised:
+            group([flow("member-a", [[0, 0], [1, 0]]),
+                   flow("member-b", [[1, 0], [2, 0]], name="Different")])
+        for value in ("member-a", "member-b", "River", "Different"):
+            self.assertIn(value, str(raised.exception))
+
+    def test_empty_gnis_stream_joins_nothing(self):
+        result = group([flow("named", [[0, 0], [1, 0]]),
+                        flow("empty", [[1, 0], [2, 0]], gnis="")])
+        self.assertEqual(len(result["groups"]), 1)
+        self.assertEqual(result["water_groups"]["nhd-gnis-00000001"], ["named"])
+        self.assertIsNone(result["group_assignments"]["empty"])
+
+    def test_intermittent_reach_connects_two_drawn_lines_without_inventing_geometry(self):
+        result = group([flow("seed-a", [[0, 0], [1, 0]]),
+                        flow("hidden", [[1, 0], [2, 0]], fcode=46003),
+                        flow("seed-b", [[2, 0], [3, 0]])])
+        self.assertEqual(len(result["groups"]), 1)
+        self.assertEqual(result["water_groups"]["nhd-gnis-00000001"], ["seed-a", "seed-b"])
+        self.assertIsNone(result["group_assignments"]["hidden"])
+        self.assertEqual(result["groups"][0]["geometry"]["coordinates"],
+                         [[[0.0, 0.0], [1.0, 0.0]], [[2.0, 0.0], [3.0, 0.0]]])
+
+    def test_same_gnis_connector_connects_but_is_not_drawn_counted_or_assigned(self):
+        result = group([flow("seed-a", [[0, 0], [1, 0]]),
+                        flow("connector", [[1, 0], [2, 0]], ftype=334, fcode=33400),
+                        flow("seed-b", [[2, 0], [3, 0]])])
+        self.assertEqual(len(result["groups"]), 1)
+        self.assertEqual(result["water_groups"]["nhd-gnis-00000001"], ["seed-a", "seed-b"])
+        self.assertEqual(result["groups"][0]["properties"]["member_count"], 2)
+        self.assertIsNone(result["group_assignments"]["connector"])
+        self.assertEqual(result["connectors_used"][0]["id"], "connector")
+        self.assertGreater(result["connectors_used"][0]["length_km"], 0)
+
+    def test_empty_or_foreign_connector_canal_and_pipeline_do_not_connect(self):
+        cases = [
+            flow("connector-empty", [[1, 0], [2, 0]], gnis="", ftype=334, fcode=33400),
+            flow("connector-foreign", [[1, 0], [2, 0]], gnis="00000002", ftype=334, fcode=33400),
+            flow("canal", [[1, 0], [2, 0]], ftype=336, fcode=33600),
+            flow("pipeline", [[1, 0], [2, 0]], ftype=428, fcode=42803),
+        ]
+        for middle in cases:
+            with self.subTest(middle=middle["properties"]["id"]):
+                result = group([flow("seed-a", [[0, 0], [1, 0]]), middle,
+                                flow("seed-b", [[2, 0], [3, 0]])])
+                self.assertEqual(len(result["groups"]), 2)
+                self.assertIsNone(result["group_assignments"][middle["properties"]["id"]])
+
+    def test_drawn_status_does_not_pass_through_connector_to_artificial_path(self):
+        result = group([flow("seed", [[0, 0], [1, 0]]),
+                        flow("connector", [[1, 0], [2, 0]], ftype=334, fcode=33400),
+                        flow("artificial", [[2, 0], [3, 0]], ftype=558, fcode=55800)])
+        self.assertEqual(result["water_groups"]["nhd-gnis-00000001"], ["seed"])
+        self.assertIsNone(result["group_assignments"]["artificial"])
+
+    def test_artificial_paths_draw_to_fixed_point_but_not_through_hidden_stream(self):
+        result = group([flow("seed", [[0, 0], [1, 0]]),
+                        flow("art-a", [[1, 0], [2, 0]], ftype=558, fcode=55800),
+                        flow("art-b", [[2, 0], [3, 0]], ftype=558, fcode=55800),
+                        flow("hidden", [[3, 0], [4, 0]], fcode=46003),
+                        flow("art-c", [[4, 0], [5, 0]], ftype=558, fcode=55800)])
+        self.assertEqual(result["water_groups"]["nhd-gnis-00000001"], ["art-a", "art-b", "seed"])
+        only_artificial = group([flow("art-only", [[0, 0], [1, 0]], ftype=558, fcode=55800)])
+        self.assertEqual(only_artificial["groups"], [])
+
+    def test_connectivity_name_conflict_and_connector_name_are_strict(self):
+        with self.assertRaisesRegex(ValueError, "multiple names under GNIS"):
+            group([flow("seed-a", [[0, 0], [1, 0]]),
+                   flow("connector", [[1, 0], [2, 0]], ftype=334, fcode=33400,
+                        name="Other River"),
+                   flow("seed-b", [[2, 0], [3, 0]])])
+
+    def test_multipart_source_is_one_member_and_no_intersection_connects(self):
+        multipart = flow("multipart", [[[0, 0], [1, 0]], [[5, 0], [6, 0]]])
+        result = group([multipart])
+        self.assertEqual(result["groups"][0]["properties"]["member_count"], 1)
+        self.assertEqual(len(result["groups"][0]["geometry"]["coordinates"]), 2)
+        crossing = flow("crossing", [[0.5, -1], [0.5, 1]], gnis="00000002")
+        split = group([flow("horizontal", [[0, 0], [1, 0]]), crossing])
+        self.assertEqual(len(split["groups"]), 2)
+
+    def test_same_gnis_interior_crossing_does_not_join_components(self):
+        crossing = flow("vertical", [[0.5, -1], [0.5, 1]])
+        horizontal = flow("horizontal", [[0, 0], [1, 0]])
+        self.assertEqual(len(group([horizontal, crossing])["groups"]), 2)
+
+    def test_supporting_bridge_joins_connectivity_but_is_never_a_member(self):
+        support = flow("support", [[1, 0], [2, 0]], gnis="", name=None,
+                       support_for="00000001", support_reason="bridges_named_parts")
+        result = group([flow("seed-a", [[0, 0], [1, 0]]), support,
+                        flow("seed-b", [[2, 0], [3, 0]])])
+        self.assertEqual(result["water_groups"]["nhd-gnis-00000001"], ["seed-a", "seed-b"])
+        self.assertIsNone(result["group_assignments"]["support"])
+        self.assertNotIn("support", result["water_groups"]["nhd-gnis-00000001"])
+
+    def test_real_canonical_regions_reproduce_expected_groups_connectors_and_bodies(self):
+        config = water_display_config()
+        for region_id in ("aspen", "douglas-co"):
+            manifest = json.loads((V2 / f"regions/{region_id}/region.json").read_text())
+            bundle_path = V2 / ("map-data-v2.json" if region_id == "aspen"
+                                else "regions/douglas-co/research.json")
+            bundle = json.loads(bundle_path.read_text())
+            coverage_doc = json.loads((V2 / manifest["coverage"]["path"]).read_text())
+            coverage_feature = _json_pointer(coverage_doc, manifest["coverage"].get("pointer", ""))
+            from shapely.geometry import shape
+            coverage = shape(coverage_feature["geometry"]).buffer(
+                next((layer.get("extent_padding_deg", 0.0) for layer in manifest["layers"]
+                      if layer.get("kind") == "water"), 0.0))
+            flowline_id = "hydrology" if region_id == "aspen" else "waterways"
+            flowlines = bundle["layers"][flowline_id]["features"]
+            grouped = group_flowlines(flowlines, config, region_id=region_id,
+                                      coverage=coverage)
+            body_features = ([feature for feature in bundle["layers"]["hydrology"]["features"]
+                              if feature["properties"].get("source_layer") == "waterbody"]
+                             if region_id == "aspen" else
+                             bundle["layers"]["waterbodies"]["features"])
+            bodies = [row for row in select_water_features(body_features, config) if row["eligible"]]
+            expected_groups = 69 if region_id == "aspen" else 35
+            expected_bodies = 46 if region_id == "aspen" else 32
+            with self.subTest(region=region_id):
+                self.assertEqual(len(grouped["groups"]), expected_groups)
+                self.assertEqual(len(bodies), expected_bodies)
+                self.assertTrue(all(set(feature["properties"]["gnis_id"]
+                                        for feature in flowlines if feature["properties"]["id"] in members)
+                                    == {group_id.removeprefix("nhd-gnis-").split("-p")[0]}
+                                    for group_id, members in grouped["water_groups"].items()))
+        aspen_manifest = json.loads((V2 / "regions/aspen/region.json").read_text())
+        aspen_bundle = json.loads((V2 / "map-data-v2.json").read_text())
+        aspen_flowlines = aspen_bundle["layers"]["hydrology"]["features"]
+        coverage_doc = json.loads((V2 / aspen_manifest["coverage"]["path"]).read_text())
+        from shapely.geometry import shape
+        coverage = shape(_json_pointer(coverage_doc, aspen_manifest["coverage"].get("pointer", ""))
+                         ["geometry"]).buffer(0.005)
+        aspen = group_flowlines(aspen_flowlines, config, region_id="aspen", coverage=coverage)
+        members = {row["gnis_id"]: row["member_count"] for row in aspen["group_summaries"]}
+        counts = {}
+        for row in aspen["group_summaries"]:
+            counts[row["gnis_id"]] = counts.get(row["gnis_id"], 0) + 1
+        self.assertEqual(counts["00180061"], 1)
+        self.assertEqual(counts["00180317"], 1)
+        self.assertEqual(counts["00179785"], 3)
+        self.assertEqual(members["00174812"], 111)
+        self.assertEqual({row["gnis_id"] for row in aspen["extent_edge_splits"]}, {"00179785"})
+        self.assertEqual({row["gnis_id"] for row in aspen["connectors_used"]},
+                         {"00180061", "00180317"})
+
+    def test_geodesic_length_uses_canonical_coordinates_not_source_sum(self):
+        feature = flow("long-degree", [[0, 0], [1, 0]], length_km=999.0)
+        result = group([feature])
+        exact = geodesic_length_km([feature])
+        self.assertAlmostEqual(exact, 111.3194908, places=5)
+        self.assertEqual(result["groups"][0]["properties"]["length_km"], round(exact, 3))
+        self.assertNotEqual(result["groups"][0]["properties"]["length_km"], 999.0)
+
+    def test_group_and_member_order_are_input_and_hash_seed_independent(self):
+        features = [flow("z", [[0, 0], [1, 0]]), flow("a", [[1, 0], [2, 0]]),
+                    flow("b", [[5, 0], [6, 0]])]
+        baseline = group(features)
+        shuffled = group(list(reversed(features)))
+        self.assertEqual(baseline, shuffled)
+        script = """import sys; sys.path.insert(0,'v2/pipeline/scripts')
+from lib.water import group_flowlines,water_display_config
+def f(i,a,b):
+ return {'type':'Feature','geometry':{'type':'LineString','coordinates':[[a,0],[b,0]]},'properties':{'id':i,'source_id':i,'source_layer':'flowline','gnis_id':'00000001','name':'River','ftype':460,'fcode':46006,'water_class':'stream','hydro_category':'perennial','evidence':{},'length_km':1}}
+r=group_flowlines([f('z',0,1),f('a',1,2),f('b',5,6)],water_display_config(),region_id='fixture',enforce_major=False)
+import json; print(json.dumps(r['water_groups'],sort_keys=True))"""
+        outputs = []
+        for seed in ("0", "1"):
+            env = dict(__import__("os").environ, PYTHONHASHSEED=seed)
+            run = subprocess.run([sys.executable, "-c", script], cwd=V2.parent,
+                                 env=env, check=True, text=True, capture_output=True)
+            outputs.append(run.stdout.strip())
+        self.assertEqual(outputs[0], outputs[1])
+
+    def test_expected_major_river_missing_short_foreign_and_pending_are_distinct(self):
+        row = {"gnis_id": "123", "minimum_drawn_fraction": 0.8}
+        config = copy.deepcopy(CONFIG)
+        config["expected_major_rivers"] = {"fixture": [row]}
+        missing = group([], config=config)
+        with self.assertRaisesRegex(ValueError, "major river 123.*missing"):
+            validate_expected_major_rivers(missing, config, "fixture")
+        short = group([flow("short", [[0, 0], [0.5, 0]], gnis="123"),
+                       flow("undrawn-long", [[10, 0], [110, 0]], gnis="123",
+                            ftype=558, fcode=55800)], config=config)
+        with self.assertRaisesRegex(ValueError, "major river 123.*fraction"):
+            validate_expected_major_rivers(short, config, "fixture")
+        foreign_group = copy.deepcopy(short)
+        foreign_group["groups"][0]["properties"]["gnis_id"] = "other"
+        with self.assertRaisesRegex(ValueError, "major river 123.*foreign"):
+            validate_expected_major_rivers(foreign_group, config, "fixture")
+
+    def test_pending_marker_only_downgrades_absent_south_platte(self):
+        config = copy.deepcopy(CONFIG)
+        config["expected_major_rivers"] = {"douglas-co": [
+            {"gnis_id": "00201759", "minimum_drawn_fraction": 0.8}]}
+        config["pending_external_source_refresh"] = {
+            "region_id": "douglas-co", "gnis_id": "00201759",
+            "state": "PENDING_EXTERNAL_SOURCE_REFRESH", "reason": "fixture pending source"}
+        result = group([], config=config, region_id="douglas-co")
+        self.assertEqual(validate_expected_major_rivers(result, config, "douglas-co")[0]["state"],
+                         "PENDING_EXTERNAL_SOURCE_REFRESH")
+        config["expected_major_rivers"]["douglas-co"].append(
+            {"gnis_id": "other", "minimum_drawn_fraction": 0.8})
+        result["major_river_checks"].append({"gnis_id": "other", "group_present": False,
+            "seed_present": False, "member_gnis_ids": [], "drawn_fraction": 0,
+            "minimum_drawn_fraction": 0.8})
+        with self.assertRaisesRegex(ValueError, "major river other.*missing"):
+            validate_expected_major_rivers(result, config, "douglas-co")
+        config.pop("pending_external_source_refresh")
+        with self.assertRaisesRegex(ValueError, "major river 00201759.*missing"):
+            validate_expected_major_rivers(result, config, "douglas-co")
+
+    def test_pending_marker_does_not_hide_a_short_river_or_another_identity(self):
+        config = copy.deepcopy(CONFIG)
+        config["expected_major_rivers"] = {"douglas-co": [
+            {"gnis_id": "00201759", "minimum_drawn_fraction": 0.8}]}
+        pending = config["pending_external_source_refresh"]
+        short = group([flow("seed", [[0, 0], [0.5, 0]], gnis="00201759"),
+                       flow("undrawn", [[10, 0], [110, 0]], gnis="00201759",
+                            ftype=558, fcode=55800)], config=config, region_id="douglas-co")
+        with self.assertRaisesRegex(ValueError, "00201759.*fraction"):
+            validate_expected_major_rivers(short, config, "douglas-co")
+        config["pending_external_source_refresh"] = {**pending, "gnis_id": "other"}
+        with self.assertRaisesRegex(ValueError, "invalid pending"):
+            validate_expected_major_rivers(short, config, "douglas-co")
+
+    def test_padded_south_platte_fixture_groups_only_when_seed_is_present(self):
+        cfg = copy.deepcopy(CONFIG)
+        cfg["expected_major_rivers"] = {"fixture": []}
+        fixture = [flow("south-seed", [[0, 0], [1, 0]], gnis="00201759",
+                         name="South Platte River"),
+                   flow("south-path", [[1, 0], [2, 0]], gnis="00201759",
+                         name="South Platte River", ftype=558, fcode=55800)]
+        self.assertEqual(len(group(fixture, config=cfg)["groups"]), 1)
+        self.assertEqual(group(fixture[1:], config=cfg)["groups"], [])
 
 
 if __name__ == "__main__":

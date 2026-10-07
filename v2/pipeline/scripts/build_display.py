@@ -294,11 +294,75 @@ def build_region(region_id: str, root: Path = ROOT, write: bool = False) -> dict
     return {'manifest': manifest, 'index': index, 'artifacts': artifacts}
 
 
+def build_water_report(root: Path = ROOT) -> dict[str, Any]:
+    """Compute the offline M4-B selection/grouping summary without writing files."""
+    from shapely.geometry import shape
+    from lib.water import group_flowlines, select_water_features, water_display_config
+
+    config = water_display_config()
+    result = {}
+    for region_id in ("aspen", "douglas-co"):
+        manifest = _read_json(root / "regions" / region_id / "region.json")
+        water_layers = [layer for layer in manifest["layers"] if layer.get("kind") == "water"]
+        flowlines, bodies = [], []
+        for layer in water_layers:
+            document = _read_json(root / layer["path"])
+            collection = _pointer(document, layer.get("pointer", ""))
+            for feature in collection.get("features", []):
+                source_layer = (feature.get("properties") or {}).get("source_layer")
+                if source_layer == "flowline":
+                    flowlines.append(feature)
+                elif source_layer == "waterbody":
+                    bodies.append(feature)
+        review = {"inclusions": [], "exclusions": []}
+        review_ref = manifest.get("water_review")
+        if isinstance(review_ref, dict) and isinstance(review_ref.get("path"), str):
+            review_path = root / review_ref["path"]
+            if review_path.is_file():
+                review = _pointer(_read_json(review_path), review_ref.get("pointer", ""))
+        coverage_doc = _read_json(root / manifest["coverage"]["path"])
+        coverage_feature = _pointer(coverage_doc, manifest["coverage"].get("pointer", ""))
+        coverage = shape(coverage_feature["geometry"])
+        padding = max((layer.get("extent_padding_deg", 0.0) or 0.0 for layer in water_layers),
+                      default=0.0)
+        grouped = group_flowlines(flowlines, config, region_id=region_id, review=review,
+                                  coverage=coverage.buffer(padding))
+        selected_bodies = [row for row in select_water_features(bodies, config, review)
+                           if row["eligible"]]
+        group_summaries = {row["group_id"]: row for row in grouped["group_summaries"]}
+        expected_rivers = {}
+        for check in grouped["major_river_checks"]:
+            expected_rivers[check["gnis_id"]] = {
+                "group_ids": check["group_ids"],
+                "member_counts": [group_summaries[group_id]["member_count"]
+                                  for group_id in check["group_ids"]],
+                "drawn_fraction": check["drawn_fraction"],
+                "state": ("PENDING_EXTERNAL_SOURCE_REFRESH"
+                          if any(item["gnis_id"] == check["gnis_id"]
+                                 for item in grouped["pending_external_source_refresh"])
+                          else "confirmed"),
+            }
+        result[region_id] = {
+            "group_count": len(grouped["groups"]),
+            "members_per_expected_river": expected_rivers,
+            "multi_part_gnis_ids": grouped["multi_part_gnis_ids"],
+            "connectors_used_with_lengths": grouped["connectors_used"],
+            "extent_edge_splits": grouped["extent_edge_splits"],
+            "waterbodies_displayed_at_0_02_sqkm": len(selected_bodies),
+        }
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('regions', nargs='*', default=['aspen', 'douglas-co'])
     parser.add_argument('--root', type=Path, default=ROOT)
+    parser.add_argument('--water-report', action='store_true',
+                        help='print M4-B water selection and grouping without writing files')
     args = parser.parse_args()
+    if args.water_report:
+        print(json.dumps(build_water_report(args.root), ensure_ascii=False, indent=2))
+        return
     for region_id in args.regions:
         build_region(region_id, args.root, write=True)
         print(f"built {region_id}")
