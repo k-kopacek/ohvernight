@@ -52,11 +52,16 @@ def _page_valid(page, batch, oid_field):
 
 
 def controlled_layer_query(client, region, layer_name, layer_id, extent, where, out_fields,
-                           raw_root: Path, query_name: str):
+                           raw_root: Path, query_name: str, *, count_id_timeout: int = 90):
     """Fetch fixed-size object-ID pages and resume only the failed page on rerun."""
     if layer_id not in LAYER_METADATA:
-        LAYER_METADATA[layer_id] = describe_layer(SERVICE, layer_id, timeout=90, session=client,
-                                                  required_fields=["permanent_identifier", "ftype", "fcode"])
+        metadata_path = raw_root / f"layer-{layer_id}-metadata.json"
+        if metadata_path.exists():
+            LAYER_METADATA[layer_id] = json.loads(metadata_path.read_text(encoding="utf-8"))
+        else:
+            LAYER_METADATA[layer_id] = describe_layer(SERVICE, layer_id, timeout=90, session=client,
+                                                      required_fields=["permanent_identifier", "ftype", "fcode"])
+            _write_json(metadata_path, LAYER_METADATA[layer_id])
     info = LAYER_METADATA[layer_id]
     oid_field = next((field["name"] for field in info["fields"]
                       if field["type"] == "esriFieldTypeOID"), None)
@@ -75,9 +80,9 @@ def controlled_layer_query(client, region, layer_name, layer_id, extent, where, 
         if any(plan.get(key) != value for key, value in expected_plan.items()):
             raise RuntimeError(f"refusing to change saved NHD query plan: {plan_path}")
     else:
-        counts = get_json(client, base, {**spatial, "f": "json", "returnCountOnly": "true"}, 90)
+        counts = get_json(client, base, {**spatial, "f": "json", "returnCountOnly": "true"}, count_id_timeout)
         count = counts.get("count")
-        ids_payload = get_json(client, base, {**spatial, "f": "json", "returnIdsOnly": "true"}, 90)
+        ids_payload = get_json(client, base, {**spatial, "f": "json", "returnIdsOnly": "true"}, count_id_timeout)
         object_ids = sorted(ids_payload.get("objectIds") or [])
         if ids_payload.get("exceededTransferLimit") or not isinstance(count, int) or count != len(object_ids) or len(object_ids) != len(set(object_ids)):
             raise ArcGISQueryError(f"layer {layer_id} count and complete ID set disagree")
@@ -119,7 +124,7 @@ def controlled_layer_query(client, region, layer_name, layer_id, extent, where, 
             _write_json(plan_path, plan)
         features.extend(page["features"])
     if not plan.get("final_ids_verified"):
-        final_ids = get_json(client, base, {**spatial, "f": "json", "returnIdsOnly": "true"}, 90)
+        final_ids = get_json(client, base, {**spatial, "f": "json", "returnIdsOnly": "true"}, count_id_timeout)
         if sorted(final_ids.get("objectIds") or []) != object_ids:
             raise ArcGISQueryError(f"layer {layer_id} object IDs changed during the controlled refresh")
         plan["final_ids_verified"] = True
@@ -127,6 +132,7 @@ def controlled_layer_query(client, region, layer_name, layer_id, extent, where, 
     query_record = {"region": region, "layer_id": layer_id, "where": where,
                     "outFields": f"{out_fields},{oid_field}", "extent_wgs84": list(extent),
                     "page_size": PAGE_SIZE, "pages": len(batches), "count": len(features),
+                    "count_id_timeout_seconds": count_id_timeout,
                     "max_record_count": info.get("maxRecordCount"),
                     "elevation_field_metadata": next((field for field in info["fields"]
                                                        if field["name"].lower() == "elevation"), None)
