@@ -108,6 +108,18 @@
     if(origin!=='tap'&&Number.isFinite(policy.list?.min_zoom)&&Number.isFinite(fitZoom)&&fitZoom<policy.list.min_zoom)return 'list-cap';
     return 'fit';
   }
+  function tapPointVisible(coordinate,center,zoom,mapRect,sheetRect){
+    if(!Array.isArray(coordinate)||!Array.isArray(center)||!mapRect||!sheetRect)return false;
+    const point=mercatorPoint(coordinate,zoom),origin=mercatorPoint(center,zoom),x=mapRect.left+mapRect.width/2+point.x-origin.x,
+      y=mapRect.top+mapRect.height/2+point.y-origin.y;
+    return x>=mapRect.left&&x<=mapRect.right&&y>=mapRect.top&&y<=mapRect.bottom&&
+      !(x>=sheetRect.left&&x<=sheetRect.right&&y>=sheetRect.top&&y<=sheetRect.bottom);
+  }
+  function cappedTapCameraPlan(currentZoom,pointVisible,coordinate,size,padding){
+    if(currentZoom>15||pointVisible||!Array.isArray(coordinate))return {action:'none',bounds:null,zoom:currentZoom};
+    const fitBounds=viewportBoundsAt(coordinate,currentZoom,size,padding);
+    return {action:'recenter',bounds:fitBounds,zoom:fitZoomForBounds(fitBounds,size,padding)};
+  }
   function createShell(host,options){
     const M=scope.ExploreMap,E=scope.ExploreEvidence;
     host.classList.add('explore-root');
@@ -201,8 +213,15 @@
             currentZoom=zoom,fitZoom=fitZoomForBounds(fitBounds,size,padding),action=selectionFitAction(entry,geometry.type,origin,currentZoom,fitZoom);
           if(action==='fit')M.fit(fitBounds,padding);
           else if(action==='tap-cap'){
-            const coordinate=Array.isArray(tapCoordinates)?tapCoordinates:waterMidpointMember(feature)?.point;
-            if(coordinate){M.fit(viewportBoundsAt(coordinate,currentZoom,size,padding),padding);if(currentZoom>15)scope.setTimeout(()=>{for(let i=15;i<currentZoom;i++)$('zoom-in').click();},350);}
+            const coordinate=Array.isArray(tapCoordinates)?tapCoordinates:null,safeBottom=parseFloat(scope.getComputedStyle(host).getPropertyValue('--safe-bottom'))||0,
+              safeLeft=parseFloat(scope.getComputedStyle(host).getPropertyValue('--safe-left'))||0,safeRight=parseFloat(scope.getComputedStyle(host).getPropertyValue('--safe-right'))||0,
+              viewport=scope.ExploreSheet.panelViewport($('sheet')),shortLandscape=scope.ExploreSheet.shortLandscape(),phone=!scope.matchMedia('(min-width:768px)').matches&&!shortLandscape,
+              halfHeight=shortLandscape?viewport-120:viewport*.4,
+              sheetRect=phone?{left:mapRect.left+safeLeft,right:mapRect.right-safeRight,top:mapRect.bottom-safeBottom-halfHeight,bottom:mapRect.bottom-safeBottom}:
+                {left:mapRect.left+safeLeft+8,right:mapRect.left+safeLeft+8+(shortLandscape?Math.min(320,host.clientWidth*.4):340),
+                  top:mapRect.bottom-safeBottom-(shortLandscape?12:8)-halfHeight,bottom:mapRect.bottom-safeBottom-(shortLandscape?12:8)},
+              visible=tapPointVisible(coordinate,state.view.center,currentZoom,mapRect,sheetRect),plan=cappedTapCameraPlan(currentZoom,visible,coordinate,size,padding);
+            if(plan.action==='recenter')M.fit(plan.bounds,padding);
           }else if(action==='list-cap'){
             const midpoint=waterMidpointMember(feature),minimum=policy.list.min_zoom;
             if(midpoint)M.fit(viewportBoundsAt(midpoint.point,minimum,size,padding),padding);
@@ -330,5 +349,5 @@
     active.destroy=()=>{for(const name of ['resize','orientationchange'])scope.removeEventListener(name,viewportChanged);for(const name of ['resize','scroll'])viewport?.removeEventListener(name,viewportChanged);$('drawer').removeEventListener('drawerstatechange',drawerState);$('sheet').removeEventListener('sheetstatechange',sheetState);$('map').removeEventListener('exploremaptap',mapTap);sheet.destroy();drawer.destroy();M.destroy();host.replaceChildren();};
     return active;
   }
-  const api={createShell,bounds,selectionCameraPolicy,fitZoomForBounds,viewportBoundsAt,waterMidpointMember,selectionFitAction};if(typeof module!=='undefined')module.exports=api;scope.ExploreShell=api;
+  const api={createShell,bounds,selectionCameraPolicy,fitZoomForBounds,viewportBoundsAt,waterMidpointMember,selectionFitAction,tapPointVisible,cappedTapCameraPlan};if(typeof module!=='undefined')module.exports=api;scope.ExploreShell=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

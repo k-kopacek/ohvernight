@@ -1,6 +1,6 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {fitZoomForBounds,waterMidpointMember,selectionFitAction}=require('../../explore/shell.js');
+const {fitZoomForBounds,waterMidpointMember,selectionFitAction,cappedTapCameraPlan}=require('../../explore/shell.js');
 
 const stream={fitPolicy:{tap:{max_zoom_out:2},list:{min_zoom:11}}};
 const padding={topLeft:[24,70],bottomRight:[24,120]};
@@ -19,6 +19,16 @@ test('long water line from a list uses its minimum zoom and polygons preserve th
   assert.equal(selectionFitAction(stream,'MultiLineString','list',14,8),'list-cap');
   assert.equal(selectionFitAction(stream,'MultiLineString','list',14,12),'fit');
   assert.equal(selectionFitAction(stream,'Polygon','tap',14,8),'preserve');
+});
+
+test('capped water taps preserve zoom and recenter only when the tapped point is hidden',()=>{
+  const coordinate=[-105,39];
+  assert.deepEqual(cappedTapCameraPlan(17,false,coordinate,size,padding),{action:'none',bounds:null,zoom:17});
+  assert.deepEqual(cappedTapCameraPlan(15,true,coordinate,size,padding),{action:'none',bounds:null,zoom:15});
+  const hidden=cappedTapCameraPlan(14,false,coordinate,size,padding);
+  assert.equal(hidden.action,'recenter');
+  assert.equal(hidden.zoom,14);
+  assert.equal(fitZoomForBounds(hidden.bounds,size,padding),14);
 });
 
 test('fit zoom uses the padded viewport and midpoint follows ordered drawn geodesic length',()=>{
