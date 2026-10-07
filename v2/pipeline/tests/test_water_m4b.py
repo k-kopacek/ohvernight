@@ -17,9 +17,10 @@ from lib.water import (  # noqa: E402
 from lib.region_contract import (ContractError, _json_pointer,
                                  _validate_water_review,
                                  REGION_MANIFEST_SCHEMA,
+                                 _validate_water_group_index,
                                  validate_m4b_water_layer)  # noqa: E402
 from jsonschema import Draft202012Validator  # noqa: E402
-from build_display import build_water_report  # noqa: E402
+from build_display import build_selection_report, build_water_report  # noqa: E402
 
 
 CONFIG = water_display_config()
@@ -214,6 +215,15 @@ class WaterGroupingFixtures(unittest.TestCase):
                          "PENDING_EXTERNAL_SOURCE_REFRESH")
         self.assertEqual(report["douglas-co"]["waterbodies_displayed_at_0_02_sqkm"], 32)
 
+    def test_section_8_6_report_is_deterministic_and_marks_pending_source(self):
+        report = build_selection_report(V2)
+        self.assertEqual(report, build_selection_report(V2))
+        for section in ('## aspen', '## douglas-co', 'Members per group distribution',
+                        'Extent-edge splits', '0.5 ha (0.005 km²)',
+                        'PENDING_EXTERNAL_SOURCE_REFRESH',
+                        'To be written by Codex after the padded refresh and checked by the coordinator.'):
+            self.assertIn(section, report)
+
 
 class WaterContractFixtures(unittest.TestCase):
     def setUp(self):
@@ -240,6 +250,16 @@ class WaterContractFixtures(unittest.TestCase):
         features[1]["properties"]["group_id"] = "nhd-gnis-foreign"
         with self.assertRaisesRegex(ContractError, "R70"):
             validate_m4b_water_layer(self.manifest, self.layer, features, display, CONFIG)
+
+    def test_R70_rejects_a_segment_moved_to_another_index_group(self):
+        features = [flow("a", [[0, 0], [1, 0]]), flow("b", [[3, 0], [4, 0]])]
+        computed = group(features)["water_groups"]
+        declared = copy.deepcopy(computed)
+        first, second = sorted(declared)
+        moved = declared[first].pop()
+        declared[second].append(moved)
+        with self.assertRaisesRegex(ContractError, "R70"):
+            _validate_water_group_index(self.manifest, "waterways", declared, computed)
 
     def test_R71_detects_dropped_group_geometry_line(self):
         features, display = self._connected()
@@ -516,8 +536,10 @@ class WaterContractFixtures(unittest.TestCase):
             coverage = shape(coverage_feature["geometry"]).buffer(
                 next((layer.get("extent_padding_deg", 0.0) for layer in manifest["layers"]
                       if layer.get("kind") == "water"), 0.0))
-            flowline_id = "hydrology" if region_id == "aspen" else "waterways"
-            flowlines = bundle["layers"][flowline_id]["features"]
+            flowline_layer = next(layer for layer in manifest["layers"]
+                                  if layer.get("kind") == "water" and
+                                  layer.get("display", {}).get("select") == "streams")
+            flowlines = _json_pointer(bundle, flowline_layer["pointer"])["features"]
             grouped = group_flowlines(flowlines, config, region_id=region_id,
                                       coverage=coverage)
             body_features = ([feature for feature in bundle["layers"]["hydrology"]["features"]

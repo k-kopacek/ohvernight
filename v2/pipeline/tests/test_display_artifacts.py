@@ -7,29 +7,41 @@ from pathlib import Path
 
 V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / 'pipeline' / 'scripts'))
-from build_display import _display_feature, build_layer, build_region, display_water  # noqa: E402
+from build_display import (_display_feature, _water_context, build_layer, build_region,
+                          display_water)  # noqa: E402
 
 
 class DisplayArtifactTests(unittest.TestCase):
-    def test_water_display_keeps_only_id_name_evidence_and_selection_fields(self):
+    def test_display_feature_conversion_keeps_properties_except_evidence_reference(self):
         feature = {'type': 'Feature', 'geometry': {'type': 'LineString', 'coordinates': [[0, 0], [1, 1]]},
                    'properties': {'id': 'nhd-123', 'name': 'River', 'source_layer': 'flowline',
                                   'kind': 'flowline', 'source_id': 'source-123', 'fcode': 55800,
                                   'water_class': 'stream', 'legacy_ids': ['old-id'],
                                   'evidence': {'source_url': 'https://example.test'}}}
-        display, _ = _display_feature(feature, {}, [], water=True)
-        self.assertEqual(set(display['properties']), {'id', 'name', 'evidence', 'kind', 'source_layer'})
+        display, _ = _display_feature(feature, {}, [])
+        self.assertEqual(set(display['properties']), set(feature['properties']))
+        self.assertIsInstance(display['properties']['evidence'], int)
 
-    def test_water_aliases_are_built_from_canonical_features_after_display_property_filtering(self):
+    def test_group_map_and_displayed_aliases_are_built_from_canonical_members(self):
         for region_id in ('aspen', 'douglas-co'):
             result = build_region(region_id, V2)
             index = result['index']
             self.assertNotIn('water_id_aliases', index)
+            self.assertTrue(index['water_groups'])
             alias_entry = index['water_aliases']
             aliases = json.loads(result['artifacts'][alias_entry['path']])['water_id_aliases']
             self.assertTrue(aliases)
             self.assertTrue(all(isinstance(key, str) and isinstance(value, str)
                                 for key, value in aliases.items()))
+            context = _water_context(result['manifest'], V2)
+            targets = {member: group for group, ids in index['water_groups'].items()
+                       for member in ids}
+            targets.update({ident: ident for ident in context['selected_body_ids']})
+            expected = {legacy: targets[feature['properties']['id']]
+                        for feature in context['all_water_features']
+                        if feature['properties']['id'] in targets
+                        for legacy in feature['properties'].get('legacy_ids', [])}
+            self.assertEqual(aliases, expected)
 
     def test_transport_copies_every_status_reference_verbatim_including_place_lists(self):
         for region_id in ('aspen', 'douglas-co'):
@@ -75,6 +87,7 @@ class DisplayArtifactTests(unittest.TestCase):
     def test_evidence_is_deduplicated_without_changing_non_evidence_properties(self):
         result = build_region('aspen', V2)
         manifest = result['manifest']
+        context = _water_context(manifest, V2)
         for entry in result['index']['artifacts']:
             if entry['layer_id'] == 'coverage':
                 continue
@@ -85,9 +98,15 @@ class DisplayArtifactTests(unittest.TestCase):
             canonical = source
             for token in layer.get('pointer', '').lstrip('/').split('/') if layer.get('pointer') else []:
                 canonical = canonical[token]
-            if layer['kind'] == 'water' and any('kind' in (feature.get('properties') or {}) for feature in canonical['features']):
-                canonical = {**canonical, 'features': [feature for feature in canonical['features'] if display_water(feature)]}
-            expected = {json.dumps(feature['properties']['evidence'], sort_keys=True) for feature in canonical['features']}
+            selector = layer.get('display', {}).get('select')
+            if selector == 'streams':
+                evidence = [feature['properties']['evidence'] for feature in context['grouped']['groups']]
+            elif selector == 'bodies':
+                evidence = [feature['properties']['evidence'] for feature in context['body_features']
+                            if feature['properties']['id'] in context['selected_body_ids']]
+            else:
+                evidence = [feature['properties']['evidence'] for feature in canonical['features']]
+            expected = {json.dumps(value, sort_keys=True) for value in evidence}
             self.assertEqual({json.dumps(value, sort_keys=True) for value in artifact['evidence_table']}, expected)
 
     def test_build_fails_when_every_part_of_a_feature_collapses(self):
