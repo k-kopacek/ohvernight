@@ -20,7 +20,7 @@ from shapely.geometry import shape
 from lib.common import ROOT
 from fetch_trails import ACTIVITIES
 from lib.water import (classify as classify_water, group_flowlines,
-                       select_water_features)
+                       select_water_features, waterbody_inclusion_allowed)
 
 REGION_MANIFEST_SCHEMA = json.loads((ROOT / "schema/region-manifest.schema.json").read_text())
 WATER_DISPLAY_CONFIG = json.loads((ROOT / "config/water_display.json").read_text())
@@ -306,8 +306,7 @@ def _validate_water_review(review, canonical, region_id, config, group_ids=()):
                           "water_supply_no_public_use", "not_a_waterbody", "duplicate_of"}
     records = (("exclusions", allowed_exclusions, exclusions),
                ("inclusions", {"reviewed_intermittent_waterbody"}, inclusions))
-    community_hosts = {"facebook.com", "reddit.com", "youtube.com", "instagram.com",
-                       "alltrails.com", "wikiloc.com", "tripadvisor.com"}
+    blocked_hosts = set(config.get("non_claim_hosts", []))
     for field, reason_codes, output in records:
         rows = review[field]
         if not isinstance(rows, list):
@@ -331,7 +330,7 @@ def _validate_water_review(review, canonical, region_id, config, group_ids=()):
             parsed = urlparse(source_url) if isinstance(source_url, str) else None
             if (parsed is None or parsed.scheme not in {"http", "https"} or not parsed.hostname
                     or any(parsed.hostname == host or parsed.hostname.endswith("." + host)
-                           for host in community_hosts | set(config.get("non_claim_hosts", [])))):
+                           for host in blocked_hosts)):
                 _error("R73", manifest, None, "water-review source must be HTTP(S) and non-community")
             statement = evidence["statement"]
             if (not isinstance(evidence["agency"], str) or not evidence["agency"].strip()
@@ -359,12 +358,10 @@ def _validate_water_review(review, canonical, region_id, config, group_ids=()):
                 parsed_date = None
             if parsed_date is None or parsed_date.tzinfo is None:
                 _error("R73", manifest, None, "water-review reviewed_at must be RFC 3339")
-            props = (canonical_by_id.get(ident, {}).get("properties") or {})
-            if field == "inclusions" and not (
-                    props.get("source_layer") == "waterbody"
-                    and props.get("water_class") in {"lake_pond", "reservoir"}
-                    and props.get("hydro_category") in {"intermittent", "unknown"}):
-                _error("R73", manifest, None, "reviewed inclusion must target an intermittent waterbody")
+            target = canonical_by_id.get(ident)
+            if field == "inclusions" and (target is None or not waterbody_inclusion_allowed(target, config)):
+                _error("R73", manifest, None,
+                       "reviewed inclusion must target an intermittent lake or pond, fcode 39000 lake or pond, or intermittent reservoir fcode 43614")
             output.append(row)
     return {"inclusions": inclusions, "exclusions": exclusions}
 
@@ -394,16 +391,24 @@ def validate_m4b_water_layer(manifest, layer, canonical_features, display_featur
         decisions = select_water_features(canonical_features, config, selection)
         eligible = {row["feature"]["properties"]["id"] for row in decisions
                     if row["eligible"] and (row["feature"].get("properties") or {}).get("source_layer") == "waterbody"}
-        if set(by_id) != eligible:
-            _error("R69", manifest, layer_id, "waterbody display set differs from reviewed eligibility")
-        for ident in eligible:
-            props = (by_id[ident].get("properties") or {})
+        inclusion_ids = {row["feature_id"] for row in selection["inclusions"]}
+        for ident, feature in by_id.items():
+            props = (feature.get("properties") or {})
             water_class, category = classify_water(props.get("ftype"), props.get("fcode"), config)
             if props.get("water_class") != water_class or props.get("hydro_category") != category:
                 _error("R72", manifest, layer_id, f"displayed waterbody {ident} has incorrect classification")
-            if water_class not in {"lake_pond", "reservoir"} or category != "perennial":
-                if ident not in {row["feature_id"] for row in selection["inclusions"]}:
-                    _error("R72", manifest, layer_id, f"displayed waterbody {ident} is outside allowed classes")
+            if ident in inclusion_ids and waterbody_inclusion_allowed(feature, config):
+                continue
+            if water_class == "lake_pond" and category == "perennial":
+                continue
+            if (water_class == "reservoir"
+                    and props.get("fcode") in config["reservoir_eligible_fcodes"]
+                    and category in {"perennial", "unknown"}):
+                continue
+            _error("R72", manifest, layer_id,
+                   f"displayed waterbody {ident} has an ineligible water class, category or reservoir code")
+        if set(by_id) != eligible:
+            _error("R69", manifest, layer_id, "waterbody display set differs from reviewed eligibility")
         return {"water_groups": {}, "group_assignments": {}}
     if select != "streams":
         _error("R60", manifest, layer_id, "M4 water display requires select streams or bodies")

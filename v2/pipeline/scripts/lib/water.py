@@ -108,6 +108,24 @@ def _reviewed_ids(review: dict[str, Any] | None, key: str) -> set[str]:
     return result
 
 
+def waterbody_inclusion_allowed(feature: dict[str, Any],
+                                config: dict[str, Any] | None = None) -> bool:
+    """Whether section 8.5 permits reviewing this canonical waterbody in."""
+    config = config or water_display_config()
+    props = feature.get("properties") or {}
+    if (props.get("source_layer") or props.get("kind")) != "waterbody":
+        return False
+    try:
+        water_class, hydro_category = classify(props.get("ftype"), props.get("fcode"), config)
+    except (KeyError, TypeError, ValueError):
+        return False
+    if water_class == "lake_pond":
+        return (hydro_category == "intermittent"
+                or (props.get("fcode") == 39000 and hydro_category == "unknown"))
+    return (water_class == "reservoir" and props.get("fcode") == 43614
+            and hydro_category == "intermittent")
+
+
 def select_water_features(features: list[dict[str, Any]], config: dict[str, Any] | None = None,
                           review: dict[str, Any] | None = None, *,
                           threshold_sqkm: float | None = None) -> list[dict[str, Any]]:
@@ -150,10 +168,8 @@ def select_water_features(features: list[dict[str, Any]], config: dict[str, Any]
             else:
                 eligible, reason = True, "eligible_perennial_stream"
         elif source_layer in {"waterbody", "lake", "reservoir"}:
-            allowed_review_inclusion = (
-                ident in inclusions and hydro_category in {"intermittent", "unknown"}
-                and water_class in {"lake_pond", "reservoir"}
-            )
+            allowed_review_inclusion = (ident in inclusions
+                                        and waterbody_inclusion_allowed(feature, config))
             reservoir_code_ok = (water_class != "reservoir" or
                                  props.get("fcode") in config["reservoir_eligible_fcodes"])
             if allowed_review_inclusion:
@@ -493,6 +509,10 @@ def validate_expected_major_rivers(result: dict[str, Any], config: dict[str, Any
                                 or pending.get("gnis_id") != "00201759"):
         raise ValueError("invalid pending external source refresh marker")
     checks = {row["gnis_id"]: row for row in result.get("major_river_checks", [])}
+    if (pending is not None and pending.get("region_id") == region_id
+            and checks.get(pending.get("gnis_id"), {}).get("seed_present")):
+        raise ValueError(
+            f"PENDING_EXTERNAL_SOURCE_REFRESH marker must be removed for river {pending['gnis_id']} after its perennial seed is present")
     pending_rows = []
     for river in expected:
         gnis_id = river["gnis_id"]

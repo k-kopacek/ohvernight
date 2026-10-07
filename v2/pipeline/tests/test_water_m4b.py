@@ -15,6 +15,7 @@ from lib.water import (  # noqa: E402
     validate_expected_major_rivers, water_display_config,
 )
 from lib.region_contract import (ContractError, _json_pointer,
+                                 _validate_water_review,
                                  REGION_MANIFEST_SCHEMA,
                                  validate_m4b_water_layer)  # noqa: E402
 from jsonschema import Draft202012Validator  # noqa: E402
@@ -141,6 +142,36 @@ class WaterSelectionFixtures(unittest.TestCase):
             {"feature_id": "not-stated", "reason_code": "reviewed_intermittent_waterbody"}])
         self.assertTrue(unknown["not-stated"]["eligible"])
 
+    def test_reviewed_inclusion_is_limited_to_the_three_specified_waterbody_cases(self):
+        allowed = [water_feature("lake-intermittent", fcode=39001, name="Lake"),
+                   water_feature("lake-unstated", fcode=39000, name="Pond"),
+                   water_feature("reservoir-intermittent", ftype=436, fcode=43614,
+                                 name="Reservoir")]
+        decisions_by_id = decisions(allowed, inclusions=[
+            {"feature_id": feature["properties"]["id"],
+             "reason_code": "reviewed_intermittent_waterbody"} for feature in allowed])
+        self.assertTrue(all(decisions_by_id[feature["properties"]["id"]]["eligible"]
+                            for feature in allowed))
+
+        invalid = [water_feature("ineligible-code", ftype=436, fcode=43624, area=2),
+                   water_feature("eligible-unknown", ftype=436, fcode=43619,
+                                 name="Reservoir", area=0.01),
+                   water_feature("perennial-lake", fcode=39004, area=0.01),
+                   water_feature("swamp", ftype=466, fcode=46600, area=2),
+                   water_feature("flowline", layer="flowline", ftype=460, fcode=46003,
+                                 name="Intermittent Creek", gnis="001")]
+        baseline = decisions(invalid)
+        with_inclusions = decisions(invalid, inclusions=[
+            {"feature_id": feature["properties"]["id"],
+             "reason_code": "reviewed_intermittent_waterbody"} for feature in invalid])
+        for feature in invalid:
+            ident = feature["properties"]["id"]
+            with self.subTest(ident=ident):
+                self.assertEqual(with_inclusions[ident]["eligible"], baseline[ident]["eligible"])
+                self.assertEqual(with_inclusions[ident]["reason"], baseline[ident]["reason"])
+        self.assertTrue(baseline["eligible-unknown"]["eligible"])
+        self.assertEqual(baseline["eligible-unknown"]["reason"], "eligible_named_waterbody")
+
     def test_reviewed_exclusion_removes_only_its_exact_target(self):
         features = [water_feature("target", name="Lake", area=0.001),
                     water_feature("other", name="Pond", area=0.001)]
@@ -251,6 +282,74 @@ class WaterContractFixtures(unittest.TestCase):
         body["properties"]["hydro_category"] = "perennial"
         with self.assertRaisesRegex(ContractError, "R72"):
             validate_m4b_water_layer(self.manifest, layer, [body], [body], CONFIG)
+
+    def test_R72_accepts_eligible_unknown_reservoir_and_rejects_other_displayed_categories(self):
+        layer = {"id": "waterbodies", "kind": "water",
+                 "display": {"path": "regions/fixture/display/waterbodies.json", "select": "bodies"}}
+        eligible_unknown_reservoir = water_feature(
+            "eligible-unknown", ftype=436, fcode=43619, name="Reservoir")
+        result = validate_m4b_water_layer(self.manifest, layer,
+                    [eligible_unknown_reservoir], [eligible_unknown_reservoir], CONFIG)
+        self.assertEqual(result["water_groups"], {})
+        invalid_display_features = [
+            water_feature("ineligible-code", ftype=436, fcode=43624, name="Treatment Pond"),
+            water_feature("intermittent-reservoir", ftype=436, fcode=43614, name="Reservoir"),
+            water_feature("unstated-lake", ftype=390, fcode=39000, name="Lake"),
+        ]
+        for feature in invalid_display_features:
+            with self.subTest(feature=feature["properties"]["id"]):
+                with self.assertRaisesRegex(ContractError, "R72"):
+                    validate_m4b_water_layer(self.manifest, layer, [feature], [feature], CONFIG)
+
+    def test_R73_accepts_only_specified_reviewed_inclusion_targets(self):
+        allowed = [water_feature("lake-intermittent", ftype=390, fcode=39001, name="Lake"),
+                   water_feature("lake-unstated", ftype=390, fcode=39000, name="Pond"),
+                   water_feature("reservoir-intermittent", ftype=436, fcode=43614,
+                                 name="Reservoir")]
+        review = {"exclusions": [], "inclusions": [
+            {"feature_id": feature["properties"]["id"],
+             "reason_code": "reviewed_intermittent_waterbody",
+             "evidence": {"source_url": "https://agency.example/water",
+                          "agency": "Agency", "statement": "Official record identifies this water's hydrographic classification."},
+             "reviewed_at": "2026-10-07T00:00:00Z"} for feature in allowed]}
+        self.assertEqual(len(_validate_water_review(review, [("waterbodies", feature) for feature in allowed],
+                                                    "fixture", CONFIG)["inclusions"]), 3)
+        invalid = [water_feature("ineligible-code", ftype=436, fcode=43624, area=2),
+                   water_feature("eligible-unknown", ftype=436, fcode=43619,
+                                 name="Reservoir", area=0.01),
+                   water_feature("perennial-lake", ftype=390, fcode=39004, area=0.01),
+                   water_feature("swamp", ftype=466, fcode=46600, area=2),
+                   water_feature("flowline", layer="flowline", ftype=460, fcode=46003,
+                                 name="Creek", gnis="001")]
+        for feature in invalid:
+            candidate_review = {"exclusions": [], "inclusions": [{
+                "feature_id": feature["properties"]["id"],
+                "reason_code": "reviewed_intermittent_waterbody",
+                "evidence": {"source_url": "https://agency.example/water", "agency": "Agency",
+                             "statement": "Official record identifies this water's hydrographic classification."},
+                "reviewed_at": "2026-10-07T00:00:00Z"}]}
+            with self.subTest(feature=feature["properties"]["id"]):
+                with self.assertRaisesRegex(ContractError, "R73"):
+                    _validate_water_review(candidate_review, [("water", feature)], "fixture", CONFIG)
+        grouped = group([flow("seed", [[0, 0], [1, 0]])])
+        group_id = grouped["groups"][0]["properties"]["id"]
+        candidate_review["inclusions"][0]["feature_id"] = group_id
+        with self.assertRaisesRegex(ContractError, "R73"):
+            _validate_water_review(candidate_review, [("water", flow("seed", [[0, 0], [1, 0]]))],
+                                   "fixture", CONFIG, [group_id])
+
+    def test_review_host_blocklist_is_read_only_from_config(self):
+        feature = water_feature("pond", name="Pond", area=0.01)
+        review = {"exclusions": [{"feature_id": "pond", "reason_code": "duplicate_of",
+                    "evidence": {"source_url": "https://reddit.com/water", "agency": "Agency",
+                                 "statement": "An agency record describes this as a duplicate inventory feature."},
+                    "reviewed_at": "2026-10-07T00:00:00Z"}], "inclusions": []}
+        self.assertIn("reddit.com", CONFIG["non_claim_hosts"])
+        with self.assertRaisesRegex(ContractError, "non-community"):
+            _validate_water_review(review, [("waterbodies", feature)], "fixture", CONFIG)
+        without_reddit = copy.deepcopy(CONFIG)
+        without_reddit["non_claim_hosts"].remove("reddit.com")
+        _validate_water_review(review, [("waterbodies", feature)], "fixture", without_reddit)
 
     def test_R73_rejects_name_only_exclusion_and_accepts_empty_review(self):
         body = water_feature("pond", name="Pond", area=0.001)
@@ -426,6 +525,10 @@ class WaterContractFixtures(unittest.TestCase):
                              if region_id == "aspen" else
                              bundle["layers"]["waterbodies"]["features"])
             bodies = [row for row in select_water_features(body_features, config) if row["eligible"]]
+            body_layer = {"id": "waterbodies", "kind": "water",
+                          "display": {"select": "bodies"}}
+            validate_m4b_water_layer({"region": {"id": region_id}}, body_layer,
+                                     body_features, [row["feature"] for row in bodies], config)
             expected_groups = 69 if region_id == "aspen" else 35
             expected_bodies = 46 if region_id == "aspen" else 32
             with self.subTest(region=region_id):
@@ -529,11 +632,26 @@ import json; print(json.dumps(r['water_groups'],sort_keys=True))"""
         short = group([flow("seed", [[0, 0], [0.5, 0]], gnis="00201759"),
                        flow("undrawn", [[10, 0], [110, 0]], gnis="00201759",
                             ftype=558, fcode=55800)], config=config, region_id="douglas-co")
+        config.pop("pending_external_source_refresh")
         with self.assertRaisesRegex(ValueError, "00201759.*fraction"):
+            validate_expected_major_rivers(short, config, "douglas-co")
+        config["pending_external_source_refresh"] = pending
+        with self.assertRaisesRegex(ValueError, "PENDING_EXTERNAL_SOURCE_REFRESH marker must be removed"):
             validate_expected_major_rivers(short, config, "douglas-co")
         config["pending_external_source_refresh"] = {**pending, "gnis_id": "other"}
         with self.assertRaisesRegex(ValueError, "invalid pending"):
             validate_expected_major_rivers(short, config, "douglas-co")
+
+    def test_present_seed_requires_pending_marker_removal(self):
+        config = copy.deepcopy(CONFIG)
+        config["expected_major_rivers"] = {"douglas-co": [
+            {"gnis_id": "00201759", "minimum_drawn_fraction": 0.8}]}
+        seed = flow("south-seed", [[0, 0], [1, 0]], gnis="00201759",
+                    name="South Platte River")
+        result = group_flowlines([seed], config, region_id="douglas-co", enforce_major=False)
+        with self.assertRaisesRegex(ValueError,
+                                    "PENDING_EXTERNAL_SOURCE_REFRESH marker must be removed"):
+            validate_expected_major_rivers(result, config, "douglas-co")
 
     def test_padded_south_platte_fixture_groups_only_when_seed_is_present(self):
         cfg = copy.deepcopy(CONFIG)

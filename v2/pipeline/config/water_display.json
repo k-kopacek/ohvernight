@@ -45,7 +45,15 @@
   "reservoir_eligible_fcodes": [43600, 43613, 43615, 43617, 43618, 43619, 43621],
   "reservoir_ineligible_fcodes": [43601, 43603, 43604, 43605, 43606, 43607, 43608, 43609, 43610, 43611, 43612, 43614, 43623, 43624, 43625, 43626],
   "unnamed_waterbody_min_area_sqkm": 0.02,
-  "non_claim_hosts": [],
+  "non_claim_hosts": [
+    "facebook.com",
+    "reddit.com",
+    "youtube.com",
+    "instagram.com",
+    "alltrails.com",
+    "wikiloc.com",
+    "tripadvisor.com"
+  ],
   "expected_major_rivers": {
     "aspen": [
       {"gnis_id": "00174812", "minimum_drawn_fraction": 0.8},

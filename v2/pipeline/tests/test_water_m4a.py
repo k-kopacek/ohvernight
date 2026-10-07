@@ -111,7 +111,9 @@ class WaterM4ATests(unittest.TestCase):
                                                                   43625, 43626])
         self.assertFalse(set(config["reservoir_eligible_fcodes"]) & set(config["reservoir_ineligible_fcodes"]))
         self.assertEqual(config["unnamed_waterbody_min_area_sqkm"], 0.02)
-        self.assertEqual(config["non_claim_hosts"], [])
+        self.assertEqual(set(config["non_claim_hosts"]),
+                         {"facebook.com", "reddit.com", "youtube.com", "instagram.com",
+                          "alltrails.com", "wikiloc.com", "tripadvisor.com"})
         self.assertEqual({region: [row["gnis_id"] for row in rows]
                           for region, rows in config["expected_major_rivers"].items()},
                          {"aspen": ["00174812", "00180078", "00180007", "00175217", "00180061"],
