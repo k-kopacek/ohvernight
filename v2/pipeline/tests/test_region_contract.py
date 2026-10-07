@@ -1,4 +1,5 @@
 import copy
+import csv
 import hashlib
 import json
 import re
@@ -6,18 +7,65 @@ import shutil
 import sys
 import tempfile
 import unittest
+from collections import Counter
 from pathlib import Path
 
 V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
 from lib.region_contract import (ContractError, _display_transform_geometry,
-                                 normalize_transport, validate_region, validate_region_data)
+                                 normalize_transport, validate_region, validate_region_data,
+                                 validate_water_alias_file, validate_water_contract_data)
 
 
 class RegionContractTests(unittest.TestCase):
     def load(self, relative):
         return json.loads((V2 / relative).read_text())
+
+    def test_usgs_nhd_scope_strings_match_origin_main(self):
+        expected = {
+            "aspen": "Hydrography retained for setback screening. Feature type, flow permanence and size are not carried. A name does not indicate recreational usefulness, public access or seasonal flow.",
+            "douglas-co": "Named waterbodies and flowlines only, selected by name. A display subset, not complete hydrology. A name does not indicate recreational usefulness, public access, fishing or paddling permission.",
+        }
+        for region_id, scope in expected.items():
+            with self.subTest(region=region_id):
+                manifest = self.load(f"regions/{region_id}/region.json")
+                self.assertEqual(manifest["sources"]["usgs_nhd"]["scope"], scope)
+
+    def test_real_water_features_do_not_carry_mislabeled_elevation(self):
+        for manifest_path in (V2 / "regions").glob("*/region.json"):
+            manifest = json.loads(manifest_path.read_text())
+            for layer in manifest["layers"]:
+                if layer.get("kind") != "water":
+                    continue
+                document = self.load(layer["path"])
+                features = document["layers"][layer["id"]]["features"]
+                mislabeled = [feature.get("properties", {}).get("id") for feature in features
+                              if "elevation_ft" in feature.get("properties", {})]
+                self.assertEqual(mislabeled, [], f"{manifest['region']['id']}/{layer['id']}")
+
+    def test_committed_pre_m4_water_ids_are_pinned_once_in_canonical_data(self):
+        with (V2.parent / "docs/research/m4-water/nhd-snapshot-id-map.csv").open() as handle:
+            pins = list(csv.DictReader(handle))
+        pinned_by_region = {}
+        for row in pins:
+            if row["legacy_id"]:
+                pinned_by_region.setdefault(row["region"], Counter())[row["legacy_id"]] += 1
+        manifests = sorted((V2 / "regions").glob("*/region.json"))
+        for manifest_path in manifests:
+            manifest = json.loads(manifest_path.read_text())
+            region = manifest["region"]["id"]
+            actual = Counter()
+            for layer in manifest["layers"]:
+                if layer.get("kind") != "water":
+                    continue
+                document = self.load(layer["path"])
+                features = document["layers"][layer["id"]]["features"]
+                for feature in features:
+                    actual.update(feature["properties"].get("legacy_ids", []))
+            expected = pinned_by_region.get(region, Counter())
+            self.assertTrue(all(count == 1 for count in expected.values()), region)
+            self.assertEqual(actual, expected, region)
 
     def test_real_regions_validate_and_pin_status_gaps(self):
         manifests = sorted((V2 / "regions").glob("*/region.json"))
@@ -205,6 +253,72 @@ class RegionContractTests(unittest.TestCase):
         entry = next(item for item in docs["regions/synthetic/display/index.json"]["artifacts"] if item["layer_id"] == layer_id)
         entry["bytes"] = len(data)
         entry["sha256"] = hashlib.sha256(data).hexdigest()
+
+    def water_contract_base(self):
+        manifest = {"region": {"id": "synthetic"}}
+        def water_feature(ident, source_id, legacy_ids):
+            return {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+                    "properties": {"id": ident, "name": "River", "evidence": {}, "source_id": source_id,
+                                   "source_namespace": "usgs_nhd", "ftype": 460, "fcode": 46006,
+                                   "source_layer": "flowline", "water_class": "stream",
+                                   "hydro_category": "perennial", "legacy_ids": legacy_ids}}
+        canonical = [("waterways", water_feature("nhd-A", "{A}", ["old-a"])),
+                     ("waterways", water_feature("nhd-B", "{B}", []))]
+        display = [("waterways", copy.deepcopy(canonical[0][1]))]
+        config = self.load("pipeline/config/water_display.json")
+        aliases = {"old-a": "nhd-A"}
+        return manifest, canonical, config, aliases, display
+
+    def assert_water_rule(self, rule, mutate):
+        manifest, canonical, config, aliases, display = self.water_contract_base()
+        validate_water_contract_data(manifest, canonical, config, aliases, display)
+        mutate(manifest, canonical, config, aliases, display)
+        with self.assertRaises(ContractError) as raised:
+            validate_water_contract_data(manifest, canonical, config, aliases, display)
+        self.assertEqual(raised.exception.rule, rule)
+
+    def test_water_R66_rejects_id_not_derived_from_source(self):
+        self.assert_water_rule("R66", lambda m, c, cfg, a, d: c[0][1]["properties"].update(id="row-1"))
+
+    def test_water_R67_rejects_wrong_fixed_table_classification(self):
+        self.assert_water_rule("R67", lambda m, c, cfg, a, d: c[0][1]["properties"].update(water_class="canal_ditch"))
+
+    def test_water_R68_rejects_missing_display_alias(self):
+        self.assert_water_rule("R68", lambda m, c, cfg, a, d: a.clear())
+
+    def test_water_R68_rejects_alias_for_undisplayed_feature(self):
+        self.assert_water_rule("R68", lambda m, c, cfg, a, d: a.update({"old-hidden": "nhd-B"}))
+
+    def test_water_R68_rejects_alias_to_wrong_display_id(self):
+        self.assert_water_rule("R68", lambda m, c, cfg, a, d: a.update({"old-a": "nhd-B"}))
+
+    def test_water_R68_rejects_legacy_id_on_two_canonical_features(self):
+        self.assert_water_rule("R68", lambda m, c, cfg, a, d: c[1][1]["properties"].update(legacy_ids=["old-a"]))
+
+    def test_water_R68_rejects_legacy_id_equal_to_current_water_id(self):
+        manifest, canonical, config, aliases, display = self.water_contract_base()
+        canonical[0][1]["properties"]["legacy_ids"] = ["nhd-B"]
+        with self.assertRaisesRegex(ContractError, "legacy ID nhd-B equals the ID of a current water feature") as raised:
+            validate_water_contract_data(manifest, canonical, config, aliases, display)
+        self.assertEqual(raised.exception.rule, "R68")
+
+    def test_water_R68_rejects_stale_alias_file_hash(self):
+        document = {"region_id": "synthetic", "water_id_aliases": {"old-a": "nhd-A"}}
+        raw = (json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        index = {"water_aliases": {"path": "regions/synthetic/display/water-aliases.json",
+                                   "bytes": len(raw), "sha256": "0" * 64}}
+        with self.assertRaises(ContractError) as raised:
+            validate_water_alias_file(index, document, raw, "synthetic")
+        self.assertEqual(raised.exception.rule, "R68")
+
+    def test_water_R68_rejects_alias_map_left_in_index(self):
+        index = {"water_id_aliases": {"old-a": "nhd-A"}}
+        with self.assertRaises(ContractError) as raised:
+            validate_water_alias_file(index, {}, b"", "synthetic")
+        self.assertEqual(raised.exception.rule, "R68")
+
+    def test_water_R75_rejects_activity_property(self):
+        self.assert_water_rule("R75", lambda m, c, cfg, a, d: c[0][1]["properties"].update(fishing="allowed"))
 
     def test_display_contract_rules_R60_to_R64(self):
         def assert_display_rule(rule, mutate):

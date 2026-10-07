@@ -32,6 +32,9 @@ class LegacyExtractTests(unittest.TestCase):
                 for artifact in index.get("artifacts", []):
                     if isinstance(artifact, dict) and isinstance(artifact.get("path"), str):
                         allowed.add((Path("v2") / artifact["path"]).as_posix())
+                water_aliases = index.get("water_aliases")
+                if isinstance(water_aliases, dict) and isinstance(water_aliases.get("path"), str):
+                    allowed.add((Path("v2") / water_aliases["path"]).as_posix())
         candidates = []
         for path in (ROOT / "v2").rglob("*"):
             if "pipeline" in path.relative_to(ROOT / "v2").parts:
