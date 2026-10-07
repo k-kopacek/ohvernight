@@ -11,11 +11,102 @@
     for(const [lon,lat] of points){west=Math.min(west,lon);south=Math.min(south,lat);east=Math.max(east,lon);north=Math.max(north,lat);}
     return [[west,south],[east,north]];
   }
+  function mercatorPoint(coordinate,zoom){
+    const scale=256*2**zoom,latitude=Math.max(-85.0511287798,Math.min(85.0511287798,coordinate[1]))*Math.PI/180;
+    return {x:(coordinate[0]+180)/360*scale,y:(1-Math.log(Math.tan(latitude)+1/Math.cos(latitude))/Math.PI)/2*scale};
+  }
+  function inverseMercator(point,zoom){
+    const scale=256*2**zoom,x=point.x/scale,y=point.y/scale;
+    return [x*360-180,Math.atan(Math.sinh(Math.PI*(1-2*y)))*180/Math.PI];
+  }
+  function fitZoomForBounds(box,size,padding={}){
+    if(!box||!Array.isArray(box)||box.length!==2)return null;
+    const a=mercatorPoint(box[0],0),b=mercatorPoint(box[1],0),left=padding.topLeft?.[0]||0,top=padding.topLeft?.[1]||0,
+      right=padding.bottomRight?.[0]||0,bottom=padding.bottomRight?.[1]||0;
+    const width=Math.max(1,size.width-left-right),height=Math.max(1,size.height-top-bottom),spanX=Math.abs(b.x-a.x),spanY=Math.abs(b.y-a.y);
+    const value=Math.log2(Math.min(width/Math.max(spanX,1e-12),height/Math.max(spanY,1e-12)));
+    return Math.max(5,Math.min(15,Math.floor(value+1e-8)));
+  }
+  function viewportBoundsAt(coordinate,zoom,size,padding={}){
+    const left=padding.topLeft?.[0]||0,top=padding.topLeft?.[1]||0,right=padding.bottomRight?.[0]||0,bottom=padding.bottomRight?.[1]||0;
+    const width=Math.max(1,size.width-left-right)*.97,height=Math.max(1,size.height-top-bottom)*.97;
+    const center=mercatorPoint(coordinate,zoom),west=inverseMercator({x:center.x-width/2,y:center.y},zoom)[0],
+      east=inverseMercator({x:center.x+width/2,y:center.y},zoom)[0],
+      north=inverseMercator({x:center.x,y:center.y-height/2},zoom)[1],
+      south=inverseMercator({x:center.x,y:center.y+height/2},zoom)[1];
+    return [[west,south],[east,north]];
+  }
+  const WGS84={a:6378137,f:1/298.257223563,b:6356752.314245179};
+  function inverseGeodesic(start,end){
+    const {a,f,b}=WGS84,toRad=Math.PI/180,phi1=start[1]*toRad,phi2=end[1]*toRad,L=(end[0]-start[0])*toRad;
+    if(Math.abs(phi1-phi2)<1e-15&&Math.abs(L)<1e-15)return {distance:0,bearing:0};
+    const U1=Math.atan((1-f)*Math.tan(phi1)),U2=Math.atan((1-f)*Math.tan(phi2)),sinU1=Math.sin(U1),cosU1=Math.cos(U1),
+      sinU2=Math.sin(U2),cosU2=Math.cos(U2);let lambda=L,sinSigma,cosSigma,sigma,sinAlpha,cosSqAlpha,cos2SigmaM;
+    for(let i=0;i<100;i++){
+      const sinLambda=Math.sin(lambda),cosLambda=Math.cos(lambda),x=cosU2*sinLambda,
+        y=cosU1*sinU2-sinU1*cosU2*cosLambda;
+      sinSigma=Math.hypot(x,y);if(!sinSigma)return {distance:0,bearing:0};
+      cosSigma=sinU1*sinU2+cosU1*cosU2*cosLambda;sigma=Math.atan2(sinSigma,cosSigma);
+      sinAlpha=cosU1*cosU2*sinLambda/sinSigma;cosSqAlpha=1-sinAlpha*sinAlpha;
+      cos2SigmaM=cosSqAlpha>1e-15?cosSigma-2*sinU1*sinU2/cosSqAlpha:0;
+      const C=f/16*cosSqAlpha*(4+f*(4-3*cosSqAlpha)),next=L+(1-C)*f*sinAlpha*(sigma+C*sinSigma*(cos2SigmaM+C*cosSigma*(-1+2*cos2SigmaM*cos2SigmaM)));
+      if(Math.abs(next-lambda)<1e-12){lambda=next;break;}lambda=next;
+    }
+    const uSq=cosSqAlpha*(a*a-b*b)/(b*b),A=1+uSq/16384*(4096+uSq*(-768+uSq*(320-175*uSq))),
+      B=uSq/1024*(256+uSq*(-128+uSq*(74-47*uSq))),delta=B*sinSigma*(cos2SigmaM+B/4*(cosSigma*(-1+2*cos2SigmaM*cos2SigmaM)-
+        B/6*cos2SigmaM*(-3+4*sinSigma*sinSigma)*(-3+4*cos2SigmaM*cos2SigmaM)));
+    const bearing=Math.atan2(cosU2*Math.sin(lambda),cosU1*sinU2-sinU1*cosU2*Math.cos(lambda));
+    return {distance:b*A*(sigma-delta),bearing};
+  }
+  function directGeodesic(start,bearing,distance){
+    const {a,f,b}=WGS84,toRad=Math.PI/180,phi1=start[1]*toRad,lambda1=start[0]*toRad,
+      sinAlpha1=Math.sin(bearing),cosAlpha1=Math.cos(bearing),tanU1=(1-f)*Math.tan(phi1),
+      cosU1=1/Math.sqrt(1+tanU1*tanU1),sinU1=tanU1*cosU1,sigma1=Math.atan2(tanU1,cosAlpha1),
+      sinAlpha=cosU1*sinAlpha1,cosSqAlpha=1-sinAlpha*sinAlpha,uSq=cosSqAlpha*(a*a-b*b)/(b*b),
+      A=1+uSq/16384*(4096+uSq*(-768+uSq*(320-175*uSq))),B=uSq/1024*(256+uSq*(-128+uSq*(74-47*uSq)));
+    let sigma=distance/(b*A),previous;
+    for(let i=0;i<100;i++){
+      const cos2=Math.cos(2*sigma1+sigma),sinSigma=Math.sin(sigma),cosSigma=Math.cos(sigma),delta=B*sinSigma*(cos2+B/4*(cosSigma*(-1+2*cos2*cos2)-
+        B/6*cos2*(-3+4*sinSigma*sinSigma)*(-3+4*cos2*cos2)));
+      previous=sigma;sigma=distance/(b*A)+delta;if(Math.abs(sigma-previous)<1e-12)break;
+    }
+    const sinSigma=Math.sin(sigma),cosSigma=Math.cos(sigma),tmp=sinU1*sinSigma-cosU1*cosSigma*cosAlpha1,
+      phi2=Math.atan2(sinU1*cosSigma+cosU1*sinSigma*cosAlpha1,(1-f)*Math.sqrt(sinAlpha*sinAlpha+tmp*tmp)),
+      lambda=Math.atan2(sinSigma*sinAlpha1,cosU1*cosSigma-sinU1*sinSigma*cosAlpha1),cos2=Math.cos(2*sigma1+sigma),
+      C=f/16*cosSqAlpha*(4+f*(4-3*cosSqAlpha)),L=lambda-(1-C)*f*sinAlpha*(sigma+C*sinSigma*(cos2+C*cosSigma*(-1+2*cos2*cos2)));
+    return [(lambda1+L)/toRad,phi2/toRad];
+  }
+  function waterMidpointMember(feature){
+    const geometry=feature.geometry;if(!geometry||!['LineString','MultiLineString'].includes(geometry.type))return null;
+    const lines=geometry.type==='LineString'?[geometry.coordinates]:geometry.coordinates,
+      lengths=lines.map(line=>line.slice(1).reduce((sum,point,index)=>sum+inverseGeodesic(line[index],point).distance,0)),
+      total=lengths.reduce((sum,length)=>sum+length,0);
+    if(!total)return lines.length?{line:lines[0],point:lines[0][0],lineIndex:0}:null;
+    // The river midpoint is the point at half its drawn WGS84 geodesic length across the ordered member lines.
+    let remaining=total/2;
+    for(let lineIndex=0;lineIndex<lines.length;lineIndex++){
+      const line=lines[lineIndex];if(remaining>lengths[lineIndex]){remaining-=lengths[lineIndex];continue;}
+      for(let i=1;i<line.length;i++){
+        const inverse=inverseGeodesic(line[i-1],line[i]);if(remaining>inverse.distance){remaining-=inverse.distance;continue;}
+        return {line,point:directGeodesic(line[i-1],inverse.bearing,remaining),lineIndex};
+      }
+      return {line,point:line.at(-1),lineIndex};
+    }
+    return null;
+  }
   function selectionCameraPolicy(entry,geometryType){
     const geometryPolicy=/Polygon$/.test(geometryType||'')?'preserve':'fit';
     const override=entry?.selectionCameraPolicy;
     if(override==='fit'||override==='preserve')return override;
     return geometryPolicy;
+  }
+  function selectionFitAction(entry,geometryType,origin,currentZoom,fitZoom){
+    if(selectionCameraPolicy(entry,geometryType)==='preserve')return 'preserve';
+    const policy=entry?.fitPolicy||{};
+    if(origin==='tap'&&Number.isFinite(policy.tap?.max_zoom_out)&&Number.isFinite(currentZoom)&&Number.isFinite(fitZoom)&&
+       currentZoom-fitZoom>policy.tap.max_zoom_out)return 'tap-cap';
+    if(origin!=='tap'&&Number.isFinite(policy.list?.min_zoom)&&Number.isFinite(fitZoom)&&fitZoom<policy.list.min_zoom)return 'list-cap';
+    return 'fit';
   }
   function createShell(host,options){
     const M=scope.ExploreMap,E=scope.ExploreEvidence;
@@ -93,7 +184,7 @@
     function backToList(){if(state.selection)M.setSelected(state.selection.layerId,null);state.selection=null;showList();listOpener?.focus({preventScroll:true});}
     $('detail-back').onclick=backToList;
     $('search-back').onclick=()=>showList($('list-body'));
-    function select(entry,feature){
+    function select(entry,feature,origin='list',tapCoordinates=null){
       if(!entry)return;
       const featureId=feature.properties?.id||feature.id;
       state.selection={layerId:entry.id,featureId};
@@ -105,12 +196,22 @@
           const phone=!scope.matchMedia('(min-width:768px)').matches&&!scope.ExploreSheet.shortLandscape();
           const mapRect=$('map').getBoundingClientRect(),panelRect=$('sheet').getBoundingClientRect(),safeBottom=parseFloat(scope.getComputedStyle(host).getPropertyValue('--safe-bottom'))||0;
           const panelWidth=scope.ExploreSheet.shortLandscape()?Math.min(320,host.clientWidth*.4):340;
-          M.fit(bounds({features:[{geometry}]}),{topLeft:[phone?24:panelRect.left-mapRect.left+panelWidth+24,$('zoom-in').getBoundingClientRect().bottom-mapRect.top+8],bottomRight:[24,phone?Math.round(scope.ExploreSheet.panelViewport(host)*.4)+safeBottom+24:safeBottom+24]});
+          const padding={topLeft:[phone?24:panelRect.left-mapRect.left+panelWidth+24,$('zoom-in').getBoundingClientRect().bottom-mapRect.top+8],bottomRight:[24,phone?Math.round(scope.ExploreSheet.panelViewport(host)*.4)+safeBottom+24:safeBottom+24]},
+            policy=entry.fitPolicy||{},fitBounds=bounds({features:[{geometry}]}),size={width:mapRect.width,height:mapRect.height},
+            currentZoom=zoom,fitZoom=fitZoomForBounds(fitBounds,size,padding),action=selectionFitAction(entry,geometry.type,origin,currentZoom,fitZoom);
+          if(action==='fit')M.fit(fitBounds,padding);
+          else if(action==='tap-cap'){
+            const coordinate=Array.isArray(tapCoordinates)?tapCoordinates:waterMidpointMember(feature)?.point;
+            if(coordinate){M.fit(viewportBoundsAt(coordinate,currentZoom,size,padding),padding);if(currentZoom>15)scope.setTimeout(()=>{for(let i=15;i<currentZoom;i++)$('zoom-in').click();},350);}
+          }else if(action==='list-cap'){
+            const midpoint=waterMidpointMember(feature),minimum=policy.list.min_zoom;
+            if(midpoint)M.fit(viewportBoundsAt(midpoint.point,minimum,size,padding),padding);
+          }
         }
       }
       showFeatureDetail(entry,feature);
     }
-    function showDetail(entry,feature){select(entry,feature);}
+    function showDetail(entry,feature,origin='list',tapCoordinates=null){select(entry,feature,origin,tapCoordinates);}
     function showFeatureDetail(entry,feature){
       if($('detail-view').hidden){listScroll=$('sheet-body').scrollTop;listOpener=document.activeElement;}
       for(const dialog of host.querySelectorAll('dialog[open]'))dialog.close();
@@ -131,8 +232,8 @@
       const entry=region.layers.get(result.id),row=rows.get(result.id);
       if(row){row.status.textContent=result.state==='loaded'?(result.count?result.count+' map features loaded':'No features in this dataset'):result.state==='failed'?'Could not load':result.state==='loading'?'Loading':'';row.retry.hidden=result.state!=='failed';}
       if(result.state==='loaded'){
-        if(mapAvailable){M.addLayer(entry.id,result.data,styleFor(entry));if(['trails','recreation_sites'].includes(entry.kind))M.setLabels(entry.id,{property:'name',minZoom:14,max:24});M.onFeature(entry.id,feature=>showDetail(entry,feature));M.setVisible(entry.id,visibleLayers.has(entry.id));}
-        options.onLayer?.(active,entry,result.data);renderResults();
+        if(mapAvailable){M.addLayer(entry.id,result.data,styleFor(entry));if(['trails','recreation_sites'].includes(entry.kind)||entry.kind==='water'&&entry.displaySelect==='streams')M.setLabels(entry.id,{property:'name',minZoom:14,max:entry.kind==='water'?32:24});M.onFeature(entry.id,(feature,coordinates)=>showDetail(entry,feature,'tap',coordinates));M.setVisible(entry.id,visibleLayers.has(entry.id));}
+        options.onLayer?.(active,entry,result.data);renderResults();if(!$('search-view').hidden)renderSearch();
         renderLandLegend(entry,row?.legend,result.data.features);
       }
     }
@@ -188,7 +289,8 @@
     function renderSearch(){
       const box=$('search-results');box.replaceChildren();
       for(const entry of region.registry.filter(item=>item.kind==='trails'))for(const feature of [...(region.layers.get(entry.id).data?.features||[])].sort((a,b)=>(a.properties.name||'').localeCompare(b.properties.name||'')))
-        if(scope.TrailDiscovery.matches(feature,$('query').value,$('activity').value))box.append(button(feature.properties.name||entry.title,()=>showDetail(entry,feature)));
+        if(scope.TrailDiscovery.matches(feature,$('query').value,$('activity').value)){const node=button(feature.properties.name||entry.title,()=>showDetail(entry,feature));node.dataset.feature=feature.properties.id;box.append(node);}
+      for(const row of scope.ExploreWaterDetail.searchRows(region,$('query').value)){const node=button(row.feature.properties.name,()=>showDetail(row.entry,row.feature));node.dataset.feature=row.feature.properties.id;box.append(node);}
     }
     $('query').oninput=renderSearch;$('activity').onchange=renderSearch;
     $('search').onclick=()=>{if(active.capabilities?.search){active.capabilities.search();return;}renderSearch();showList($('search-view'));};$('sources').onclick=showSources;
@@ -207,6 +309,7 @@
         active.capabilities=scope.ExploreCapabilities?.attach(active);
         host.querySelector('.explore-region').textContent=manifest.region.name;
         renderDrawer();renderResults();
+        if(mapAvailable)for(const entry of region.registry.filter(item=>item.kind==='water'&&item.displaySelect==='streams'))M.setLabels(entry.id,{property:'name',minZoom:14,max:32});
         if(mapAvailable){M.addLayer('coverage',region.coverage,{color:'#fff',weight:1,opacity:.5,dashArray:'6 5',fill:false});M.fit(bounds(region.coverage));for(const entry of region.registry.filter(item=>item.format==='place_list')){
           const pins=active.capabilities?.pins?.(entry)||region.places[entry.id];if(Array.isArray(pins)){M.setPins(entry.id,pins);M.setLabels(entry.id,{property:'name',minZoom:14,max:8});M.onFeature(entry.id,pin=>showDetail(entry,pin));M.setVisible(entry.id,visibleLayers.has(entry.id));}
         }}
@@ -227,5 +330,5 @@
     active.destroy=()=>{for(const name of ['resize','orientationchange'])scope.removeEventListener(name,viewportChanged);for(const name of ['resize','scroll'])viewport?.removeEventListener(name,viewportChanged);$('drawer').removeEventListener('drawerstatechange',drawerState);$('sheet').removeEventListener('sheetstatechange',sheetState);$('map').removeEventListener('exploremaptap',mapTap);sheet.destroy();drawer.destroy();M.destroy();host.replaceChildren();};
     return active;
   }
-  const api={createShell,bounds,selectionCameraPolicy};if(typeof module!=='undefined')module.exports=api;scope.ExploreShell=api;
+  const api={createShell,bounds,selectionCameraPolicy,fitZoomForBounds,viewportBoundsAt,waterMidpointMember,selectionFitAction};if(typeof module!=='undefined')module.exports=api;scope.ExploreShell=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
