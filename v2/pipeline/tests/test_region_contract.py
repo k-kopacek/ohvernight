@@ -12,7 +12,8 @@ V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
 from lib.region_contract import (ContractError, _display_transform_geometry,
-                                 normalize_transport, validate_region, validate_region_data)
+                                 normalize_transport, validate_region, validate_region_data,
+                                 validate_water_contract_data)
 
 
 class RegionContractTests(unittest.TestCase):
@@ -205,6 +206,50 @@ class RegionContractTests(unittest.TestCase):
         entry = next(item for item in docs["regions/synthetic/display/index.json"]["artifacts"] if item["layer_id"] == layer_id)
         entry["bytes"] = len(data)
         entry["sha256"] = hashlib.sha256(data).hexdigest()
+
+    def water_contract_base(self):
+        manifest = {"region": {"id": "synthetic"}}
+        def water_feature(ident, source_id, legacy_ids):
+            return {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+                    "properties": {"id": ident, "name": "River", "evidence": {}, "source_id": source_id,
+                                   "source_namespace": "usgs_nhd", "ftype": 460, "fcode": 46006,
+                                   "source_layer": "flowline", "water_class": "stream",
+                                   "hydro_category": "perennial", "legacy_ids": legacy_ids}}
+        canonical = [("waterways", water_feature("nhd-A", "{A}", ["old-a"])),
+                     ("waterways", water_feature("nhd-B", "{B}", []))]
+        display = [("waterways", copy.deepcopy(canonical[0][1]))]
+        config = self.load("pipeline/config/water_display.json")
+        aliases = {"old-a": "nhd-A"}
+        return manifest, canonical, config, aliases, display
+
+    def assert_water_rule(self, rule, mutate):
+        manifest, canonical, config, aliases, display = self.water_contract_base()
+        validate_water_contract_data(manifest, canonical, config, aliases, display)
+        mutate(manifest, canonical, config, aliases, display)
+        with self.assertRaises(ContractError) as raised:
+            validate_water_contract_data(manifest, canonical, config, aliases, display)
+        self.assertEqual(raised.exception.rule, rule)
+
+    def test_water_R66_rejects_id_not_derived_from_source(self):
+        self.assert_water_rule("R66", lambda m, c, cfg, a, d: c[0][1]["properties"].update(id="row-1"))
+
+    def test_water_R67_rejects_wrong_fixed_table_classification(self):
+        self.assert_water_rule("R67", lambda m, c, cfg, a, d: c[0][1]["properties"].update(water_class="canal_ditch"))
+
+    def test_water_R68_rejects_missing_display_alias(self):
+        self.assert_water_rule("R68", lambda m, c, cfg, a, d: a.clear())
+
+    def test_water_R68_rejects_alias_for_undisplayed_feature(self):
+        self.assert_water_rule("R68", lambda m, c, cfg, a, d: a.update({"old-hidden": "nhd-B"}))
+
+    def test_water_R68_rejects_alias_to_wrong_display_id(self):
+        self.assert_water_rule("R68", lambda m, c, cfg, a, d: a.update({"old-a": "nhd-B"}))
+
+    def test_water_R68_rejects_legacy_id_on_two_canonical_features(self):
+        self.assert_water_rule("R68", lambda m, c, cfg, a, d: c[1][1]["properties"].update(legacy_ids=["old-a"]))
+
+    def test_water_R75_rejects_activity_property(self):
+        self.assert_water_rule("R75", lambda m, c, cfg, a, d: c[0][1]["properties"].update(fishing="allowed"))
 
     def test_display_contract_rules_R60_to_R64(self):
         def assert_display_rule(rule, mutate):

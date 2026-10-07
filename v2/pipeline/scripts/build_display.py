@@ -31,13 +31,15 @@ def display_water(feature: dict[str, Any]) -> bool:
     properties = feature.get('properties') or {}
     name = properties.get('name')
     geometry = feature.get('geometry') or {}
+    kind = properties.get('kind')
+    source_layer = properties.get('source_layer')
     return (
         isinstance(name, str)
         and bool(name.strip())
         and (
-            properties.get('kind') == 'flowline'
+            (kind == 'flowline' or source_layer == 'flowline')
             and geometry.get('type') in {'LineString', 'MultiLineString'}
-            or properties.get('kind') == 'waterbody'
+            or (kind == 'waterbody' or source_layer == 'waterbody')
             and geometry.get('type') in {'Polygon', 'MultiPolygon'}
         )
     )
@@ -166,7 +168,8 @@ def build_layer(manifest: dict[str, Any], layer: dict[str, Any], root: Path = RO
     source, canonical_path = _source_feature_collection(manifest, layer, root)
     source_features = source.get('features', [])
     selected = source_features
-    if layer['kind'] == 'water' and any('kind' in (f.get('properties') or {}) for f in source_features):
+    if layer['kind'] == 'water' and any(
+            {'kind', 'source_layer'} & set(f.get('properties') or {}) for f in source_features):
         selected = [feature for feature in source_features if display_water(feature)]
     evidence_indexes: dict[str, int] = {}
     evidence_table: list[Any] = []
@@ -250,6 +253,19 @@ def build_region(region_id: str, root: Path = ROOT, write: bool = False) -> dict
             transport[layer['id']] = copy.deepcopy(_pointer(
                 _read_json(root / reference['path']), reference.get('pointer', '')))
     index = {'region_id': region_id, 'artifacts': entries, 'transport': transport}
+    aliases = {}
+    for layer, (display, _) in zip(
+            (layer for layer in manifest['layers'] if layer['format'] == 'feature_collection'), built):
+        if layer['kind'] != 'water':
+            continue
+        for feature in display['features']:
+            props = feature.get('properties') or {}
+            for legacy_id in props.get('legacy_ids', []):
+                if legacy_id in aliases:
+                    raise ValueError(f'duplicate water legacy ID in display index: {legacy_id}')
+                aliases[legacy_id] = props['id']
+    if aliases:
+        index['water_id_aliases'] = aliases
     index_data = (_canonical_json(index) + '\n').encode('utf-8')
     artifacts[f"regions/{region_id}/display/index.json"] = index_data
     if write:

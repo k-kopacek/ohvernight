@@ -67,7 +67,13 @@ def get_json(client, url, params, timeout=90):
     for attempt in range(3):
         response = client.get(url, params=params, timeout=timeout)
         response.raise_for_status()
-        value = response.json()
+        try:
+            value = response.json()
+        except ValueError as error:
+            if attempt == 2:
+                raise ArcGISQueryError(f"{url}: invalid or empty JSON response") from error
+            time.sleep(0.5 * 2 ** attempt)
+            continue
         if isinstance(value, dict) and "error" not in value:
             return value
         error = value.get("error") if isinstance(value, dict) else "not an object"

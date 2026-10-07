@@ -35,6 +35,8 @@ test('water display removes unnamed clutter without changing screening geometry'
   const feature=(name,kind='flowline',type='LineString')=>({properties:{name,kind},geometry:{type,coordinates:[]}});
   assert.equal(displayWater(feature('River')),true);
   assert.equal(displayWater(feature('Lake','waterbody','Polygon')),true);
+  assert.equal(displayWater({properties:{name:'Douglas River',source_layer:'flowline'},geometry:{type:'MultiLineString',coordinates:[]}}),true);
+  assert.equal(displayWater({properties:{name:'Douglas Lake',source_layer:'waterbody'},geometry:{type:'MultiPolygon',coordinates:[]}}),true);
   for(const name of [null,undefined,'','   '])assert.equal(displayWater(feature(name)),false);
   assert.equal(displayWater(feature('Wetland','area','Polygon')),false);
   assert.equal(displayWater(feature('River','flowline','Polygon')),false);

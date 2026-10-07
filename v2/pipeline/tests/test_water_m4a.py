@@ -1,0 +1,138 @@
+import copy
+import sys
+import unittest
+from pathlib import Path
+
+V2 = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
+
+from lib.water import (  # noqa: E402
+    classify, ensure_unique_feature_ids, enrich_properties, feature_id, legacy_geometry_matches,
+    normalize_source_fields, splice_layer, support_bridges, support_gap_boxes,
+    water_display_config,
+)
+
+
+class WaterM4ATests(unittest.TestCase):
+    def test_feature_id_sanitizes_but_source_id_is_preserved(self):
+        self.assertEqual(feature_id("{A0-b_C}"), "nhd-A0-bC")
+        values = normalize_source_fields("flowline", {
+            "permanent_identifier": "{A0-b_C}", "gnis_id": "0012", "ftype": 460, "fcode": 46006,
+        })
+        self.assertEqual(values["source_id"], "{A0-b_C}")
+        self.assertEqual(values["gnis_id"], "0012")
+        self.assertNotIn("area_sqkm", values)
+        self.assertNotIn("elevation_ft", values)
+
+    def test_missing_source_id_stops_normalization(self):
+        with self.assertRaisesRegex(ValueError, "no permanent source_id"):
+            normalize_source_fields("flowline", {"ftype": 460, "fcode": 46006})
+
+    def test_normalized_water_feature_keeps_source_fields_and_omits_grouping(self):
+        source = {"permanent_identifier": "{A0-b_C}", "gnis_id": "0012", "gnis_name": "River",
+                  "ftype": 460, "fcode": 46006, "reachcode": "123456", "lengthkm": 2.5,
+                  "visibilityfilter": 3, "wbarea_permanent_identifier": "wb-1", "fdate": "2023-01-01T00:00:00Z"}
+        result = enrich_properties("flowline", source, {"source_url": "https://agency.example"},
+                                   ["old-id"], support_for="0012")
+        self.assertEqual(result["id"], "nhd-A0-bC")
+        self.assertEqual(result["source_id"], "{A0-b_C}")
+        self.assertEqual(result["name"], "River")
+        self.assertEqual(result["source_namespace"], "usgs_nhd")
+        self.assertEqual(result["source_layer"], "flowline")
+        self.assertEqual(result["legacy_ids"], ["old-id"])
+        self.assertEqual(result["support_for"], "0012")
+        self.assertEqual(result["support_reason"], "bridges_named_parts")
+        self.assertNotIn("group_id", result)
+        self.assertNotIn("manager", result)
+
+    def test_sanitization_collision_stops_build(self):
+        features = [{"properties": {"id": feature_id(value)}} for value in ("A{B}", "AB")]
+        with self.assertRaisesRegex(ValueError, "duplicate water feature ID"):
+            ensure_unique_feature_ids(features)
+
+    def test_fixed_water_class_and_hydro_category_tables(self):
+        vectors = {
+            460: "stream", 558: "artificial_path", 336: "canal_ditch", 428: "pipeline",
+            334: "connector", 390: "lake_pond", 436: "reservoir", 466: "swamp_marsh", 999: "other",
+        }
+        for ftype, expected in vectors.items():
+            self.assertEqual(classify(ftype, 39004)[0], expected)
+        for fcode in (39004, 39009, 39010, 39011, 39012, 43615, 43621):
+            self.assertEqual(classify(436, fcode)[1], "perennial")
+        for fcode in (46003, 39001, 39005, 39006, 43614):
+            self.assertEqual(classify(436, fcode)[1], "intermittent")
+        self.assertEqual(classify(460, 46007)[1], "ephemeral")
+        self.assertEqual(classify(460, 43619)[1], "unknown")
+
+    def test_water_display_config_contains_fixed_reservoir_tables_and_m4b_placeholders(self):
+        config = water_display_config()
+        self.assertEqual(config["reservoir_eligible_fcodes"], [43600, 43613, 43615, 43617, 43618, 43619, 43621])
+        self.assertEqual(config["reservoir_ineligible_fcodes"], [43601, 43603, 43604, 43605, 43606, 43607, 43608,
+                                                                  43609, 43610, 43611, 43612, 43614, 43623, 43624,
+                                                                  43625, 43626])
+        self.assertFalse(set(config["reservoir_eligible_fcodes"]) & set(config["reservoir_ineligible_fcodes"]))
+        self.assertEqual(config["unnamed_waterbody_min_area_sqkm"], 0.02)
+        self.assertEqual(config["non_claim_hosts"], [])
+        self.assertEqual(config["expected_major_rivers"], {"aspen": [], "douglas-co": []})
+
+    def test_legacy_matching_uses_exact_geometry_not_row_position(self):
+        def feature(ident, geometry):
+            return {"type": "Feature", "geometry": geometry, "properties": {"id": ident}}
+        old = [feature("old-first", {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}),
+               feature("old-second", {"type": "LineString", "coordinates": [[2, 2], [3, 3]]})]
+        new = [feature("new-first", {"type": "LineString", "coordinates": [[9, 9], [10, 10]]}),
+               feature("new-second", {"type": "LineString", "coordinates": [[2, 2], [3, 3]]})]
+        matches, unmatched_old, unmatched_new = legacy_geometry_matches(old, new)
+        self.assertEqual(matches, {"new-second": ["old-second"]})
+        self.assertEqual(unmatched_old, ["old-first"])
+        self.assertEqual(unmatched_new, ["new-first"])
+
+    def test_legacy_matching_rejects_ambiguous_duplicate_geometry(self):
+        geom = {"type": "Point", "coordinates": [1, 1]}
+        old = [{"geometry": geom, "properties": {"id": "old-1"}},
+               {"geometry": geom, "properties": {"id": "old-2"}}]
+        new = [{"geometry": geom, "properties": {"id": "new-1"}}]
+        matches, unmatched_old, unmatched_new = legacy_geometry_matches(old, new)
+        self.assertEqual(matches, {})
+        self.assertEqual(unmatched_old, ["old-1", "old-2"])
+        self.assertEqual(unmatched_new, ["new-1"])
+
+    def test_support_bridge_is_kept_but_non_bridge_is_not(self):
+        def line(ident, coords, name, gnis_id="42", water_class="stream"):
+            return {"type": "Feature", "geometry": {"type": "LineString", "coordinates": coords},
+                    "properties": {"id": ident, "name": name, "gnis_id": gnis_id, "water_class": water_class}}
+        named = [line("left", [[-0.001, 39], [0, 39]], "River"),
+                 line("right", [[0.001, 39], [0.002, 39]], "River")]
+        bridge = line("bridge", [[0, 39], [0.001, 39]], None, gnis_id=None)
+        stray = line("stray", [[20, 20], [21, 20]], None, gnis_id=None)
+        result = support_bridges(named, [bridge, stray], max_gap_m=250, tolerance_m=0.01)
+        self.assertEqual([(feature["properties"]["id"], gnis_id) for feature, gnis_id in result], [("bridge", "42")])
+
+    def test_support_gap_uses_six_decimal_endpoints_and_300m_box(self):
+        named = [
+            {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-0.001, 39], [0, 39]]},
+             "properties": {"id": "left", "gnis_id": "42"}},
+            {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[0.001, 39], [0.002, 39]]},
+             "properties": {"id": "right", "gnis_id": "42"}},
+        ]
+        gaps = support_gap_boxes(named)
+        self.assertEqual(len(gaps), 1)
+        self.assertEqual(gaps[0][0], "42")
+        west, south, east, north = gaps[0][1]
+        self.assertLess(east - west, 0.004)
+        self.assertGreater(east - west, 0.002)
+        self.assertLess(north - south, 0.004)
+        self.assertGreater(north - south, 0.002)
+
+    def test_splicing_replaces_only_selected_layer(self):
+        original = {"layers": {"hydrology": {"features": [1]}, "roads": {"features": [2]},
+                                "land": {"features": [3]}}}
+        before = copy.deepcopy(original)
+        updated = splice_layer(original, "hydrology", {"features": [9]})
+        self.assertEqual(updated["layers"]["hydrology"], {"features": [9]})
+        self.assertEqual(updated["layers"]["roads"], before["layers"]["roads"])
+        self.assertEqual(updated["layers"]["land"], before["layers"]["land"])
+
+
+if __name__ == "__main__":
+    unittest.main()

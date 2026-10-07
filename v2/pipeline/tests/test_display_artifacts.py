@@ -35,6 +35,9 @@ class DisplayArtifactTests(unittest.TestCase):
                 'name': vector['name'], 'kind': vector['kind'],
             }}
             self.assertEqual(display_water(feature), vector['expected'], vector['name'])
+        source_layer_feature = {'type': 'Feature', 'geometry': {'type': 'LineString', 'coordinates': [[0, 0], [1, 1]]},
+                                'properties': {'name': 'Douglas River', 'source_layer': 'flowline'}}
+        self.assertTrue(display_water(source_layer_feature))
 
     def test_committed_artifacts_rebuild_byte_for_byte(self):
         for region_id in ('aspen', 'douglas-co'):
