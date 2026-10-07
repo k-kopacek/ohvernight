@@ -194,16 +194,21 @@ values map to `other` and `unknown` respectively.
 Water feature IDs are `nhd-` plus `source_id` with characters outside
 `[A-Za-z0-9-]` removed. IDs never fall back to service row numbers. Exact
 canonical geometry equality within the same layer associates old IDs with
-new IDs through each feature's distinct `legacy_ids` array. The display
-index's `water_id_aliases` contains exactly the aliases for water features
+new IDs through each feature's distinct `legacy_ids` array. The
+`water-aliases.json` artifact contains exactly the aliases for water features
 present in the current water display artifacts; aliases for undisplayed
-features remain on canonical features only (spec clarification A1).
+features remain on canonical features only (spec clarification A1). The
+display index carries its path, byte count and SHA-256 digest. The browser does
+not request this artifact by default, so it does not add to initial map bytes.
 
 ### M4-A water validation rules
 
 R66 checks the stable source ID, namespace, integer type/code fields, derived
 ID and regional uniqueness. R67 checks the fixed `water_display.json` tables.
-R68 checks canonical legacy ID uniqueness and the display-scoped alias map.
+R68 checks canonical legacy ID uniqueness and exact alias coverage in
+`water-aliases.json`, including display targets and agreement with canonical
+data. It verifies the index path, byte count and SHA-256 digest, and rejects
+aliases left inline in `index.json`.
 R75 rejects properties that could state an activity or access claim on a
 water feature; such claims belong in a separate reviewed registry.
 

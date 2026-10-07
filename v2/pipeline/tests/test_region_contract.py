@@ -13,7 +13,7 @@ sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
 from lib.region_contract import (ContractError, _display_transform_geometry,
                                  normalize_transport, validate_region, validate_region_data,
-                                 validate_water_contract_data)
+                                 validate_water_alias_file, validate_water_contract_data)
 
 
 class RegionContractTests(unittest.TestCase):
@@ -247,6 +247,21 @@ class RegionContractTests(unittest.TestCase):
 
     def test_water_R68_rejects_legacy_id_on_two_canonical_features(self):
         self.assert_water_rule("R68", lambda m, c, cfg, a, d: c[1][1]["properties"].update(legacy_ids=["old-a"]))
+
+    def test_water_R68_rejects_stale_alias_file_hash(self):
+        document = {"region_id": "synthetic", "water_id_aliases": {"old-a": "nhd-A"}}
+        raw = (json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        index = {"water_aliases": {"path": "regions/synthetic/display/water-aliases.json",
+                                   "bytes": len(raw), "sha256": "0" * 64}}
+        with self.assertRaises(ContractError) as raised:
+            validate_water_alias_file(index, document, raw, "synthetic")
+        self.assertEqual(raised.exception.rule, "R68")
+
+    def test_water_R68_rejects_alias_map_left_in_index(self):
+        index = {"water_id_aliases": {"old-a": "nhd-A"}}
+        with self.assertRaises(ContractError) as raised:
+            validate_water_alias_file(index, {}, b"", "synthetic")
+        self.assertEqual(raised.exception.rule, "R68")
 
     def test_water_R75_rejects_activity_property(self):
         self.assert_water_rule("R75", lambda m, c, cfg, a, d: c[0][1]["properties"].update(fishing="allowed"))

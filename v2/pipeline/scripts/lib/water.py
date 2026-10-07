@@ -86,6 +86,17 @@ def classify(ftype: Any, fcode: Any, config: dict[str, Any] | None = None) -> tu
             _int_keyed(config["hydro_category_by_fcode"]).get(fcode, "unknown"))
 
 
+def ensure_supported_ftype(ftype: Any, config: dict[str, Any] | None = None) -> str:
+    """Reject a source feature type that falls through to the ``other`` class."""
+    if isinstance(ftype, bool) or not isinstance(ftype, int):
+        raise ValueError("water ftype must be an integer")
+    config = config or water_display_config()
+    water_class = _int_keyed(config["water_class_by_ftype"]).get(ftype)
+    if water_class is None:
+        raise ValueError(f"unsupported water ftype {ftype}")
+    return water_class
+
+
 def normalize_source_fields(layer: str, source_properties: dict[str, Any]) -> dict[str, Any]:
     if layer not in SOURCE_FIELDS:
         raise ValueError(f"unsupported NHD layer {layer}")

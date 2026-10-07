@@ -32,6 +32,13 @@ def write_json(path: Path, value, *, indent=None):
                                 indent=indent, allow_nan=False) + "\n", encoding="utf-8")
 
 
+def set_retrieved_at(features, retrieved_at):
+    for feature in features:
+        evidence = feature.get("properties", {}).get("evidence")
+        if isinstance(evidence, dict):
+            evidence["retrieved_at"] = retrieved_at
+
+
 def apply_refresh(report_path: Path, v2_root: Path = V2):
     report_path = Path(report_path)
     report = read_json(report_path)
@@ -47,6 +54,7 @@ def apply_refresh(report_path: Path, v2_root: Path = V2):
     hydrology = read_json(staging / "aspen-flowline.geojson")["features"]
     hydrology.extend(read_json(staging / "aspen-area.geojson")["features"])
     hydrology.extend(read_json(staging / "aspen-waterbody.geojson")["features"])
+    set_retrieved_at(hydrology, retrieved_at)
     aspen = splice_layer(aspen, "hydrology", {"type": "FeatureCollection", "features": hydrology})
     status = aspen.setdefault("source_status", {}).setdefault("03_fetch_hydrology", {"status": "available"})
     status.update(status="available", last_retrieved_at=retrieved_at, last_checked_at=retrieved_at,
@@ -58,6 +66,8 @@ def apply_refresh(report_path: Path, v2_root: Path = V2):
     douglas = read_json(douglas_path)
     waterways = read_json(staging / "douglas-co-flowline.geojson")["features"]
     waterbodies = read_json(staging / "douglas-co-waterbody.geojson")["features"]
+    set_retrieved_at(waterways, retrieved_at)
+    set_retrieved_at(waterbodies, retrieved_at)
     douglas["layers"] = dict(douglas["layers"])
     douglas["layers"]["waterways"] = {"type": "FeatureCollection", "features": waterways}
     douglas["layers"]["waterbodies"] = {"type": "FeatureCollection", "features": waterbodies}

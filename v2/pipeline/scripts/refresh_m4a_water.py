@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+import argparse
 from datetime import datetime, timezone
 from collections import Counter
 from pathlib import Path
@@ -13,7 +14,7 @@ from shapely.geometry import box, shape
 from lib.arcgis_client import ArcGISQueryError, describe_layer, get_json, new_session
 from lib.common import ROOT, bbox, clip_geometry, properties
 from lib.evidence import make_evidence
-from lib.water import (attach_legacy_ids, ensure_unique_feature_ids,
+from lib.water import (attach_legacy_ids, ensure_unique_feature_ids, ensure_supported_ftype,
                        legacy_geometry_matches, normalize_feature,
                        support_bridges, support_gap_boxes, water_display_config)
 from build_display import display_water
@@ -156,15 +157,23 @@ def _old_object_id(feature):
 
 def _counts(features):
     result = {"ftype": Counter(), "fcode": Counter(), "water_class": Counter(), "hydro_category": Counter(),
-              "named": 0, "unnamed": 0}
+              "ftype_fcode_pairs": {}, "named": 0, "unnamed": 0}
     for feature in features:
         props = feature["properties"]
         result["ftype"][str(props["ftype"])] += 1
         result["fcode"][str(props["fcode"])] += 1
         result["water_class"][props["water_class"]] += 1
         result["hydro_category"][props["hydro_category"]] += 1
+        pair = (props["ftype"], props["fcode"])
+        if pair not in result["ftype_fcode_pairs"]:
+            result["ftype_fcode_pairs"][pair] = {
+                "ftype": props["ftype"], "fcode": props["fcode"], "count": 0,
+                "water_class": props["water_class"], "hydro_category": props["hydro_category"],
+            }
+        result["ftype_fcode_pairs"][pair]["count"] += 1
         result["named" if isinstance(props.get("name"), str) and props["name"].strip() else "unnamed"] += 1
-    return {key: (dict(sorted(value.items())) if isinstance(value, Counter) else value)
+    return {key: (dict(sorted(value.items())) if isinstance(value, Counter) else
+                  [value[pair] for pair in sorted(value)] if key == "ftype_fcode_pairs" else value)
             for key, value in result.items()}
 
 
@@ -235,9 +244,92 @@ def difference_report(region, source_layer, old_features, new_features, raw_by_s
     return report
 
 
+def _staged_raw_properties(raw_root: Path) -> dict[str, dict]:
+    """Reconstruct source attributes from saved pages without contacting NHD."""
+    result = {}
+    for page_path in sorted(raw_root.glob("*-pages/page-*.json")):
+        page = json.loads(page_path.read_text(encoding="utf-8"))
+        for feature in page.get("features", []):
+            props = properties(feature)
+            source_id = props.get("permanent_identifier")
+            if source_id is not None:
+                result[str(source_id)] = props
+    return result
+
+
+def review_staged(staging: Path, raw_root: Path) -> dict:
+    """Recompute the difference report from saved stage and raw response files."""
+    existing = json.loads((staging / "refresh-report.json").read_text(encoding="utf-8"))
+    raw_by_source_id = _staged_raw_properties(raw_root)
+    differences = {}
+    layer_files = {
+        ("aspen", "flowline"): "aspen-flowline.geojson",
+        ("aspen", "area"): "aspen-area.geojson",
+        ("aspen", "waterbody"): "aspen-waterbody.geojson",
+        ("douglas-co", "flowline"): "douglas-co-flowline.geojson",
+        ("douglas-co", "waterbody"): "douglas-co-waterbody.geojson",
+    }
+    config = water_display_config()
+    for (region, source_layer), filename in layer_files.items():
+        staged = json.loads((staging / filename).read_text(encoding="utf-8"))["features"]
+        old = _old_layers(region)[source_layer]
+        report = difference_report(region, source_layer, old, staged, raw_by_source_id)
+        if region == "douglas-co" and source_layer == "flowline":
+            gap_queries = [query for query in existing["queries"] if query.get("support_for_query")]
+            gap_ids = sorted({query["support_for_query"] for query in gap_queries})
+            named_by_gnis = {}
+            for feature in staged:
+                props = feature["properties"]
+                if props.get("support_reason") != "bridges_named_parts":
+                    name = props.get("name")
+                    if props.get("gnis_id") and name:
+                        named_by_gnis.setdefault(props["gnis_id"], name)
+            support_counts = Counter(feature["properties"].get("water_class") for feature in staged
+                                     if feature["properties"].get("support_reason") == "bridges_named_parts")
+            report["support_report"] = {
+                "gap_boxes_examined": len(gap_queries),
+                "gnis_ids_examined": [{"gnis_id": ident, "river_name": named_by_gnis.get(ident)}
+                                       for ident in gap_ids],
+                "named_segment_count": sum(not feature["properties"].get("support_reason")
+                                            for feature in staged),
+                "supporting_segment_count": sum(support_counts.values()),
+                "supporting_by_water_class": dict(sorted(support_counts.items())),
+            }
+        unsupported_ftypes = []
+        for feature in staged:
+            ftype = feature["properties"].get("ftype")
+            try:
+                ensure_supported_ftype(ftype, config)
+            except ValueError:
+                unsupported_ftypes.append({"id": feature["properties"].get("id"), "ftype": ftype})
+        report["unsupported_ftypes"] = unsupported_ftypes
+        report["stop_required"] = bool(report["stop_required"] or unsupported_ftypes)
+        differences[f"{region}/{source_layer}"] = report
+    existing["differences"] = differences
+    existing["acceptable_differences_only"] = not any(
+        report["stop_required"] for report in differences.values())
+    _write_json(staging / "refresh-report.json", existing)
+    return existing
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--review-staged", action="store_true",
+                        help="recompute differences from saved pages without network access")
+    args = parser.parse_args()
     raw_root = ROOT / "data/raw/m4a-nhd-refresh"
     staging = ROOT / "data/processed/m4a-nhd-refresh"
+    if args.review_staged:
+        result = review_staged(staging, raw_root)
+        print(json.dumps({"staging": str(staging),
+                          "acceptable_differences_only": result["acceptable_differences_only"],
+                          "differences": {key: {"before": value["before"]["feature_count"],
+                                                "after": value["after"]["named"] + value["after"]["unnamed"],
+                                                "stop_required": value["stop_required"]}
+                                          for key, value in result["differences"].items()}}, indent=2))
+        if not result["acceptable_differences_only"]:
+            raise SystemExit("M4-A differences need coordinator review; canonical files were not written")
+        return
     raw_root.mkdir(parents=True, exist_ok=True)
     client = new_session()
     service_metadata_path = raw_root / "service-metadata.json"
@@ -333,13 +425,15 @@ def main():
             ensure_unique_feature_ids(features)
             report = difference_report(region, source_layer, old_layer, features, raw_by_source_id)
             displayed = [feature for feature in features if display_water(feature)]
-            unmapped = [{"id": feature["properties"]["id"], "ftype": feature["properties"]["ftype"],
-                         "fcode": feature["properties"]["fcode"]}
-                        for feature in displayed
-                        if str(feature["properties"]["ftype"]) not in config["water_class_by_ftype"] or
-                        str(feature["properties"]["fcode"]) not in config["hydro_category_by_fcode"]]
-            report["displayed_features_with_unmapped_type_or_code"] = unmapped
-            if unmapped:
+            unsupported_ftypes = []
+            for feature in features:
+                try:
+                    ensure_supported_ftype(feature["properties"].get("ftype"), config)
+                except ValueError:
+                    unsupported_ftypes.append({"id": feature["properties"].get("id"),
+                                               "ftype": feature["properties"].get("ftype")})
+            report["unsupported_ftypes"] = unsupported_ftypes
+            if unsupported_ftypes:
                 report["stop_required"] = True
             report["support_report"] = support_reports if region == "douglas-co" and source_layer == "flowline" else []
             difference[f"{region}/{source_layer}"] = report

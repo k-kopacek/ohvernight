@@ -7,10 +7,30 @@ from pathlib import Path
 
 V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / 'pipeline' / 'scripts'))
-from build_display import build_layer, build_region, display_water  # noqa: E402
+from build_display import _display_feature, build_layer, build_region, display_water  # noqa: E402
 
 
 class DisplayArtifactTests(unittest.TestCase):
+    def test_water_display_keeps_only_id_name_evidence_and_selection_fields(self):
+        feature = {'type': 'Feature', 'geometry': {'type': 'LineString', 'coordinates': [[0, 0], [1, 1]]},
+                   'properties': {'id': 'nhd-123', 'name': 'River', 'source_layer': 'flowline',
+                                  'kind': 'flowline', 'source_id': 'source-123', 'fcode': 55800,
+                                  'water_class': 'stream', 'legacy_ids': ['old-id'],
+                                  'evidence': {'source_url': 'https://example.test'}}}
+        display, _ = _display_feature(feature, {}, [], water=True)
+        self.assertEqual(set(display['properties']), {'id', 'name', 'evidence', 'kind', 'source_layer'})
+
+    def test_water_aliases_are_built_from_canonical_features_after_display_property_filtering(self):
+        for region_id in ('aspen', 'douglas-co'):
+            result = build_region(region_id, V2)
+            index = result['index']
+            self.assertNotIn('water_id_aliases', index)
+            alias_entry = index['water_aliases']
+            aliases = json.loads(result['artifacts'][alias_entry['path']])['water_id_aliases']
+            self.assertTrue(aliases)
+            self.assertTrue(all(isinstance(key, str) and isinstance(value, str)
+                                for key, value in aliases.items()))
+
     def test_transport_copies_every_status_reference_verbatim_including_place_lists(self):
         for region_id in ('aspen', 'douglas-co'):
             result = build_region(region_id, V2)

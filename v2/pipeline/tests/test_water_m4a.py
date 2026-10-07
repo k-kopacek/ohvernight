@@ -7,7 +7,7 @@ V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
 from lib.water import (  # noqa: E402
-    classify, ensure_unique_feature_ids, enrich_properties, feature_id, legacy_geometry_matches,
+    classify, ensure_supported_ftype, ensure_unique_feature_ids, enrich_properties, feature_id, legacy_geometry_matches,
     normalize_source_fields, splice_layer, support_bridges, support_gap_boxes,
     water_display_config,
 )
@@ -64,6 +64,15 @@ class WaterM4ATests(unittest.TestCase):
         self.assertEqual(classify(460, 46007)[1], "ephemeral")
         self.assertEqual(classify(460, 43619)[1], "unknown")
 
+    def test_known_unknown_hydro_codes_are_valid_but_unknown_ftype_stops(self):
+        for ftype, fcode, expected_class in (
+                (558, 55800, "artificial_path"), (336, 33600, "canal_ditch"),
+                (436, 43619, "reservoir")):
+            self.assertEqual(classify(ftype, fcode), (expected_class, "unknown"))
+            self.assertEqual(ensure_supported_ftype(ftype), expected_class)
+        with self.assertRaisesRegex(ValueError, "unsupported water ftype 999"):
+            ensure_supported_ftype(999)
+
     def test_water_display_config_contains_fixed_reservoir_tables_and_m4b_placeholders(self):
         config = water_display_config()
         self.assertEqual(config["reservoir_eligible_fcodes"], [43600, 43613, 43615, 43617, 43618, 43619, 43621])
@@ -74,6 +83,14 @@ class WaterM4ATests(unittest.TestCase):
         self.assertEqual(config["unnamed_waterbody_min_area_sqkm"], 0.02)
         self.assertEqual(config["non_claim_hosts"], [])
         self.assertEqual(config["expected_major_rivers"], {"aspen": [], "douglas-co": []})
+        self.assertEqual([row["fcode"] for row in config["snapshot_unknown_fcodes"]],
+                         [33400, 33600, 39000, 42800, 42802, 42803, 42807, 42813,
+                          43601, 43612, 43613, 43619, 43624, 46600, 55800])
+        ftype_by_fcode = {33400: 334, 33600: 336, 39000: 390, 42800: 428, 42802: 428,
+                          42803: 428, 42807: 428, 42813: 428, 43601: 436, 43612: 436,
+                          43613: 436, 43619: 436, 43624: 436, 46600: 466, 55800: 558}
+        for row in config["snapshot_unknown_fcodes"]:
+            self.assertEqual(classify(ftype_by_fcode[row["fcode"]], row["fcode"])[1], "unknown")
 
     def test_legacy_matching_uses_exact_geometry_not_row_position(self):
         def feature(ident, geometry):

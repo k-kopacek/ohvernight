@@ -148,7 +148,8 @@ def _source_feature_collection(manifest: dict[str, Any], layer: dict[str, Any], 
     return value, path
 
 
-def _display_feature(feature: dict[str, Any], evidence_indexes: dict[str, int], evidence_table: list[Any]) -> tuple[dict[str, Any], int]:
+def _display_feature(feature: dict[str, Any], evidence_indexes: dict[str, int], evidence_table: list[Any],
+                     *, water: bool = False) -> tuple[dict[str, Any], int]:
     result = copy.deepcopy(feature)
     result['geometry'], dropped = _transform_geometry(feature.get('geometry'))
     if feature.get('geometry') is not None and result['geometry'] is None:
@@ -160,6 +161,9 @@ def _display_feature(feature: dict[str, Any], evidence_indexes: dict[str, int], 
         evidence_indexes[key] = len(evidence_table)
         evidence_table.append(copy.deepcopy(evidence))
     properties['evidence'] = evidence_indexes[key]
+    if water:
+        retained = {'id', 'name', 'evidence', 'kind', 'source_layer'}
+        properties = {name: value for name, value in properties.items() if name in retained}
     result['properties'] = properties
     return result, dropped
 
@@ -176,7 +180,8 @@ def build_layer(manifest: dict[str, Any], layer: dict[str, Any], root: Path = RO
     display_features = []
     dropped_parts = 0
     for feature in selected:
-        display_feature, dropped = _display_feature(feature, evidence_indexes, evidence_table)
+        display_feature, dropped = _display_feature(feature, evidence_indexes, evidence_table,
+                                                     water=layer['kind'] == 'water')
         display_features.append(display_feature)
         dropped_parts += dropped
     output = {
@@ -258,14 +263,29 @@ def build_region(region_id: str, root: Path = ROOT, write: bool = False) -> dict
             (layer for layer in manifest['layers'] if layer['format'] == 'feature_collection'), built):
         if layer['kind'] != 'water':
             continue
-        for feature in display['features']:
+        display_ids = {(feature.get('properties') or {}).get('id') for feature in display['features']}
+        source, _ = _source_feature_collection(manifest, layer, root)
+        for feature in source['features']:
             props = feature.get('properties') or {}
+            if props.get('id') not in display_ids:
+                continue
             for legacy_id in props.get('legacy_ids', []):
                 if legacy_id in aliases:
                     raise ValueError(f'duplicate water legacy ID in display index: {legacy_id}')
                 aliases[legacy_id] = props['id']
     if aliases:
-        index['water_id_aliases'] = aliases
+        alias_path = f"regions/{region_id}/display/water-aliases.json"
+        alias_data = _encoded({'region_id': region_id, 'water_id_aliases': aliases})
+        index['water_aliases'] = {
+            'path': alias_path,
+            'bytes': len(alias_data),
+            'sha256': hashlib.sha256(alias_data).hexdigest(),
+        }
+        artifacts[alias_path] = alias_data
+        if write:
+            target = root / alias_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(alias_data)
     index_data = (_canonical_json(index) + '\n').encode('utf-8')
     artifacts[f"regions/{region_id}/display/index.json"] = index_data
     if write:
