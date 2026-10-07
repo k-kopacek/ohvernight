@@ -20,6 +20,16 @@ class RegionContractTests(unittest.TestCase):
     def load(self, relative):
         return json.loads((V2 / relative).read_text())
 
+    def test_usgs_nhd_scope_strings_match_origin_main(self):
+        expected = {
+            "aspen": "Hydrography retained for setback screening. Feature type, flow permanence and size are not carried. A name does not indicate recreational usefulness, public access or seasonal flow.",
+            "douglas-co": "Named waterbodies and flowlines only, selected by name. A display subset, not complete hydrology. A name does not indicate recreational usefulness, public access, fishing or paddling permission.",
+        }
+        for region_id, scope in expected.items():
+            with self.subTest(region=region_id):
+                manifest = self.load(f"regions/{region_id}/region.json")
+                self.assertEqual(manifest["sources"]["usgs_nhd"]["scope"], scope)
+
     def test_real_regions_validate_and_pin_status_gaps(self):
         manifests = sorted((V2 / "regions").glob("*/region.json"))
         self.assertEqual({p.parent.name for p in manifests}, {"aspen", "douglas-co"})
