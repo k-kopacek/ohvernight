@@ -14,7 +14,10 @@ from lib.water import (  # noqa: E402
     classify, group_flowlines, geodesic_length_km, select_water_features,
     validate_expected_major_rivers, water_display_config,
 )
-from lib.region_contract import _json_pointer  # noqa: E402
+from lib.region_contract import (ContractError, _json_pointer,
+                                 REGION_MANIFEST_SCHEMA,
+                                 validate_m4b_water_layer)  # noqa: E402
+from jsonschema import Draft202012Validator  # noqa: E402
 from build_display import build_water_report  # noqa: E402
 
 
@@ -179,6 +182,109 @@ class WaterGroupingFixtures(unittest.TestCase):
         self.assertEqual(report["douglas-co"]["members_per_expected_river"]["00201759"]["state"],
                          "PENDING_EXTERNAL_SOURCE_REFRESH")
         self.assertEqual(report["douglas-co"]["waterbodies_displayed_at_0_02_sqkm"], 32)
+
+
+class WaterContractFixtures(unittest.TestCase):
+    def setUp(self):
+        self.manifest = {"region": {"id": "fixture"}}
+        self.layer = {"id": "waterways", "kind": "water",
+                      "display": {"path": "regions/fixture/display/waterways.json",
+                                  "select": "streams"}}
+
+    def _connected(self):
+        features = [flow("a", [[0, 0], [0.5, 0]], length_km=20),
+                    flow("b", [[0.5, 0], [1, 0]], length_km=20)]
+        expected = group(features)
+        for feature in features:
+            feature["properties"]["group_id"] = expected["group_assignments"][feature["properties"]["id"]]
+        return features, expected["groups"]
+
+    def test_grouped_R69_to_R73_and_grouped_R61_to_R63_accept_fixture(self):
+        features, display = self._connected()
+        result = validate_m4b_water_layer(self.manifest, self.layer, features, display, CONFIG)
+        self.assertEqual(result["water_groups"], {"nhd-gnis-00000001": ["a", "b"]})
+
+    def test_R70_detects_mutated_member_assignment(self):
+        features, display = self._connected()
+        features[1]["properties"]["group_id"] = "nhd-gnis-foreign"
+        with self.assertRaisesRegex(ContractError, "R70"):
+            validate_m4b_water_layer(self.manifest, self.layer, features, display, CONFIG)
+
+    def test_R71_detects_dropped_group_geometry_line(self):
+        features, display = self._connected()
+        display[0]["geometry"]["coordinates"].pop()
+        with self.assertRaisesRegex(ContractError, "R71"):
+            validate_m4b_water_layer(self.manifest, self.layer, features, display, CONFIG)
+
+    def test_R62_detects_group_evidence_changed_from_canonical_members(self):
+        features, display = self._connected()
+        display[0]["properties"]["evidence"] = {"source_url": "https://wrong.example/"}
+        with self.assertRaisesRegex(ContractError, "R62"):
+            validate_m4b_water_layer(self.manifest, self.layer, features, display, CONFIG)
+
+    def test_R69_detects_unexpected_canal_in_stream_display(self):
+        features, display = self._connected()
+        display.append(copy.deepcopy(display[0]))
+        display[-1]["properties"]["id"] = "canal-display"
+        with self.assertRaisesRegex(ContractError, "R69"):
+            validate_m4b_water_layer(self.manifest, self.layer, features, display, CONFIG)
+
+    def test_R69_detects_fcode_change_that_removes_expected_stream(self):
+        features, display = self._connected()
+        features[0]["properties"]["fcode"] = 46003
+        with self.assertRaisesRegex(ContractError, "R71"):
+            validate_m4b_water_layer(self.manifest, self.layer, features, display, CONFIG)
+
+    def test_R69_body_threshold_is_taken_from_config_not_artifact_metadata(self):
+        layer = {"id": "waterbodies", "kind": "water",
+                 "display": {"path": "regions/fixture/display/waterbodies.json", "select": "bodies"}}
+        below = water_feature("below", area=0.019)
+        at = water_feature("at", area=0.02)
+        # Simulate a stale display generated with a lowered 0.01 km2 threshold.
+        with self.assertRaisesRegex(ContractError, "R69"):
+            validate_m4b_water_layer(self.manifest, layer, [below, at], [below, at], CONFIG)
+
+    def test_R72_rejects_a_reservoir_promoted_from_unknown_to_perennial(self):
+        layer = {"id": "waterbodies", "kind": "water",
+                 "display": {"path": "regions/fixture/display/waterbodies.json", "select": "bodies"}}
+        body = water_feature("reservoir", ftype=436, fcode=43619, name="Reservoir")
+        body["properties"]["hydro_category"] = "perennial"
+        with self.assertRaisesRegex(ContractError, "R72"):
+            validate_m4b_water_layer(self.manifest, layer, [body], [body], CONFIG)
+
+    def test_R73_rejects_name_only_exclusion_and_accepts_empty_review(self):
+        body = water_feature("pond", name="Pond", area=0.001)
+        review = {"exclusions": [{"feature_id": "pond", "reason_code": "duplicate_of",
+                                  "evidence": {"source_url": "https://agency.example/pond",
+                                               "agency": "Agency", "statement": "Pond"},
+                                  "reviewed_at": "2026-10-07T00:00:00Z"}],
+                  "inclusions": []}
+        with self.assertRaisesRegex(ContractError, "R73"):
+            validate_m4b_water_layer(self.manifest, {"id": "waterbodies", "display": {"select": "bodies"}},
+                                     [body], [], CONFIG, review)
+        intermittent = water_feature("intermittent", fcode=39001, name="Pond", area=0.01)
+        inclusion = {"exclusions": [], "inclusions": [{"feature_id": "intermittent",
+                      "reason_code": "reviewed_intermittent_waterbody",
+                      "evidence": {"source_url": "https://agency.example/pond", "agency": "Agency",
+                                   "statement": "Pond is named Pond"},
+                      "reviewed_at": "2026-10-07T00:00:00Z"}]}
+        with self.assertRaisesRegex(ContractError, "R73"):
+            validate_m4b_water_layer(self.manifest, {"id": "waterbodies", "display": {"select": "bodies"}},
+                                     [intermittent], [], CONFIG, inclusion)
+        valid = validate_m4b_water_layer(self.manifest,
+                {"id": "waterbodies", "display": {"select": "bodies"}}, [body], [body], CONFIG,
+                {"exclusions": [], "inclusions": []})
+        self.assertEqual(valid["water_groups"], {})
+
+    def test_manifest_schema_accepts_optional_review_and_water_selector(self):
+        manifest = json.loads((V2 / "regions/aspen/region.json").read_text())
+        water_layer = next(layer for layer in manifest["layers"] if layer["kind"] == "water")
+        water_layer["display"]["select"] = "streams"
+        manifest["water_review"] = {"path": "regions/aspen/water-review.json"}
+        validator = Draft202012Validator(REGION_MANIFEST_SCHEMA)
+        self.assertTrue(validator.is_valid(manifest))
+        water_layer["display"]["select"] = "other"
+        self.assertFalse(validator.is_valid(manifest))
 
     def test_same_gnis_endpoints_form_one_group_and_member_order_is_by_id(self):
         result = group([flow("nhd-b", [[1, 0], [2, 0]]), flow("nhd-a", [[0, 0], [1, 0]])])
