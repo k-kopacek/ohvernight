@@ -118,6 +118,7 @@ The following rules are normative:
 7. **Freshness thresholds are product review policy**, held in data (`max_age_hours`), not agency guarantees.
 8. **Trip-scoped evaluations** carry the `evaluated_trip` for which they were computed. They are historical for any other trip.
 9. **Generated geometry** stays `needs_review: true`, `camping_permission: "unknown"`, and never produces point campsites.
+
 10. **Validation is time-independent.** No contract check depends on the current date. Data getting older must never fail CI.
 11. **Non-federal is not private.** A private classification may be published only where the source itself classifies land as private, and only as the source's generalized classification. Absence of a federal/public polygon, unshaded land, and an unrecognized agency code mean unknown.
 12. **Ownership is not access.** Ownership or managing-agency classification and public access are separate dimensions. Public or agency-managed land does not establish that the public may enter, cross, park, or stay. Private classification does not itself establish access is prohibited.
@@ -168,6 +169,48 @@ method has been applied. `community_report` is not a verification method. An
 unverified community lead must have `verification_method: null`; its origin is
 already preserved by `evidence.source_url`, `evidence.agency`,
 `evidence.reported_at`, and `site_type: "dispersed_lead_unverified"`.
+
+### M4-A water source fields
+
+Water feature collections use the NHD source snapshot and retain the source
+fields below in `fields.source`; `source_id` is the unchanged
+`permanent_identifier` string. Optional source values may be null. Flowlines
+carry `name`, `gnis_id`, `source_id`, `ftype`, `fcode`, `reach_code`,
+`length_km`, `visibility_filter`, `waterbody_source_id` and `source_date`.
+Areas carry `name`, `gnis_id`, `source_id`, `ftype`, `fcode`, `area_sqkm`,
+`visibility_filter` and `source_date`. Waterbodies carry `name`, `gnis_id`,
+`source_id`, `ftype`, `fcode`, `reach_code`, `area_sqkm`, `elevation_m`,
+`visibility_filter` and `source_date`.
+
+Every water feature declares `source_namespace`, `source_layer`,
+`water_class`, `hydro_category` and `legacy_ids` under `fields.derived`.
+Douglas supporting flowlines also declare `support_for` and `support_reason`.
+Aspen keeps `kind` as a compatibility alias for `source_layer` during M4.
+Douglas water layers no longer carry the always-null `manager` property.
+Water classification tables and the 0.02 sq km unnamed-waterbody threshold
+are kept in `pipeline/config/water_display.json`; unknown feature and code
+values map to `other` and `unknown` respectively.
+
+Water feature IDs are `nhd-` plus `source_id` with characters outside
+`[A-Za-z0-9-]` removed. IDs never fall back to service row numbers. Exact
+canonical geometry equality within the same layer associates old IDs with
+new IDs through each feature's distinct `legacy_ids` array. The
+`water-aliases.json` artifact contains exactly the aliases for water features
+present in the current water display artifacts; aliases for undisplayed
+features remain on canonical features only (spec clarification A1). The
+display index carries its path, byte count and SHA-256 digest. The browser does
+not request this artifact by default, so it does not add to initial map bytes.
+
+### M4-A water validation rules
+
+R66 checks the stable source ID, namespace, integer type/code fields, derived
+ID and regional uniqueness. R67 checks the fixed `water_display.json` tables.
+R68 checks canonical legacy ID uniqueness and exact alias coverage in
+`water-aliases.json`, including display targets and agreement with canonical
+data. It verifies the index path, byte count and SHA-256 digest, and rejects
+aliases left inline in `index.json`.
+R75 rejects properties that could state an activity or access claim on a
+water feature; such claims belong in a separate reviewed registry.
 
 ## 5.5 Fact coverage
 

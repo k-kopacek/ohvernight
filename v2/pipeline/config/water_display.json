@@ -1,0 +1,53 @@
+{
+  "water_class_by_ftype": {
+    "460": "stream",
+    "558": "artificial_path",
+    "336": "canal_ditch",
+    "428": "pipeline",
+    "334": "connector",
+    "390": "lake_pond",
+    "436": "reservoir",
+    "466": "swamp_marsh"
+  },
+  "hydro_category_by_fcode": {
+    "46006": "perennial",
+    "39004": "perennial",
+    "39009": "perennial",
+    "39010": "perennial",
+    "39011": "perennial",
+    "39012": "perennial",
+    "43615": "perennial",
+    "43621": "perennial",
+    "46003": "intermittent",
+    "39001": "intermittent",
+    "39005": "intermittent",
+    "39006": "intermittent",
+    "43614": "intermittent",
+    "46007": "ephemeral"
+  },
+  "snapshot_unknown_fcodes": [
+    {"fcode": 33400, "domain_text": "network link"},
+    {"fcode": 33600, "domain_text": "canal or ditch"},
+    {"fcode": 39000, "domain_text": null},
+    {"fcode": 42800, "domain_text": null},
+    {"fcode": 42802, "domain_text": null},
+    {"fcode": 42803, "domain_text": null},
+    {"fcode": 42807, "domain_text": null},
+    {"fcode": 42813, "domain_text": null},
+    {"fcode": 43601, "domain_text": "aquaculture"},
+    {"fcode": 43612, "domain_text": "sewage treatment pond"},
+    {"fcode": 43613, "domain_text": "water storage"},
+    {"fcode": 43619, "domain_text": "construction material only"},
+    {"fcode": 43624, "domain_text": "treatment"},
+    {"fcode": 46600, "domain_text": null},
+    {"fcode": 55800, "domain_text": "modelled centre line through lake or wide river"}
+  ],
+  "reservoir_eligible_fcodes": [43600, 43613, 43615, 43617, 43618, 43619, 43621],
+  "reservoir_ineligible_fcodes": [43601, 43603, 43604, 43605, 43606, 43607, 43608, 43609, 43610, 43611, 43612, 43614, 43623, 43624, 43625, 43626],
+  "unnamed_waterbody_min_area_sqkm": 0.02,
+  "non_claim_hosts": [],
+  "expected_major_rivers": {
+    "aspen": [],
+    "douglas-co": []
+  }
+}

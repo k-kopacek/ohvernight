@@ -5,6 +5,7 @@ from shapely.geometry import shape
 from lib.arcgis_client import query_layer_geojson
 from lib.common import source, properties, clip_geometry
 from lib.evidence import make_evidence, now
+from lib.water import SOURCE_FIELDS, attach_legacy_ids, normalize_feature
 
 REC = 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_RecInfraRecreationSites_02/MapServer'
 def main():
@@ -16,23 +17,32 @@ def main():
     feeds=[('recreation',REC,0,{},['objectid','site_name','site_type']),
            ('land',source('land')['base_url'],1,{'native_json':True,'page_size':1},['objectid','admin_agency_code']),
            ('wilderness',source('wilderness')['base_url'],0,{},['objectid']),
-           ('waterbodies',source('water')['base_url'],12,{'where':"gnis_name IS NOT NULL AND gnis_name <> ''",'page_size':20},['objectid','gnis_name']),
-           ('waterways',source('water')['base_url'],6,{'where':"gnis_name IS NOT NULL AND gnis_name <> ''",'page_size':20},['objectid','gnis_name'])]
+           ('waterbodies',source('water')['base_url'],12,{'where':'1=1','page_size':100},['permanent_identifier','ftype','fcode']),
+           ('waterways',source('water')['base_url'],6,{'where':"gnis_name IS NOT NULL AND gnis_name <> ''",'page_size':100},['permanent_identifier','ftype','fcode'])]
     for key,url,layer,options,required in feeds:
         print('Fetching '+key,flush=True)
         try:
-            fc=query_layer_geojson(url,layer,boundary.bounds,required_fields=required,timeout=40,**options)
+            if key in {'waterbodies','waterways'}:
+                source_layer = 'waterbody' if key == 'waterbodies' else 'flowline'
+                options['out_fields'] = ','.join(sorted({name for name in SOURCE_FIELDS[source_layer].values() if name}))
+            fc=query_layer_geojson(url,layer,boundary.bounds,required_fields=required,timeout=90,**options)
             rows=[];evidence=make_evidence(f'{url}/{layer}','USFS' if key in {'recreation','wilderness'} else 'BLM multi-agency' if key=='land' else 'USGS')
             for row in fc['features']:
                 g=clip_geometry(row['geometry'],boundary)
                 if not g:continue
                 p=properties(row)
-                if key=='recreation':
-                    keep=['site_name','site_type','activity_type_list','seasonal_operational_status','op_status_reason','fee_description','open_season','usda_portal_url','rec1stop_url','important_info','restrictions','water_availability','restroom_availability','directions']
-                    props={k:p.get(k) for k in keep};props['name']=p.get('site_name')
-                else:props={'name':p.get('gnis_name') or p.get('wildernessname') or p.get('admin_agency_code'),'manager':p.get('admin_agency_code')}
-                props.update(id=f"{key}-{p['objectid']}",evidence=evidence)
-                rows.append({'type':'Feature','geometry':g,'properties':props})
+                if key in {'waterbodies','waterways'}:
+                    rows.append(normalize_feature(source_layer, row, g, evidence))
+                else:
+                    if key=='recreation':
+                        keep=['site_name','site_type','activity_type_list','seasonal_operational_status','op_status_reason','fee_description','open_season','usda_portal_url','rec1stop_url','important_info','restrictions','water_availability','restroom_availability','directions']
+                        props={k:p.get(k) for k in keep};props['name']=p.get('site_name')
+                    else:props={'name':p.get('gnis_name') or p.get('wildernessname') or p.get('admin_agency_code'),'manager':p.get('admin_agency_code')}
+                    props.update(id=f"{key}-{p['objectid']}",evidence=evidence)
+                    rows.append({'type':'Feature','geometry':g,'properties':props})
+            if key in {'waterbodies','waterways'}:
+                old = data['layers'].get(key, {}).get('features', [])
+                rows, _, _ = attach_legacy_ids(old, rows)
             if not rows and key != 'wilderness':
                 raise ValueError('Unexpected empty layer; keep previous snapshot')
             data['layers'][key]={'type':'FeatureCollection','features':rows}

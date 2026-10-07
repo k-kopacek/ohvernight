@@ -19,8 +19,10 @@ from shapely.geometry import shape
 
 from lib.common import ROOT
 from fetch_trails import ACTIVITIES
+from lib.water import classify as classify_water
 
 REGION_MANIFEST_SCHEMA = json.loads((ROOT / "schema/region-manifest.schema.json").read_text())
+WATER_DISPLAY_CONFIG = json.loads((ROOT / "config/water_display.json").read_text())
 
 APPROVED_VERIFICATION_METHODS = {
     "arcgis_rest_query", "source_fetch", "rest_api", "html_change_monitor",
@@ -68,8 +70,10 @@ def _display_water(feature):
     geometry = feature.get("geometry") or {}
     name = properties.get("name")
     return (isinstance(name, str) and bool(name.strip()) and
-            ((properties.get("kind") == "flowline" and geometry.get("type") in {"LineString", "MultiLineString"}) or
-             (properties.get("kind") == "waterbody" and geometry.get("type") in {"Polygon", "MultiPolygon"})))
+            (((properties.get("kind") == "flowline" or properties.get("source_layer") == "flowline") and
+              geometry.get("type") in {"LineString", "MultiLineString"}) or
+             ((properties.get("kind") == "waterbody" or properties.get("source_layer") == "waterbody") and
+              geometry.get("type") in {"Polygon", "MultiPolygon"})))
 
 
 def _display_round_path(points, minimum):
@@ -189,8 +193,142 @@ def _resolved_bytes(resolve, path, document):
     return _display_json_bytes(document)
 
 
+def validate_water_alias_file(index, document, raw_bytes, region_id):
+    """Validate the deferred alias artifact reference and return its alias map."""
+    if not isinstance(index, dict) or "water_id_aliases" in index:
+        _error("R68", {"region": {"id": region_id}}, None,
+               "water aliases must not be embedded in display index.json")
+    entry = index.get("water_aliases")
+    expected_path = f"regions/{region_id}/display/water-aliases.json"
+    if (not isinstance(entry, dict) or set(entry) != {"path", "bytes", "sha256"} or
+            entry.get("path") != expected_path):
+        _error("R68", {"region": {"id": region_id}}, None,
+               "display index water alias artifact reference is missing or invalid")
+    if (not isinstance(document, dict) or set(document) != {"region_id", "water_id_aliases"} or
+            document.get("region_id") != region_id or not isinstance(document.get("water_id_aliases"), dict)):
+        _error("R68", {"region": {"id": region_id}}, None, "water alias file is invalid")
+    aliases = document["water_id_aliases"]
+    if any(not isinstance(key, str) or not key or not isinstance(value, str) or not value
+           for key, value in aliases.items()):
+        _error("R68", {"region": {"id": region_id}}, None, "water alias file has invalid IDs")
+    if (entry.get("bytes") != len(raw_bytes) or
+            entry.get("sha256") != hashlib.sha256(raw_bytes).hexdigest()):
+        _error("R68", {"region": {"id": region_id}}, None,
+               "water alias file hash or byte count differs from index")
+    return aliases
+
+
 def _display_error(manifest, layer, detail):
     _error("R60", manifest, layer, detail)
+
+
+def validate_water_contract_data(manifest, canonical, config, aliases, display_features):
+    """Validate M4-A water identity, fixed classifications, aliases and R75."""
+    region = manifest.get("region", {}).get("id", "?")
+    by_legacy = {}
+    ids = set()
+    any_enriched = any(
+        any(key in (feature.get("properties") or {}) for key in
+            ("source_id", "source_namespace", "ftype", "fcode", "water_class", "hydro_category", "legacy_ids"))
+        for layer_id, feature in canonical
+    )
+    if not any_enriched:
+        return
+    current_water_ids = {(feature.get("properties") or {}).get("id") for _, feature in canonical}
+    for layer_id, feature in canonical:
+        props = feature.get("properties") or {}
+        source_id = props.get("source_id")
+        expected_id = None
+        if isinstance(source_id, str) and source_id:
+            sanitized = re.sub(r"[^A-Za-z0-9-]", "", source_id)
+            expected_id = "nhd-" + sanitized if sanitized else None
+        if (not isinstance(source_id, str) or not source_id or props.get("source_namespace") != "usgs_nhd" or
+                isinstance(props.get("ftype"), bool) or not isinstance(props.get("ftype"), int) or
+                isinstance(props.get("fcode"), bool) or not isinstance(props.get("fcode"), int) or
+                props.get("id") != expected_id or expected_id is None or expected_id in ids):
+            _error("R66", manifest, layer_id, "invalid, missing or duplicate source ID, ftype, fcode or derived ID")
+        ids.add(expected_id)
+        try:
+            water_class, hydro_category = classify_water(props["ftype"], props["fcode"], config)
+        except (KeyError, TypeError, ValueError):
+            _error("R67", manifest, layer_id, "water ftype or fcode cannot be classified")
+        if props.get("water_class") != water_class or props.get("hydro_category") != hydro_category:
+            _error("R67", manifest, layer_id, "water_class or hydro_category differs from water_display.json")
+        legacy = props.get("legacy_ids")
+        if (not isinstance(legacy, list) or any(not isinstance(value, str) or not value for value in legacy)
+                or len(legacy) != len(set(legacy))):
+            _error("R68", manifest, layer_id, "legacy_ids must be distinct non-empty strings")
+        for legacy_id in legacy:
+            if legacy_id in current_water_ids:
+                _error("R68", manifest, layer_id,
+                       f"legacy ID {legacy_id} equals the ID of a current water feature")
+            if legacy_id in by_legacy:
+                _error("R68", manifest, layer_id, f"legacy ID {legacy_id} occurs on multiple water features")
+            by_legacy[legacy_id] = props["id"]
+        forbidden = {"fishing", "fish", "boating", "boat", "paddling", "paddleboarding", "swimming", "swim",
+                     "activities", "access", "public_access"} | (RESERVED_PROPERTIES - {"id", "name", "evidence"})
+        if forbidden & set(props):
+            _error("R75", manifest, layer_id, f"water feature carries reserved activity/access properties: {sorted(forbidden & set(props))}")
+    displayed_legacy = {}
+    displayed_ids = set()
+    for layer_id, feature in display_features:
+        props = feature.get("properties") or {}
+        display_id = props.get("id")
+        displayed_ids.add(display_id)
+        for legacy_id, canonical_display_id in by_legacy.items():
+            if canonical_display_id != display_id:
+                continue
+            if legacy_id in displayed_legacy:
+                _error("R68", manifest, layer_id, f"display repeats legacy ID {legacy_id}")
+            displayed_legacy[legacy_id] = display_id
+    if not isinstance(aliases, dict) or set(aliases) != set(displayed_legacy):
+        _error("R68", manifest, None, "water_id_aliases keys do not exactly match displayed legacy IDs")
+    if any(value not in displayed_ids for value in aliases.values()):
+        _error("R68", manifest, None, "water_id_aliases contains a target that is not a display ID")
+    if any(aliases.get(legacy_id) != display_id or by_legacy.get(legacy_id) != display_id
+           for legacy_id, display_id in displayed_legacy.items()):
+        _error("R68", manifest, None, "water_id_aliases does not match canonical legacy mapping")
+
+
+def _validate_water_contract(manifest, resolve):
+    canonical, display = [], []
+    for layer in manifest["layers"]:
+        if layer.get("kind") != "water" or layer.get("format") != "feature_collection":
+            continue
+        document = resolve(layer["path"])
+        features = _json_pointer(document, layer.get("pointer", ""))["features"]
+        canonical.extend((layer["id"], feature) for feature in features)
+        if layer.get("display"):
+            displayed = resolve(layer["display"]["path"]).get("features", [])
+            display.extend((layer["id"], feature) for feature in displayed)
+    if not canonical:
+        return
+    # Older contract fixtures can declare a water layer without the M4 source
+    # identity fields. Only M4-enriched data has the deferred alias artifact.
+    any_enriched = any(
+        any(key in (feature.get("properties") or {}) for key in
+            ("source_id", "source_namespace", "ftype", "fcode", "water_class", "hydro_category", "legacy_ids"))
+        for _, feature in canonical
+    )
+    if not any_enriched:
+        validate_water_contract_data(manifest, canonical, WATER_DISPLAY_CONFIG, {}, display)
+        return
+    index_path = f"regions/{manifest['region']['id']}/display/index.json"
+    index = resolve(index_path) if any(layer.get("display") for layer in manifest["layers"] if layer.get("kind") == "water") else {}
+    aliases = {}
+    if index:
+        alias_entry = index.get("water_aliases")
+        if isinstance(alias_entry, dict) and isinstance(alias_entry.get("path"), str):
+            try:
+                alias_document = resolve(alias_entry["path"])
+            except (KeyError, IndexError, TypeError, ValueError, FileNotFoundError):
+                _error("R68", manifest, None, "water alias file does not resolve")
+            aliases = validate_water_alias_file(
+                index, alias_document, _resolved_bytes(resolve, alias_entry["path"], alias_document),
+                manifest["region"]["id"])
+        else:
+            validate_water_alias_file(index, None, b"", manifest["region"]["id"])
+    validate_water_contract_data(manifest, canonical, WATER_DISPLAY_CONFIG, aliases, display)
 
 
 def _validate_display(manifest, resolve, coverage):
@@ -266,7 +404,9 @@ def _validate_display(manifest, resolve, coverage):
         canonical_document = resolve(declaration["path"])
         canonical_features = _json_pointer(canonical_document, declaration.get("pointer", ""))["features"]
         selected = canonical_features
-        if declaration["kind"] == "water" and any("kind" in (feature.get("properties") or {}) for feature in canonical_features):
+        if declaration["kind"] == "water" and any(
+                {"kind", "source_layer"} & set(feature.get("properties") or {})
+                for feature in canonical_features):
             selected = [feature for feature in canonical_features if _display_water(feature)]
         display_features = display_document.get("features")
         if entry.get("feature_count") != len(display_features) or len(display_features) != len(selected) or entry.get("source_feature_count") != len(canonical_features):
@@ -303,7 +443,12 @@ def _validate_display(manifest, resolve, coverage):
             restored = copy.deepcopy(properties)
             restored["evidence"] = evidence_table[evidence_index]
             canonical_properties = canonical_feature.get("properties", {})
-            if _display_json_bytes(restored) != _display_json_bytes(canonical_properties):
+            expected_properties = canonical_properties
+            if declaration["kind"] == "water":
+                display_fields = {"id", "name", "kind", "source_layer", "evidence"}
+                expected_properties = {key: value for key, value in canonical_properties.items()
+                                       if key in display_fields}
+            if _display_json_bytes(restored) != _display_json_bytes(expected_properties):
                 _error("R62", manifest, layer_id, "display evidence or properties differ from canonical feature")
         if entry.get("dropped_degenerate_parts") != dropped_total:
             _error("R63", manifest, layer_id, "display drop count differs from canonical rounding")
@@ -660,6 +805,7 @@ def validate_region_data(manifest, resolve):
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         _error("R10", manifest, None, str(exc))
     _validate_display(manifest, resolve, coverage)
+    _validate_water_contract(manifest, resolve)
     report = {"region": region_id, "layers": {}, "unrecorded_status_layers": [], "legacy_transport": {}}
     _check_rules(manifest, resolve)
     ids = set()

@@ -98,7 +98,7 @@ Copied from the source without interpretation and listed under each water layer'
 | `reach_code` | `reachcode` / `REACHCODE` | string or null | Not on layer 9 |
 | `length_km` | `lengthkm` | number or null | Flowlines only |
 | `area_sqkm` | `AREASQKM` | number or null | Polygons only |
-| `elevation_ft` | `ELEVATION` | number or null | Waterbodies only; the source unit is recorded in the snapshot document after checking the service |
+| `elevation_m` | `ELEVATION` | number or null | Waterbodies only. Metres, stored unconverted (A3) |
 | `visibility_filter` | `visibilityfilter` / `VISIBILITYFILTER` | integer or null | Kept, not used by any M4 rule |
 | `waterbody_source_id` | `wbarea_permanent_identifier` | string or null | Flowlines only: the waterbody an artificial path runs through |
 | `source_date` | `fdate` / `FDATE` | string or null | The source's feature date, RFC 3339 |
@@ -136,6 +136,14 @@ A waterbody is never grouped. Its display ID is its feature ID.
 ### 7.3 Legacy mapping
 
 Every water feature that existed before M4-A carries its old ID in `legacy_ids`. Old and new features are matched by exact canonical geometry equality within the same layer; a row-number match alone is not accepted. Old features with no match, and new features with none, are listed in the snapshot document.
+
+**A1 — alias scope clarification (coordinator, 2026-10-06).** Canonical `legacy_ids` covers every matched pre-M4 water feature, whether or not it is displayed. `index.json` `water_id_aliases` covers only displayed features: its keys equal the legacy IDs of features in the region's water display artifacts and each value is that feature's current display ID. Legacy IDs for undisplayed canonical features remain on the canonical feature and are omitted from the display index. R68 checks these scopes separately and verifies that every displayed alias agrees with canonical data.
+
+**A2 — alias file and field declarations (coordinator, 2026-10-07, during M4-A).** (1) The alias map is not carried in `index.json`. With it there, Douglas's bytes to "map usable" reached 504,430 against the 500,000 limit. Section 14 already allowed moving it to a separate file; A2 makes that the rule for both regions regardless of index size. The map lives in `regions/<id>/display/water-aliases.json` as `{"region_id": …, "water_id_aliases": {legacy_id: display_id}}`, written by `build_display.py`. `index.json` carries a `water_aliases` entry with the file's path, `sha256` and `bytes`, and no `water_id_aliases` key. The browser does not request the file during load, and it counts toward neither byte budget; the browser check asserts both. Where this document says `index.json` gains `water_id_aliases`, read the alias file. (2) `name` is a reserved property under the data contract and is not listed under `fields.source`; section 6 lists it only to say it is copied from the source. (3) In M4-A the water display artifacts carry only `id`, `name`, the evidence reference, Aspen's `kind` and `source_layer`; the other new properties are canonical only until M4-B rebuilds the water display. (4) An `fcode` that states no hydrographic category is classified `unknown` and is not an error; the build stops only for an `ftype` outside the `water_class` table. The codes observed in the M4-A snapshot are listed in `water_display.json` for the record.
+
+**A3 — elevation unit (coordinator, 2026-10-07, during M4-A review).** This specification first named the waterbody elevation property `elevation_ft` and asked for the source unit to be checked. The check, made in review, shows the NHD `ELEVATION` values are metres: the field's range domain is −400 to 9,000 and the stored values are exact multiples of 0.3048 (Crater Lake 3071.1648). The property is therefore `elevation_m`, with the source value stored unconverted. The evidence is recorded in `docs/research/m4-water/nhd-snapshot.md`. Only 10 waterbodies in each region carry a value, so elevation cannot be used by any M4 rule.
+
+**A4 — legacy IDs survive later fetches (coordinator, 2026-10-07, during M4-A review).** A read-only audit of the first M4-A head showed that running the fetch a second time would replace every feature's pre-M4 ID with its own current ID. No second fetch was run and the committed data was correct; the defect was in the code path a later authorized refresh would use. Fixed in `9de1536` with no data or display change. The rule is: once an ID is in `legacy_ids` it stays there. On any later fetch a feature keeps the legacy IDs of the old feature it matches, where a match is exact canonical geometry within the same layer or the same current ID. If a later fetch gives a matched feature a different current ID, the ID it replaces joins `legacy_ids`, so that array can hold IDs from after M4-A as well as before it. A feature's own current ID is never in its `legacy_ids`. A legacy ID that would land on two features stops the build. R68 additionally rejects a legacy ID equal to the current ID of any water feature in the region. A test pins the committed `legacy_ids` to `docs/research/m4-water/nhd-snapshot-id-map.csv`. This amendment authorizes no refresh.
 
 The browser resolves an ID through the display index: `index.json` gains `water_id_aliases`, an object mapping each legacy ID to the current display ID (a group ID for a grouped segment). No saved state stores water IDs today (verified: no storage key, test or config references one), so the alias map exists for external references and for future use, and costs one small object. Aspen's `kind` property is kept alongside `source_layer` through M4 and removed in a later milestone.
 
@@ -430,7 +438,7 @@ All additive to contract version 1 and documented in `v2/pipeline/docs/data-cont
 |---|---|
 | New source and derived fields on water layers; removal of Douglas `manager` on water | A |
 | `v2/pipeline/config/water_display.json` | A |
-| `index.json` `water_id_aliases` | A (aliases to feature IDs), B (aliases to group IDs) |
+| `display/water-aliases.json` and the `index.json` `water_aliases` entry (A2) | A (aliases to feature IDs), B (aliases to group IDs) |
 | Layer `display.select` (`streams`, `bodies`) and grouped display features; R61–R63 amended for grouped layers | B |
 | `index.json` `water_groups` | B |
 | `water-review.json` and manifest `water_review` path | B |
@@ -444,7 +452,7 @@ New stable rule IDs. Each has at least one negative test on a fixture and, where
 |---|---|---|
 | R66 | Every water feature has non-empty `source_id`, `source_namespace` equal to `usgs_nhd`, integer `ftype` and `fcode`, and `id` equal to `nhd-` plus the sanitised `source_id`. IDs are unique within a region | A |
 | R67 | `water_class` and `hydro_category` equal the values computed from `ftype` and `fcode` by `water_display.json` | A |
-| R68 | `legacy_ids` is an array of distinct non-empty strings; no legacy ID appears on two features; `water_id_aliases` maps every legacy ID to an existing display ID, and nothing else | A, B |
+| R68 | `legacy_ids` is an array of distinct non-empty strings; no legacy ID appears on two features; `water_id_aliases` keys equal the legacy IDs of displayed water features, map to their existing display IDs, agree with canonical data and contain nothing else (A1) | A, B |
 | R69 | The display set of a water layer equals exactly the set computed from canonical data by section 8.2, the threshold, and the reviewed lists. No eligible feature is missing and no ineligible feature is present | B |
 | R70 | Grouping invariants G1–G7, G9, G10 hold for every group; `water_groups` equals the canonical `group_id` membership | B |
 | R71 | A group display feature's geometry equals the ordered, R63-transformed geometry of its drawn members; `member_count` and `length_km` equal the computed values; `name` and `gnis_id` equal the members' | B |
@@ -466,7 +474,8 @@ Byte budgets (enforced in the browser check, as in M3):
 | Bytes with every default-on layer | 4,500,000 (unchanged) |
 | Aspen water display artifacts, total | ≤ 1,134,855 (today's `hydrology.geojson`) |
 | Douglas water display artifacts, total | ≤ 1,887,725 (today's `waterbodies.geojson` + `waterways.geojson`) |
-| `index.json` growth from `water_groups` and `water_id_aliases` | reported; if either region's index exceeds 150,000 bytes the alias and group maps move to a separate file that the browser does not load by default |
+| Alias map | In `water-aliases.json`, outside `index.json`, never requested during load (A2) |
+| `index.json` growth from `water_groups` (M4-B) | reported; if it would push either region over the map-usable budget, the group map moves to a separate file that the browser does not load by default |
 
 Performance: the A10 limits and triggers R-1 to R-5 apply unchanged. M4-B is expected to reduce feature count and bytes; three sessions of the unchanged `measure.mjs` are run at the M4-B head and reported, pass or miss. A miss is reported, not tuned around.
 
