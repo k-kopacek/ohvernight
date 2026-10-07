@@ -75,7 +75,7 @@ Below-threshold unnamed features by `fcode`:
 
 ### Aspen (43 named)
 
-| Name | fcode | hydro_category | Area (ha) | Elevation (ft) | Shown at 0.5 ha | Shown at 2 ha | Reason if not shown |
+| Name | fcode | hydro_category | Area (ha) | Elevation (m) | Shown at 0.5 ha | Shown at 2 ha | Reason if not shown |
 |---|---|---|---|---|---|---|---|
 | American Lake | 39004 | perennial | 1.4 |  | yes | yes |  |
 | Anderson Lake | 39004 | perennial | 3.6 |  | yes | yes |  |
@@ -123,7 +123,7 @@ Below-threshold unnamed features by `fcode`:
 
 ### Douglas (33 named)
 
-| Name | fcode | hydro_category | Area (ha) | Elevation (ft) | Shown at 0.5 ha | Shown at 2 ha | Reason if not shown |
+| Name | fcode | hydro_category | Area (ha) | Elevation (m) | Shown at 0.5 ha | Shown at 2 ha | Reason if not shown |
 |---|---|---|---|---|---|---|---|
 | Allis Reservoir | 39004 | perennial | 2.1 |  | yes | yes |  |
 | Aurora-Rampart Reservoir | 39009 | perennial | 26.9 | 1802.6 | yes | yes |  |
@@ -163,7 +163,7 @@ Below-threshold unnamed features by `fcode`:
 
 Count: 44 (unnamed, displayed at 0.5 ha but not at 2 ha; lakes/ponds perennial or eligible reservoirs; area_sqkm 0.005 to under 0.020). Centroid is the vertex average of the first outer ring. Distance is great-circle to the nearest named waterbody displayed at 2 ha. Sorted by area, descending.
 
-| id | fcode | Area (ha) | Elevation (ft) | Centroid lat | Centroid lon | Km to nearest named displayed waterbody centroid |
+| id | fcode | Area (ha) | Elevation (m) | Centroid lat | Centroid lon | Km to nearest named displayed waterbody centroid |
 |---|---|---|---|---|---|---|
 | nhd-72962706 | 39004 | 1.7 |  | 39.1764 | -106.8032 | 4.37 |
 | nhd-72971650 | 39004 | 1.6 |  | 39.2588 | -106.6654 | 1.75 |
@@ -214,7 +214,7 @@ Count: 44 (unnamed, displayed at 0.5 ha but not at 2 ha; lakes/ponds perennial o
 
 Count in this range: 95; shown below: 30; remaining: 65.
 
-| id | fcode | Area (ha) | Elevation (ft) | Centroid lat | Centroid lon | Km to nearest named displayed waterbody centroid |
+| id | fcode | Area (ha) | Elevation (m) | Centroid lat | Centroid lon | Km to nearest named displayed waterbody centroid |
 |---|---|---|---|---|---|---|
 | nhd-117821201 | 39004 | 1.8 |  | 39.2397 | -104.9591 | 3.16 |
 | nhd-117822909 | 39004 | 1.7 |  | 39.5593 | -105.0181 | 1.20 |
@@ -251,7 +251,7 @@ Count in this range: 95; shown below: 30; remaining: 65.
 
 ### Aspen (of 3)
 
-| id | fcode | Area (ha) | Elevation (ft) | Centroid lat | Centroid lon |
+| id | fcode | Area (ha) | Elevation (m) | Centroid lat | Centroid lon |
 |---|---|---|---|---|---|
 | nhd-72968834 | 39004 | 4.0 |  | 39.2076 | -106.9648 |
 | nhd-72978716 | 39004 | 2.2 |  | 39.0781 | -107.0021 |
@@ -259,7 +259,7 @@ Count in this range: 95; shown below: 30; remaining: 65.
 
 ### Douglas (of 14)
 
-| id | fcode | Area (ha) | Elevation (ft) | Centroid lat | Centroid lon |
+| id | fcode | Area (ha) | Elevation (m) | Centroid lat | Centroid lon |
 |---|---|---|---|---|---|
 | nhd-117822925 | 39004 | 18.2 |  | 39.5037 | -105.0808 |
 | nhd-13e573b1-c56c-49c5-9298-be551598d368 | 39011 | 8.7 |  | 39.5386 | -104.8493 |
@@ -290,13 +290,13 @@ None.
 
 ### Douglas: displayed at 2 ha with an infrastructure-like word in the name
 
-| Name | id | fcode | hydro_category | Area (ha) | Elevation (ft) |
+| Name | id | fcode | hydro_category | Area (ha) | Elevation (m) |
 |---|---|---|---|---|---|
 | West Cherry Creek Detention Number 7 Reservoir | nhd-120656489 | 39004 | perennial | 1.8 |  |
 
 ### Douglas: named waterbodies not displayed because they are intermittent
 
-| Name | id | fcode | Area (ha) | Elevation (ft) |
+| Name | id | fcode | Area (ha) | Elevation (m) |
 |---|---|---|---|---|
 | Cantrill Reservoir | nhd-117821191 | 39001 | 0.2 |  |
 | Franktown Parker FPA-2 Reservoir | nhd-120656264 | 39001 | 4.8 |  |
@@ -316,17 +316,21 @@ None.
 
 ## 7. Possibly useful water lost at 2 ha (objective signals only)
 
-Only two objective signals are used: elevation above 10,000 ft (Aspen only) and area between 1.0 and 2 ha. The lists are examples for the owner to judge. No claim is made that any of them is recreationally useful, accessible or open to the public.
+Only two objective signals are used: elevation above 10,000 ft, which is 3,048 m (Aspen only), and area between 1.0 and 2 ha. The lists are examples for the owner to judge. No claim is made that any of them is recreationally useful, accessible or open to the public.
 
-### Aspen: unnamed perennial, 0.5 to 2 ha, above 10,000 ft: 0
+### Aspen: unnamed perennial, 0.5 to 2 ha, above 10,000 ft (3,048 m): 1
 
-Of the 44 Aspen features in the 0.5 to 2 ha range, 42 have no elevation value and cannot be tested by this signal.
+Of the 44 Aspen features in the 0.5 to 2 ha range, 42 have no elevation value and cannot be tested by this signal. Of the two that have one, `nhd-65879795` is above the line and `nhd-72968808` (2,468.9 m, about 8,100 ft) is below it.
 
-None.
+| id | fcode | Area (ha) | Elevation (m) | Elevation (ft, converted) | Centroid lat | Centroid lon | Km to nearest named displayed waterbody centroid |
+|---|---|---|---|---|---|---|---|
+| nhd-65879795 | 39009 | 1.4 | 3693.0 | 12,116 | 39.0122 | -106.9498 | 1.07 |
+
+**Correction, 2026-10-07.** An earlier version of this report labelled every elevation column in feet and said no feature in this range was above 10,000 ft. The stored values are metres (`elevation_m`, specification amendment A3), so the comparison against 10,000 was made in the wrong unit. The elevation values themselves, and every count, area, byte projection and conclusion outside this subsection, are unchanged. Elevation still does not show that a water is useful, reachable or open to the public.
 
 ### Aspen: unnamed perennial, 1.0 to 2 ha: 10
 
-| id | fcode | Area (ha) | Elevation (ft) | Centroid lat | Centroid lon | Km to nearest named displayed waterbody centroid |
+| id | fcode | Area (ha) | Elevation (m) | Centroid lat | Centroid lon | Km to nearest named displayed waterbody centroid |
 |---|---|---|---|---|---|---|
 | nhd-72962706 | 39004 | 1.7 |  | 39.1764 | -106.8032 | 4.37 |
 | nhd-72971650 | 39004 | 1.6 |  | 39.2588 | -106.6654 | 1.75 |
@@ -341,7 +345,7 @@ None.
 
 ### Douglas: unnamed perennial, 1.0 to 2 ha: 23
 
-| id | fcode | Area (ha) | Elevation (ft) | Centroid lat | Centroid lon | Km to nearest named displayed waterbody centroid |
+| id | fcode | Area (ha) | Elevation (m) | Centroid lat | Centroid lon | Km to nearest named displayed waterbody centroid |
 |---|---|---|---|---|---|---|
 | nhd-117821201 | 39004 | 1.8 |  | 39.2397 | -104.9591 | 3.16 |
 | nhd-117822909 | 39004 | 1.7 |  | 39.5593 | -105.0181 | 1.20 |
