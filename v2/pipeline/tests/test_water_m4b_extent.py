@@ -1,5 +1,5 @@
 import json
-import subprocess
+import csv
 import sys
 import unittest
 from pathlib import Path
@@ -34,16 +34,21 @@ class WaterM4BExtentTests(unittest.TestCase):
                                     feature["properties"].get("id"))
 
     def test_every_preexisting_douglas_water_id_remains_present(self):
-        baseline = json.loads(subprocess.run(
-            ["git", "show", "main:v2/regions/douglas-co/research.json"], cwd=V2.parent,
-            check=True, stdout=subprocess.PIPE, text=True).stdout)
+        baseline_by_layer = {"waterways": set(), "waterbodies": set()}
+        with (V2.parent / "docs/research/m4-water/nhd-snapshot-id-map.csv").open(newline="") as handle:
+            for row in csv.DictReader(handle):
+                if row["region"] != "douglas-co":
+                    continue
+                layer_id = {"flowline": "waterways", "waterbody": "waterbodies"}.get(row["layer"])
+                if layer_id:
+                    baseline_by_layer[layer_id].add(row["new_id"])
         current_ids = {layer: {feature["properties"]["id"] for feature in
                                self.bundle["layers"][layer]["features"]}
                        for layer in ("waterways", "waterbodies")}
         for layer in ("waterways", "waterbodies"):
-            old_ids = {feature["properties"]["id"] for feature in
-                       baseline["layers"][layer]["features"]}
+            old_ids = baseline_by_layer[layer]
             with self.subTest(layer=layer):
+                self.assertTrue(old_ids, f"snapshot CSV has no baseline IDs for {layer}")
                 self.assertTrue(old_ids.issubset(current_ids[layer]))
 
     def test_difference_guard_explains_only_geometry_growth_into_padding(self):
