@@ -139,6 +139,8 @@ Every water feature that existed before M4-A carries its old ID in `legacy_ids`.
 
 **A1 — alias scope clarification (coordinator, 2026-10-06).** Canonical `legacy_ids` covers every matched pre-M4 water feature, whether or not it is displayed. `index.json` `water_id_aliases` covers only displayed features: its keys equal the legacy IDs of features in the region's water display artifacts and each value is that feature's current display ID. Legacy IDs for undisplayed canonical features remain on the canonical feature and are omitted from the display index. R68 checks these scopes separately and verifies that every displayed alias agrees with canonical data.
 
+**A2 — alias file and field declarations (coordinator, 2026-10-07, during M4-A).** (1) The alias map is not carried in `index.json`. With it there, Douglas's bytes to "map usable" reached 504,430 against the 500,000 limit. Section 14 already allowed moving it to a separate file; A2 makes that the rule for both regions regardless of index size. The map lives in `regions/<id>/display/water-aliases.json` as `{"region_id": …, "water_id_aliases": {legacy_id: display_id}}`, written by `build_display.py`. `index.json` carries a `water_aliases` entry with the file's path, `sha256` and `bytes`, and no `water_id_aliases` key. The browser does not request the file during load, and it counts toward neither byte budget; the browser check asserts both. Where this document says `index.json` gains `water_id_aliases`, read the alias file. (2) `name` is a reserved property under the data contract and is not listed under `fields.source`; section 6 lists it only to say it is copied from the source. (3) In M4-A the water display artifacts carry only `id`, `name`, the evidence reference, Aspen's `kind` and `source_layer`; the other new properties are canonical only until M4-B rebuilds the water display. (4) An `fcode` that states no hydrographic category is classified `unknown` and is not an error; the build stops only for an `ftype` outside the `water_class` table. The codes observed in the M4-A snapshot are listed in `water_display.json` for the record.
+
 The browser resolves an ID through the display index: `index.json` gains `water_id_aliases`, an object mapping each legacy ID to the current display ID (a group ID for a grouped segment). No saved state stores water IDs today (verified: no storage key, test or config references one), so the alias map exists for external references and for future use, and costs one small object. Aspen's `kind` property is kept alongside `source_layer` through M4 and removed in a later milestone.
 
 ## 8. Display selection and grouping (D2, D3, D4, D5, D11)
@@ -432,7 +434,7 @@ All additive to contract version 1 and documented in `v2/pipeline/docs/data-cont
 |---|---|
 | New source and derived fields on water layers; removal of Douglas `manager` on water | A |
 | `v2/pipeline/config/water_display.json` | A |
-| `index.json` `water_id_aliases` | A (aliases to feature IDs), B (aliases to group IDs) |
+| `display/water-aliases.json` and the `index.json` `water_aliases` entry (A2) | A (aliases to feature IDs), B (aliases to group IDs) |
 | Layer `display.select` (`streams`, `bodies`) and grouped display features; R61–R63 amended for grouped layers | B |
 | `index.json` `water_groups` | B |
 | `water-review.json` and manifest `water_review` path | B |
@@ -468,7 +470,8 @@ Byte budgets (enforced in the browser check, as in M3):
 | Bytes with every default-on layer | 4,500,000 (unchanged) |
 | Aspen water display artifacts, total | ≤ 1,134,855 (today's `hydrology.geojson`) |
 | Douglas water display artifacts, total | ≤ 1,887,725 (today's `waterbodies.geojson` + `waterways.geojson`) |
-| `index.json` growth from `water_groups` and `water_id_aliases` | reported; if either region's index exceeds 150,000 bytes the alias and group maps move to a separate file that the browser does not load by default |
+| Alias map | In `water-aliases.json`, outside `index.json`, never requested during load (A2) |
+| `index.json` growth from `water_groups` (M4-B) | reported; if it would push either region over the map-usable budget, the group map moves to a separate file that the browser does not load by default |
 
 Performance: the A10 limits and triggers R-1 to R-5 apply unchanged. M4-B is expected to reduce feature count and bytes; three sessions of the unchanged `measure.mjs` are run at the M4-B head and reported, pass or miss. A miss is reported, not tuned around.
 
