@@ -14,14 +14,15 @@
   const a=parse(start),b=parse(end);if(!Number.isFinite(a+b)||b<a||b-a>366*86400000)return null;
   const result=[];for(let t=a;t<=b;t+=86400000){const d=new Date(t);result.push((d.getUTCMonth()+1)*100+d.getUTCDate());}return result;
  }
+ const NOT_INTERPRETED='Source dates not interpreted — see details';
  function season(feature,activity,start,end){
   const dates=days(start,end),r=feature.properties.activities?.[activity]||{};if(!dates)return 'Choose valid trip dates';
   const restricted=windows(r.restricted);if(restricted&&dates.some(d=>covers(restricted,d)))return 'Published restriction overlaps trip';
   if(r.restricted&&!restricted)return 'Restriction needs review';
   const values=[r.managed,r.accpt].filter(Boolean);if(!values.length)return 'Use permission unknown';
-  const ranges=values.map(windows);if(ranges.some(x=>!x))return 'Use dates need review';
-  if(dates.some(d=>!ranges.some(w=>covers(w,d))))return 'Outside published use dates';
-  return r.disc?'Published use discouraged — review':'Within published use dates — closures unchecked';
+  // The publisher does not define managed or accepted dates as a season of use, and dates it does not
+  // list are unknown, so no trip verdict is derived from them. Only restricted dates are compared.
+  return r.disc?'Published use discouraged — review':NOT_INTERPRETED;
  }
  function camping(features){return features.filter(f=>f.properties.site_type==='CAMPGROUND');}
  function gpx(feature){
@@ -29,5 +30,5 @@
   const lines=feature.geometry.type==='LineString'?[feature.geometry.coordinates]:feature.geometry.type==='MultiLineString'?feature.geometry.coordinates:[];
   return '<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="ohvernight" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>'+escape(feature.properties.name||'Trail segment')+'</name><desc>County-clipped source geometry, not a navigable route or access approval.</desc>'+lines.map(line=>'<trkseg>'+line.map(p=>'<trkpt lat="'+Number(p[1])+'" lon="'+Number(p[0])+'"/>').join('')+'</trkseg>').join('')+'</trk></gpx>';
  }
- const api={activities,windows,days,season,camping,gpx};if(typeof module!=='undefined')module.exports=api;scope.ExploreSeasons=api;
+ const api={activities,windows,days,season,camping,gpx,NOT_INTERPRETED};if(typeof module!=='undefined')module.exports=api;scope.ExploreSeasons=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
