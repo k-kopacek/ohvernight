@@ -25,3 +25,24 @@ are stated normatively in [trust-principles.md](trust-principles.md).
    ranking carry meaning; none may suggest more confidence than the data has.
 10. **Expand through shared contracts.** A new region uses the shared regional
     contract and evidence semantics, not one-off app semantics.
+11. **One Explore surface.** Explore is ultimately one geographic discovery
+    surface. Region packages are a data-delivery boundary, not a navigation
+    boundary for the user. See
+    [continuous-explore.md](../architecture/continuous-explore.md).
+12. **Proximity is not a relationship.** Being near something does not
+    establish connection, access, suitability or permission. Trips are
+    assembled from identified things and established links between them, and
+    every link that is not established is shown as unknown. See
+    [adventure-model.md](../architecture/adventure-model.md).
+13. **Not checked is not the same as no restriction.** What Ohvernight has
+    looked for is recorded separately from what it found, and what it has not
+    looked for is visible.
+14. **Intent stays visible.** Location, activities, dates and, later, the
+    vehicle and access profile stay primary and easy to change. Evidence
+    detail and advanced filtering are secondary and are not where core
+    discovery controls live.
+15. **Every milestone answers a product question.** From M5 onward a
+    milestone reports what a user can newly accomplish, measured against the
+    [canonical acceptance scenario](acceptance-scenario-douglas-dirt-bike.md)
+    and the [product scorecard](product-scorecard.md), as well as what
+    capability was added.
