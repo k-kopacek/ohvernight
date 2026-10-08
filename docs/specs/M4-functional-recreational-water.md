@@ -751,3 +751,21 @@ Note for the record: no file under `v2/` renders `sources.<id>.scope`. The scope
 ### 25.7 Corrections to estimates (coordinator)
 
 Section 23's estimates are superseded by measured values from the M4-A data, before the changes above: 71 Aspen and 35 Douglas stream groups; Roaring Fork River 111 drawn members; 46 Aspen and 32 Douglas waterbodies at 2 ha. The selection report states the final numbers. Seven Douglas streams are drawn as two lines because one short segment is coded intermittent; the rule has no exception.
+
+### 25.8 Douglas padded refresh: retrieval strategy (owner decision B8, 2026-10-08)
+
+**A9.** The controlled Douglas padded refresh of 25.1 failed four times between 2026-10-07T20:52Z and 2026-10-08T00:33Z. Each time the service returned its metadata and then timed out or answered HTTP 504 on the layer 6 count query that combined the padded envelope with the server-side filter `gnis_name IS NOT NULL AND gnis_name <> ''`. The attempts are recorded in `docs/research/m4-water/nhd-snapshot.md`. The owner has not authorized another attempt of that query and has authorized a change of retrieval strategy only:
+
+- Object IDs for layer 6 are requested by the padded envelope alone, with no name filter in the object-ID discovery step. Layer 12 was already requested without a name filter and is unchanged.
+- The source records for those object IDs are retrieved through the same fixed-size object-ID paging as before, and every response page is saved before anything is derived from it.
+- The name filter is applied locally and is exactly the filter the server was asked to apply: a flowline is a named feature when its `gnis_name` is not null and is not the empty string. Nothing else is filtered at retrieval. Canonical Douglas `waterways` therefore holds exactly what section 5 already specifies: named flowlines, plus the supporting features of O1.
+- The O1 supporting features are derived locally from the saved layer 6 records with the same rule as before (unnamed features intersecting a 300 m box around a gap of at most 250 m between two parts of one `gnis_id`, kept only when they bridge). No separate supporting query is made.
+- Unnamed flowlines that are neither named nor kept as O1 supporting features are never written to canonical data, to a display artifact or to any committed file. They exist only in the saved response pages, which are not committed. Owner decision O1 is unchanged in effect: the unnamed Douglas flowlines are not kept.
+
+This changes how records are obtained. It does not change the source, the layers, the extent, which features are eligible, the selection and grouping rules, or any geometry. It authorizes one session. If object-ID discovery fails because of service instability, live fetching stops and the result is recorded as `BLOCKED_EXTERNAL: NHD SERVICE CANNOT COMPLETE PADDED DOUGLAS REFRESH`; no other retrieval strategy is tried without owner review. If discovery succeeds and saves its plan, a page that fails may be resumed once, no sooner than 15 minutes later, from the same saved plan; a second failure stops the work.
+
+Before any canonical change the snapshot addendum records: the previous failing query; the new queries; the object-ID counts returned; the record counts after local filtering; that no object ID is duplicated; that source identifiers are stable; and the comparison of the result with every feature already held from M4-A. The South Platte is never inserted or hard-coded; the pending marker is removed only after the river passes the expected-major-rivers check on the retrieved data.
+
+### 25.9 Accepted limitation: long-river tap above zoom 15 (owner decision B9, 2026-10-08)
+
+When the map is above zoom 15 and the fit cap applies to a tapped river, the current zoom is preserved and the map does not move. A river selected near the lower part of the map may therefore sit partly behind the detail sheet. The owner accepts this for M4. No pan function is added to the adapter for this case and the M3 adapter contract is not expanded. Generic camera padding or pan support is revisited in a later milestone only if several interactions justify it.
