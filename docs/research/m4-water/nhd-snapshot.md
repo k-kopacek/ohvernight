@@ -416,3 +416,53 @@ Platte expected-major-river check, or difference classification can be made
 from this failed session. No canonical data, manifest, display artifact,
 selection report, or tracked raw response page was written or changed. Any
 future retrieval attempt requires renewed owner review.
+
+## BLOCKED_EXTERNAL_PARTIAL: NHD TILED REFRESH INCOMPLETE
+
+The owner-approved tiled session at reviewed head cb4d9c5 started 2026-10-08T13:23:11.605408Z and stopped 2026-10-08T14:25:41.693942Z UTC.
+Stop reason: layer 6 level-2 tile 3.1.1 failed twice. Live fetching stopped; no other strategy was tried.
+Endpoint: https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer; intended layers 6 and 12 only. Saved currentVersion 11.3, documentInfo Version 3.3.0; no source data-date was inferred.
+Approved clip remains county.buffer(0.005); full padded envelope: -105.33444166966446,39.1244790184437,-104.65558407460871,39.57119268762119.
+Initial deterministic 2x2 tiles are SW (0), SE (1), NW (2), NE (3), with shared edges computed once. Only a twice-failed tile divides into four children, to a maximum two levels below the initial grid (1/64 of the original envelope).
+Queries use where=1=1, geometryType=esriGeometryEnvelope, inSR=4326, spatialRel=esriSpatialRelIntersects, f=json, and either returnCountOnly=true or returnIdsOnly=true. Geometry is each exact tile envelope below. Every request and response is saved before interpretation in the new ignored v2/pipeline/data/raw/m4b-douglas-water-tiled directory.
+Requests use the committed 180 second count/ID timeout, at most two tile attempts, at least 60 seconds between attempts on the same tile and at least 2 seconds between any requests, without hidden HTTP or ArcGIS retries.
+Discovery requests per layer, including retries: {"6": 31}; total HTTP requests including metadata: 33; hard cap 150 per layer was not reached.
+Saved valid feature pages: 0. No final layer result, staging canonical output, canonical apply, manifest change, display rebuild or selection-report change occurred.
+The earlier four named-filter failures and the fifth full-envelope where=1=1 failure remain recorded above; all nine earlier raw files are byte-identical to their pre-session hashes.
+
+| Layer | Tile | Depth | Exact envelope (WGS84 west,south,east,north) | Outcome | Attempts | Accepted leaf IDs | Attempt outcomes and returned counts |
+|---|---|---:|---|---|---:|---:|---|
+| 6 | 0 | 0 | -105.33444166966446,39.1244790184437,-104.99501287213658,39.34783585303245 | complete | 2 | 20190 | 1: service_failure, UTC 2026-10-08T13:23:14.688249+00:00, count None, IDs unavailable; 2: complete, UTC 2026-10-08T13:27:16.710014+00:00, count 20190, IDs 20190 |
+| 6 | 1 | 0 | -104.99501287213658,39.1244790184437,-104.65558407460871,39.34783585303245 | complete | 1 | 3668 | 1: complete, UTC 2026-10-08T13:28:07.350328+00:00, count 3668, IDs 3668 |
+| 6 | 2 | 0 | -105.33444166966446,39.34783585303245,-104.99501287213658,39.57119268762119 | complete | 1 | 10923 | 1: complete, UTC 2026-10-08T13:30:18.064486+00:00, count 10923, IDs 10923 |
+| 6 | 3 | 0 | -104.99501287213658,39.34783585303245,-104.65558407460871,39.57119268762119 | subdivided | 2 | unavailable | 1: service_failure, UTC 2026-10-08T13:32:11.196462+00:00, count 3141, IDs unavailable; 2: service_failure, UTC 2026-10-08T13:38:41.563187+00:00, count None, IDs unavailable |
+| 6 | 3.0 | 1 | -104.99501287213658,39.34783585303245,-104.82529847337264,39.45951427032682 | subdivided | 2 | unavailable | 1: service_failure, UTC 2026-10-08T13:41:41.834918+00:00, count None, IDs unavailable; 2: service_failure, UTC 2026-10-08T13:45:43.995979+00:00, count None, IDs unavailable |
+| 6 | 3.0.0 | 2 | -104.99501287213658,39.34783585303245,-104.91015567275461,39.403675061679635 | complete | 1 | 252 | 1: complete, UTC 2026-10-08T13:48:44.309798+00:00, count 252, IDs 252 |
+| 6 | 3.0.1 | 2 | -104.91015567275461,39.34783585303245,-104.82529847337264,39.403675061679635 | complete | 1 | 163 | 1: complete, UTC 2026-10-08T13:51:15.412880+00:00, count 163, IDs 163 |
+| 6 | 3.0.2 | 2 | -104.99501287213658,39.403675061679635,-104.91015567275461,39.45951427032682 | complete | 1 | 341 | 1: complete, UTC 2026-10-08T13:56:01.432471+00:00, count 341, IDs 341 |
+| 6 | 3.0.3 | 2 | -104.91015567275461,39.403675061679635,-104.82529847337264,39.45951427032682 | complete | 2 | 176 | 1: service_failure, UTC 2026-10-08T13:58:28.620547+00:00, count None, IDs unavailable; 2: complete, UTC 2026-10-08T14:02:30.597902+00:00, count 176, IDs 176 |
+| 6 | 3.1 | 1 | -104.82529847337264,39.34783585303245,-104.65558407460871,39.45951427032682 | subdivided | 2 | unavailable | 1: service_failure, UTC 2026-10-08T14:02:52.844210+00:00, count None, IDs unavailable; 2: service_failure, UTC 2026-10-08T14:06:54.820801+00:00, count 748, IDs unavailable |
+| 6 | 3.1.0 | 2 | -104.82529847337264,39.34783585303245,-104.74044127399068,39.403675061679635 | complete | 2 | 169 | 1: service_failure, UTC 2026-10-08T14:11:40.957874+00:00, count 169, IDs unavailable; 2: complete, UTC 2026-10-08T14:17:17.678352+00:00, count 169, IDs 169 |
+| 6 | 3.1.1 | 2 | -104.74044127399068,39.34783585303245,-104.65558407460871,39.403675061679635 | EXTERNALLY_BLOCKED | 2 | unavailable | 1: service_failure, UTC 2026-10-08T14:18:28.553870+00:00, count None, IDs unavailable; 2: service_failure, UTC 2026-10-08T14:22:30.524882+00:00, count 198, IDs unavailable |
+| 6 | 3.1.2 | 2 | -104.82529847337264,39.403675061679635,-104.74044127399068,39.45951427032682 | NOT_REQUESTED | 0 | unavailable | none |
+| 6 | 3.1.3 | 2 | -104.74044127399068,39.403675061679635,-104.65558407460871,39.45951427032682 | NOT_REQUESTED | 0 | unavailable | none |
+| 6 | 3.2 | 1 | -104.99501287213658,39.45951427032682,-104.82529847337264,39.57119268762119 | NOT_REQUESTED | 0 | unavailable | none |
+| 6 | 3.3 | 1 | -104.82529847337264,39.45951427032682,-104.65558407460871,39.57119268762119 | NOT_REQUESTED | 0 | unavailable | none |
+
+Layer 6 has 16 tile definitions, 3 subdivided parents and 8 accepted leaves; partial leaf-ID count 35882, partial unique object IDs 35621, partial boundary duplicates 261. These are partial object-ID observations, not complete source-record counts.
+Unresolved tiles and exact envelopes: [{"envelope": [-104.99501287213658, 39.45951427032682, -104.82529847337264, 39.57119268762119], "id": "3.2"}, {"envelope": [-104.82529847337264, 39.45951427032682, -104.65558407460871, 39.57119268762119], "id": "3.3"}, {"envelope": [-104.74044127399068, 39.34783585303245, -104.65558407460871, 39.403675061679635], "id": "3.1.1"}, {"envelope": [-104.82529847337264, 39.403675061679635, -104.74044127399068, 39.45951427032682], "id": "3.1.2"}, {"envelope": [-104.74044127399068, 39.403675061679635, -104.65558407460871, 39.45951427032682], "id": "3.1.3"}].
+
+Layer 12's planned initial grid was wholly NOT_REQUESTED:
+
+| Layer | Tile | Exact envelope | Outcome |
+|---|---|---|---|
+| 12 | 0 | -105.33444166966446,39.1244790184437,-104.99501287213658,39.34783585303245 | NOT_REQUESTED |
+| 12 | 1 | -104.99501287213658,39.1244790184437,-104.65558407460871,39.34783585303245 | NOT_REQUESTED |
+| 12 | 2 | -105.33444166966446,39.34783585303245,-104.99501287213658,39.57119268762119 | NOT_REQUESTED |
+| 12 | 3 | -104.99501287213658,39.34783585303245,-104.65558407460871,39.57119268762119 | NOT_REQUESTED |
+
+Layer 12 was not reached. Named-flowline, O1-support, unnamed-discarded, waterbody and final permanent-identifier counts are not determined; local derivation never ran.
+Retrieval differences, South Platte member count, drawn length/fraction/lines and padding side effects are not evaluated from partial coverage. No missing tile is approximated.
+Canonical Douglas remains 2,359 waterways and 2,135 waterbodies. Canonical mutations (added, lengthened, removed and changed-name features) are all zero because apply did not run; this is not a comparison of complete retrieved data.
+Douglas canonical SHA-256 before/after: 55f0896051697fc52b46add755e89a0a7f9e14f267d5b6884788da58f0165e9d. All Aspen files and every Douglas non-water layer retain their pre-session hashes.
+The ignored staging directory contains no canonical GeoJSON or refresh report. The pending_external_source_refresh marker remains; data integration and Gate 2 are blocked. Independent offline Part E work proceeds; any new live session needs renewed owner review.
