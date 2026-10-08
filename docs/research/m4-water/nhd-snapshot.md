@@ -365,3 +365,54 @@ Douglas; these digests use sorted layer names and canonical JSON layer
 content.
 Douglas currently uses 413,116 bytes to map-usable resources and 3,643,449
 bytes for the default-on total, below the 500,000 and 4,500,000 limits.
+
+## M4-B section 2 — BLOCKED_EXTERNAL: NHD SERVICE CANNOT COMPLETE PADDED DOUGLAS REFRESH
+
+The one coordinator-approved session using the owner-approved object-ID
+retrieval strategy failed before layer 6 object-ID discovery. The layer 6
+count-only request returned repeated HTTP 504 responses and exhausted the
+configured HTTP retries. Live fetching stopped at that failure. No layer 6
+count, object-ID plan, response page, or layer 12 result was obtained; the
+four earlier attempts remain recorded in M4-B section 1 and were not changed.
+
+### Approved strategy and exact request
+
+- Session started `2026-10-08T01:00:35.241139Z` and failed
+  `2026-10-08T01:05:48.775435Z` UTC. This was attempt 1 in the new ignored
+  directory `v2/pipeline/data/raw/m4b-douglas-water-objectid/`; its durable
+  attempt record identifies the prior four-attempt directory as
+  `v2/pipeline/data/raw/m4b-douglas-water/`.
+- The failed query was the layer 6 count-only request at
+  `https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/6/query`
+  with `where=1=1`, `geometry=-105.33444166966446,39.1244790184437,-104.65558407460871,39.57119268762119`,
+  `geometryType=esriGeometryEnvelope`, `inSR=4326`,
+  `spatialRel=esriSpatialRelIntersects`, `f=json`,
+  `returnCountOnly=true`, and a 180 second timeout. The service returned
+  `RetryError: too many 504 error responses`; the count is unavailable.
+- The intended layer 6 object-ID discovery request used the same padded
+  envelope and spatial relation with `where=1=1` and
+  `returnIdsOnly=true`. It was not sent because the count request failed.
+- The layer 6 page request, with the existing outFields and 250 object-ID page
+  size, was not reached. Layer 12's unchanged `where=1=1` count, ID discovery
+  and page requests were not reached. No O1 boxes or local candidates were
+  derived.
+- Service metadata (`currentVersion` 11.3, documentInfo Version 3.3.0) and
+  layer 6 metadata were saved in the new raw directory. No response pages or
+  staging difference report were produced.
+
+The prior four failures all occurred under the original layer 6 named-feature
+count query `where=gnis_name IS NOT NULL AND gnis_name <> ''`; their attempt
+records and saved metadata remain unchanged in the earlier raw directory.
+This session used only the approved change of strategy: layer 6 object IDs by
+the padded envelope with `where=1=1`, exact local name filtering after saved
+pages, and local O1 derivation from those saved layer 6 rows. The local 300 m
+box check is equivalent to the replaced envelope-intersects query because it
+tests the saved source geometry against the same gap-box envelope with the
+same intersection predicate. Layer 12, host, layers, padded clip polygon,
+fields, page size and count/ID timeout policy were unchanged.
+
+No result counts, source-ID comparison, existing-feature comparison, South
+Platte expected-major-river check, or difference classification can be made
+from this failed session. No canonical data, manifest, display artifact,
+selection report, or tracked raw response page was written or changed. Any
+future retrieval attempt requires renewed owner review.
