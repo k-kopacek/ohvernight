@@ -204,10 +204,10 @@ class TiledTests(unittest.TestCase):
             self.assertFalse(state["coverage_complete"])
             self.assertTrue(state["unresolved_tiles"])
 
-    def test_over_limit_and_truncated_responses_are_not_accepted(self):
+    def test_truncated_and_count_mismatched_responses_are_not_accepted(self):
         first = refresh.split_tiles(EXTENT)[0]["extent"]
         for payload in ({"objectIds": [1, 2, 3], "exceededTransferLimit": True},
-                        {"objectIds": list(range(2001))}):
+                        {"objectIds": [1]}):
             def hook(url, params, calls):
                 if params.get("geometry") == ",".join(map(str, first)) and params.get("returnIdsOnly"):
                     return Response(payload)
@@ -218,8 +218,8 @@ class TiledTests(unittest.TestCase):
                 self.assertTrue(all(attempt["outcome"] == "overflow"
                                     for attempt in state["tiles"]["0"]["attempts"]))
 
-    def test_count_disagreement_and_duplicate_ids_are_fatal(self):
-        for payload in ({"objectIds": [1, 1]}, {"objectIds": [1, 2, 3]}):
+    def test_invalid_and_duplicate_ids_are_fatal(self):
+        for payload in ({"objectIds": [1, 1]}, {"objectIds": [1, "2"]}):
             def hook(url, params, calls):
                 if params.get("returnIdsOnly"):
                     return Response(payload)
@@ -313,13 +313,13 @@ class TiledTests(unittest.TestCase):
 
 
     def test_empty_tile_accepts_explicit_null_ids_but_not_missing_ids(self):
-        self.assertEqual(refresh._validated_ids({"objectIds": None}, 0, 2000), [])
+        self.assertEqual(refresh._validated_ids({"objectIds": None}, 0), [])
         with self.assertRaises(RuntimeError):
-            refresh._validated_ids({}, 0, 2000)
+            refresh._validated_ids({}, 0)
 
     def test_count_larger_than_ids_is_truncation_not_accepted(self):
         with self.assertRaises(refresh.TileOverflow):
-            refresh._validated_ids({"objectIds": [1]}, 2, 2000)
+            refresh._validated_ids({"objectIds": [1]}, 2)
 
     def test_partial_resume_skips_completed_tile_after_interruption(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -376,6 +376,24 @@ class TiledTests(unittest.TestCase):
             self.discover(transport)
             with self.assertRaisesRegex(RuntimeError, "plan changed"):
                 refresh.discover_tiles(transport, 6, (-105, 39, -104, 40), INFO)
+
+
+    def test_matching_id_lists_above_record_limit_are_accepted_without_subdivision(self):
+        ids = list(range(INFO["maxRecordCount"] + 1))
+        def hook(url, params, calls):
+            if params.get("returnCountOnly"):
+                return Response({"count": len(ids)})
+            if params.get("returnIdsOnly"):
+                return Response({"objectIds": list(reversed(ids))})
+        with tempfile.TemporaryDirectory() as directory:
+            transport, client, _ = self.transport(Path(directory), hook)
+            actual, state = self.discover(transport)
+            self.assertEqual(actual, ids)
+            self.assertEqual(len(state["tiles"]), 4)
+            self.assertTrue(all(tile["status"] == "complete" for tile in state["tiles"].values()))
+            self.assertEqual(state["duplicates_removed"], 3 * len(ids))
+            self.assertEqual(len(client.calls), 8)
+            self.assertEqual(state["raw_leaf_id_count"], 4 * len(ids))
 
 if __name__ == "__main__":
     unittest.main()

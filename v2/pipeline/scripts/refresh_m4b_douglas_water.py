@@ -254,20 +254,20 @@ def _spatial(extent):
             "spatialRel": "esriSpatialRelIntersects"}
 
 
-def _validated_ids(payload, count, limit):
+def _validated_ids(payload, count):
     ids = payload.get("objectIds")
     if ids is None and count == 0 and "objectIds" in payload:
         ids = []
-    if (payload.get("exceededTransferLimit") or
-            (isinstance(ids, list) and (len(ids) > limit or
-                                      (type(count) is int and len(ids) < count)))):
-        raise TileOverflow("truncated or over-limit tile ID response")
+    if payload.get("exceededTransferLimit"):
+        raise TileOverflow("truncated tile ID response")
     if not isinstance(ids, list) or any(type(ident) is not int for ident in ids):
         raise RuntimeError("tile has no valid object ID list")
     if len(ids) != len(set(ids)):
         raise RuntimeError("duplicate IDs within one tile")
-    if type(count) is not int or count != len(ids):
-        raise RuntimeError("tile count and complete ID set disagree")
+    if type(count) is not int or count < 0:
+        raise RuntimeError("tile count is not a non-negative integer")
+    if count != len(ids):
+        raise TileOverflow("tile count and complete ID set disagree")
     return sorted(ids)
 
 
@@ -276,7 +276,7 @@ def discover_tiles(transport, layer_id, extent, info, *, tile_order=None):
     root = transport.root
     state_path = root / f"layer-{layer_id}-tiles.json"
     expected = {"layer_id": layer_id, "extent": list(extent), "max_depth": MAX_TILE_DEPTH,
-                "request_cap": DISCOVERY_CAP, "id_limit": info["maxRecordCount"]}
+                "request_cap": DISCOVERY_CAP}
     if state_path.exists():
         state = json.loads(state_path.read_text())
         if any(state.get(key) != value for key, value in expected.items()):
@@ -340,7 +340,7 @@ def discover_tiles(transport, layer_id, extent, info, *, tile_order=None):
                 attempt["object_ids"] = responses["ids"].get("objectIds")
                 # Save returned counts/IDs before validating or combining them.
                 write_json(attempt_path, attempt, indent=2)
-                ids = _validated_ids(responses["ids"], attempt["count"], info["maxRecordCount"])
+                ids = _validated_ids(responses["ids"], attempt["count"])
                 attempt.update(outcome="complete", object_ids=ids)
                 tile.update(status="complete", object_ids=ids, count=attempt["count"])
             except (ServiceFailure, TileOverflow) as error:
@@ -405,7 +405,7 @@ def tiled_layer_query(transport, layer_name, layer_id, extent, out_fields):
         raise RuntimeError(f"layer {layer_id} metadata missing required fields")
     oid = next((f["name"] for f in fields if f["type"] == "esriFieldTypeOID"), None)
     if not oid or type(info.get("maxRecordCount")) is not int or info["maxRecordCount"] <= 0:
-        raise RuntimeError(f"layer {layer_id} has no object ID or positive service ID limit")
+        raise RuntimeError(f"layer {layer_id} has no object ID or positive record page limit")
     ids, tiles = discover_tiles(transport, layer_id, extent, info)
     plan_path = root / f"douglas-co-{layer_name}-plan.json"
     expected = {"layer_id": layer_id, "extent": list(extent), "out_fields": out_fields,
@@ -480,7 +480,7 @@ def tiled_layer_query(transport, layer_name, layer_id, extent, out_fields):
                         all(type(ident) is int for ident in payload["objectIds"]) and
                         sorted(payload["objectIds"]) != tile["object_ids"]):
                     raise RuntimeError(f"layer {layer_id} tile {tile['id']} IDs changed during session")
-                current = _validated_ids(payload, tile["count"], info["maxRecordCount"])
+                current = _validated_ids(payload, tile["count"])
                 if current != tile["object_ids"]:
                     raise RuntimeError(f"layer {layer_id} tile {tile['id']} IDs changed during session")
                 tile["verified"] = True
