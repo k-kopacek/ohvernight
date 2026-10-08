@@ -29,9 +29,9 @@ class RegionContractTests(unittest.TestCase):
             value = value[int(token)] if isinstance(value, list) else value[token]
         return value["features"]
 
-    def test_usgs_nhd_scope_strings_match_origin_main(self):
+    def test_usgs_nhd_scope_strings_match_approved_literals(self):
         expected = {
-            "aspen": "Hydrography retained for setback screening. Feature type, flow permanence and size are not carried. A name does not indicate recreational usefulness, public access or seasonal flow.",
+            "aspen": "USGS National Hydrography Dataset, retired by USGS in 2023 and no longer maintained. Flowlines, areas and waterbodies with the source's type and hydrographic category; also used for setback screening. The source does not establish recreation, access or permission, or present-day flow.",
             "douglas-co": "Named waterbodies and flowlines only, selected by name. A display subset, not complete hydrology. A name does not indicate recreational usefulness, public access, fishing or paddling permission.",
         }
         for region_id, scope in expected.items():
