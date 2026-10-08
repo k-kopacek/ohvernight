@@ -165,6 +165,46 @@ class ResumeLater(RuntimeError):
     """One saved record page may resume after the fixed 15 minute interval."""
 
 
+def prepare_session(*, resume_blocked=False):
+    """Consume the one explicit authorization before changing discovery state."""
+    path = RAW_ROOT / "session.json"
+    if (STAGING / "refresh-report.json").exists():
+        raise RuntimeError("staging report already exists; refusing to overwrite a completed session")
+    session = json.loads(path.read_text()) if path.exists() else None
+    if resume_blocked:
+        if session and session.get("resume_number", 0):
+            raise RuntimeError("the one blocked-snapshot resume has already been consumed")
+        if not session or not session.get("blocked"):
+            raise RuntimeError("--resume-blocked requires a previously blocked tiled snapshot")
+        states = [json.loads(p.read_text()) for p in RAW_ROOT.glob("layer-*-tiles.json")]
+        if not any(state.get("blocked") for state in states):
+            raise RuntimeError("blocked snapshot has no externally blocked tile state")
+        session.update(resume_number=1,
+                       resume_started_at_utc=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                       original_blocked=session.pop("blocked"))
+        write_json(path, session, indent=2)
+    elif session and session.get("blocked"):
+        raise ExternalBlocked(session["blocked"])
+    elif session is None:
+        session = {"retrieved_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
+        write_json(path, session, indent=2)
+
+    # Replayable activation after the authorization record is durable. A crash
+    # here can continue without consuming a second resume or resetting its tries.
+    if session.get("resume_number") == 1:
+        for state_path in sorted(RAW_ROOT.glob("layer-*-tiles.json")):
+            state = json.loads(state_path.read_text())
+            if state.get("resume_number") == 1:
+                continue
+            state.update(resume_number=1, original_blocked=state.pop("blocked", None),
+                         original_unresolved_tiles=state.pop("unresolved_tiles", []))
+            for tile in state["tiles"].values():
+                if tile["status"] == "complete":
+                    tile["completed_in"] = "original"
+            write_json(state_path, state, indent=2)
+    return session
+
+
 def split_tiles(extent, parent=None):
     """Compute shared edges once; SW, SE, NW, NE are numbered 0 through 3."""
     west, south, east, north = extent
@@ -181,8 +221,9 @@ class SavedTransport:
     Neither requests' adapter nor ArcGIS get_json may retry behind this ledger.
     Injected clock/sleep/client allow all policy tests to remain network-free.
     """
-    def __init__(self, client, root, *, now=time.time, sleep=time.sleep):
+    def __init__(self, client, root, *, now=time.time, sleep=time.sleep, resume_number=0):
         self.client, self.root = client, Path(root)
+        self.resume_number = resume_number
         self.now, self.sleep = now, sleep
         self.ledger_path = self.root / "request-ledger.json"
         self.ledger = (json.loads(self.ledger_path.read_text()) if self.ledger_path.exists()
@@ -284,11 +325,16 @@ def discover_tiles(transport, layer_id, extent, info, *, tile_order=None):
         if state.get("blocked"):
             raise ExternalBlocked(state["blocked"])
     else:
-        state = {**expected, "tiles": {tile["id"]: {**tile, "depth": 0, "status": "pending",
+        state = {**expected, "resume_number": transport.resume_number,
+                 "tiles": {tile["id"]: {**tile, "depth": 0, "status": "pending",
                                                   "attempts": []}
                                      for tile in split_tiles(extent)}}
         write_json(state_path, state, indent=2)
     base = f"{SERVICE}/{layer_id}/query"
+    resume = transport.resume_number
+    prefix = f"resume-{resume}-" if resume else ""
+    attempts_key = "resume_attempts" if resume else "attempts"
+    completed_in = f"resume-{resume}" if resume else "original"
 
     def visit(tile_id):
         tile = state["tiles"][tile_id]
@@ -298,23 +344,28 @@ def discover_tiles(transport, layer_id, extent, info, *, tile_order=None):
             for child in tile["children"]:
                 visit(child)
             return
+        attempts = tile.setdefault(attempts_key, [])
         for number in range(1, 3):
-            attempt_path = root / f"layer-{layer_id}-tiles" / tile_id / f"attempt-{number}.json"
+            attempt_path = root / f"layer-{layer_id}-tiles" / tile_id / f"{prefix}attempt-{number}.json"
             if attempt_path.exists():
                 attempt = json.loads(attempt_path.read_text())
             else:
-                if number > 1:
-                    transport.pause_until(tile["attempts"][0]["finished_epoch"] + 60)
+                previous = attempts or tile["attempts"]
+                if previous:
+                    transport.pause_until(previous[-1]["finished_epoch"] + 60)
                 attempt = {"tile_id": tile_id, "envelope": tile["extent"], "attempt": number,
                            "timestamp_utc": datetime.fromtimestamp(transport.now(), timezone.utc).isoformat(),
                            "queries": [], "count": None, "object_ids": None, "outcome": "running"}
+                if resume:
+                    attempt["resume_number"] = resume
                 write_json(attempt_path, attempt, indent=2)
             if attempt["outcome"] == "complete":
-                tile.update(status="complete", object_ids=attempt["object_ids"], count=attempt["count"])
+                tile.update(status="complete", object_ids=attempt["object_ids"], count=attempt["count"],
+                            completed_in=completed_in)
                 break
             if attempt["outcome"] in {"service_failure", "overflow"}:
-                if len(tile["attempts"]) < number:
-                    tile["attempts"].append(attempt)
+                if len(attempts) < number:
+                    attempts.append(attempt)
                 continue
             if attempt["outcome"] in {"fatal", "externally_blocked"}:
                 raise RuntimeError(f"tile {tile_id} has stopped: {attempt['error']}")
@@ -326,9 +377,10 @@ def discover_tiles(transport, layer_id, extent, info, *, tile_order=None):
                         attempt["queries"].append(params)
                     write_json(attempt_path, attempt, indent=2)
                     responses[kind] = transport.request(
-                        attempt_path.with_name(f"attempt-{number}-{kind}.json"), base, params,
+                        attempt_path.with_name(f"{prefix}attempt-{number}-{kind}.json"), base, params,
                         COUNT_ID_TIMEOUT, context={"tile_id": tile_id, "envelope": tile["extent"],
-                                                   "attempt": number, "phase": kind}, layer=layer_id)
+                                                   "attempt": number, "phase": kind,
+                                                   "resume_number": resume}, layer=layer_id)
                     if kind == "count":
                         attempt["count"] = responses[kind].get("count")
                         if responses[kind].get("exceededTransferLimit"):
@@ -342,7 +394,8 @@ def discover_tiles(transport, layer_id, extent, info, *, tile_order=None):
                 write_json(attempt_path, attempt, indent=2)
                 ids = _validated_ids(responses["ids"], attempt["count"])
                 attempt.update(outcome="complete", object_ids=ids)
-                tile.update(status="complete", object_ids=ids, count=attempt["count"])
+                tile.update(status="complete", object_ids=ids, count=attempt["count"],
+                            completed_in=completed_in)
             except (ServiceFailure, TileOverflow) as error:
                 attempt.update(outcome="overflow" if isinstance(error, TileOverflow) else "service_failure",
                                error=str(error))
@@ -353,10 +406,10 @@ def discover_tiles(transport, layer_id, extent, info, *, tile_order=None):
             finally:
                 attempt["finished_epoch"] = transport.now()
                 write_json(attempt_path, attempt, indent=2)
-                if len(tile["attempts"]) < number:
-                    tile["attempts"].append(attempt)
+                if len(attempts) < number:
+                    attempts.append(attempt)
                 else:
-                    tile["attempts"][number - 1] = attempt
+                    attempts[number - 1] = attempt
                 write_json(state_path, state, indent=2)
             if tile["status"] == "complete":
                 break
@@ -471,10 +524,13 @@ def tiled_layer_query(transport, layer_name, layer_id, extent, out_fields):
             for tile in sorted(tiles["tiles"].values(), key=lambda item: item["id"]):
                 if tile["status"] != "complete":
                     continue
-                payload = transport.request(root / f"layer-{layer_id}-tiles" / tile["id"] / "verify.json",
+                verify_name = (f"resume-{transport.resume_number}-verify.json"
+                               if transport.resume_number else "verify.json")
+                payload = transport.request(root / f"layer-{layer_id}-tiles" / tile["id"] / verify_name,
                                             base, {**_spatial(tile["extent"]), "f": "json",
                                                    "returnIdsOnly": "true"}, COUNT_ID_TIMEOUT,
-                                            context={"tile_id": tile["id"], "phase": "verify"}, layer=layer_id)
+                                            context={"tile_id": tile["id"], "phase": "verify",
+                                                     "resume_number": transport.resume_number}, layer=layer_id)
                 if (not payload.get("exceededTransferLimit") and
                         isinstance(payload.get("objectIds"), list) and
                         all(type(ident) is int for ident in payload["objectIds"]) and
@@ -495,6 +551,7 @@ def tiled_layer_query(transport, layer_name, layer_id, extent, out_fields):
         plan["final_ids_verified"] = True
         write_json(plan_path, plan, indent=2)
     record = {"region": "douglas-co", "layer_id": layer_id, "where": "1=1",
+              "resume_number": transport.resume_number,
               "outFields": f"{out_fields},{oid}", "extent_wgs84": list(extent),
               "page_size": m4a.PAGE_SIZE, "pages": len(batches), "count": len(features),
               "tiles": tiles, "discovery_requests": transport.ledger["discovery_requests"].get(str(layer_id), 0),
@@ -568,25 +625,17 @@ def _derive_flowlines(raw_features, padded, evidence):
     }
 
 
-def run():
+def run(*, resume_blocked=False):
     if not RAW_ROOT.exists():
         RAW_ROOT.mkdir(parents=True)
     STAGING.mkdir(parents=True, exist_ok=True)
-    if (STAGING / "refresh-report.json").exists():
-        raise RuntimeError("staging report already exists; refusing to overwrite a completed session")
-    session_path = RAW_ROOT / "session.json"
-    if session_path.exists():
-        session = json.loads(session_path.read_text())
-        if session.get("blocked"):
-            raise ExternalBlocked(session["blocked"])
-    else:
-        session = {"retrieved_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
-        write_json(session_path, session, indent=2)
+    session = prepare_session(resume_blocked=resume_blocked)
     retrieved_at = session["retrieved_at_utc"]
     client = requests.Session()
     client.mount("https://", HTTPAdapter(max_retries=0))
     client.headers["User-Agent"] = "ohvernight-data/0.2 (+https://github.com/k-kopacek/ohvernight)"
     transport = SavedTransport(client, RAW_ROOT)
+    transport.resume_number = session.get("resume_number", 0)
     metadata = transport.request(RAW_ROOT / "service-metadata-response.json", SERVICE, {"f": "json"}, 90)
 
     bundle_path = V2 / "regions/douglas-co/research.json"
@@ -665,6 +714,8 @@ def run():
         "service": SERVICE, "service_currentVersion": metadata.get("currentVersion"),
         "service_metadata": {key: metadata.get(key) for key in ("currentVersion", "documentInfo", "serviceDescription")},
         "retrieved_at_utc": retrieved_at,
+        "resume_number": session.get("resume_number", 0),
+        "resume_started_at_utc": session.get("resume_started_at_utc"),
         "prior_failed_attempt_directory": PRIOR_RAW_ROOT.relative_to(ROOT).as_posix(),
         "retrieval_strategy": "tiled padded-envelope object-ID discovery; local exact name filter; local O1 derivation",
         "prior_objectid_attempt_directory": OBJECTID_RAW_ROOT.relative_to(ROOT).as_posix(),
@@ -709,16 +760,20 @@ def run():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", action="store_true", help="start the one authorized live session")
+    parser.add_argument("--resume-blocked", action="store_true",
+                        help="consume the one authorized resume of the blocked tiled snapshot")
     args = parser.parse_args()
     if not args.run:
         raise SystemExit("pass --run to begin the one authorized Douglas-only NHD session")
     RAW_ROOT.mkdir(parents=True, exist_ok=True)
+    session = prepare_session(resume_blocked=args.resume_blocked)
     prior_attempts = sorted(RAW_ROOT.glob("attempt-*.json"))
     attempt_number = len(prior_attempts) + 1
     attempt_path = RAW_ROOT / f"attempt-{attempt_number:04d}.json"
     started_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     attempt = {
         "attempt": attempt_number,
+        "resume_number": session.get("resume_number", 0),
         "started_at_utc": started_at,
         "retrieval_strategy": "tiled padded-envelope object-ID discovery; local exact name filter; local O1 derivation",
         "initial_grid": "2x2; SW, SE, NW, NE; at most two subdivisions",
