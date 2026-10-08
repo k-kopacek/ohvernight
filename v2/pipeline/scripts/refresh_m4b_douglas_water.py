@@ -9,7 +9,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-from shapely.geometry import shape
+from shapely.geometry import box, shape
 
 from build_display import display_water
 from lib.common import ROOT, clip_geometry
@@ -24,8 +24,9 @@ import refresh_m4a_water as m4a  # noqa: E402
 
 V2 = ROOT.parent
 SERVICE = m4a.SERVICE
-RAW_ROOT = ROOT / "data/raw/m4b-douglas-water"
-STAGING = ROOT / "data/processed/m4b-douglas-water"
+PRIOR_RAW_ROOT = ROOT / "data/raw/m4b-douglas-water"
+RAW_ROOT = ROOT / "data/raw/m4b-douglas-water-objectid"
+STAGING = ROOT / "data/processed/m4b-douglas-water-objectid"
 PAD_DEG = 0.005
 COUNT_ID_TIMEOUT = 180
 
@@ -145,6 +146,72 @@ def _query(client, layer, layer_id, extent, where, name):
                                       count_id_timeout=COUNT_ID_TIMEOUT)
 
 
+def _is_named_flowline(raw_feature):
+    """Match the old server predicate exactly: not SQL NULL and not empty text."""
+    properties = {str(key).lower(): value
+                  for key, value in (raw_feature.get("properties") or {}).items()}
+    name = properties.get("gnis_name")
+    return name is not None and name != ""
+
+
+def _derive_flowlines(raw_features, padded, evidence):
+    """Return only named Douglas flowlines and O1 bridges from saved layer-6 rows."""
+    named, unnamed = [], []
+    raw_named_count = 0
+    for row in raw_features:
+        is_named = _is_named_flowline(row)
+        raw_named_count += int(is_named)
+        geometry = row.get("geometry")
+        if not geometry:
+            continue
+        clipped = clip_geometry(geometry, padded)
+        if not clipped:
+            continue
+        feature = normalize_feature("flowline", row, clipped, evidence)
+        (named if is_named else unnamed).append((row, feature))
+
+    named_features = [feature for _, feature in named]
+    gap_boxes = support_gap_boxes(named_features)
+    candidates_by_id = {}
+    # ArcGIS spatialRelIntersects with esriGeometryEnvelope selects a row when
+    # its source geometry intersects this same box; testing the saved geometry
+    # against box(*extent) locally is the identical predicate. The layer-6
+    # object-ID discovery extent already bounded the saved candidate universe.
+    for gnis_id, extent in gap_boxes:
+        query_box = box(*extent)
+        for row, feature in unnamed:
+            if not query_box.intersects(shape(row["geometry"])):
+                continue
+            candidate = dict(feature)
+            candidate["properties"] = dict(feature["properties"])
+            candidate["properties"]["_support_query_gnis"] = gnis_id
+            source_id = candidate["properties"]["source_id"]
+            candidates_by_id[source_id] = candidate
+
+    kept = support_bridges(named_features, list(candidates_by_id.values()))
+    supporting = []
+    support_names = {}
+    for feature, gnis_id in kept:
+        candidate = candidates_by_id[feature["properties"]["source_id"]]
+        candidate["properties"].pop("_support_query_gnis", None)
+        candidate["properties"]["support_for"] = gnis_id
+        candidate["properties"]["support_reason"] = "bridges_named_parts"
+        supporting.append(candidate)
+        support_names[gnis_id] = next((item["properties"].get("name") for item in named_features
+                                       if item["properties"].get("gnis_id") == gnis_id), None)
+    return named_features + supporting, {
+        "named_flowlines": raw_named_count,
+        "named_flowlines_canonical": len(named_features),
+        "supporting_features_kept": len(supporting),
+        "unnamed_flowlines": len(raw_features) - raw_named_count,
+        "unnamed_discarded": len(raw_features) - raw_named_count - len(supporting),
+        "support_gap_count": len(gap_boxes),
+        "supporting_features_by_water_class": dict(sorted(Counter(
+            feature["properties"]["water_class"] for feature in supporting).items())),
+        "supporting_gnis_names": support_names,
+    }
+
+
 def run():
     if not RAW_ROOT.exists():
         RAW_ROOT.mkdir(parents=True)
@@ -176,52 +243,20 @@ def run():
     # Save every primary response page for both layers before deriving rows.
     raw_by_layer = {}
     for source_layer, layer_id, where in (
-            ("flowline", 6, "gnis_name IS NOT NULL AND gnis_name <> ''"),
+            ("flowline", 6, "1=1"),
             ("waterbody", 12, "1=1")):
         raw_fc, record = _query(client, source_layer, layer_id, extent, where, source_layer)
         query_records.append(record)
         raw_by_layer[source_layer] = raw_fc
 
-    for source_layer, layer_id in (("flowline", 6), ("waterbody", 12)):
-        raw_fc = raw_by_layer[source_layer]
-        evidence = evidence6 if layer_id == 6 else evidence12
-        clipped = []
-        for row in raw_fc["features"]:
-            geom = clip_geometry(row["geometry"], padded)
-            if geom:
-                clipped.append(normalize_feature(source_layer, row, geom, evidence))
-        normalized[source_layer] = clipped
-
-    # O1 unnamed supporting features are queried only from fresh gap boxes.
-    named = normalized["flowline"]
-    gap_boxes = support_gap_boxes(named)
-    candidates_by_id = {}
-    raw_support = []
-    for index, (gnis_id, gap_extent) in enumerate(gap_boxes, start=1):
-        raw_fc, record = _query(client, "flowline", 6, gap_extent,
-                                "gnis_name IS NULL OR gnis_name = ''", f"support-{index:04d}")
-        record["support_for_query"] = gnis_id
-        query_records.append(record)
-        raw_support.extend((gnis_id, row) for row in raw_fc["features"])
-    # All O1 supporting response pages are durable before candidate derivation.
-    for gnis_id, row in raw_support:
+    normalized["flowline"], flowline_counts = _derive_flowlines(
+        raw_by_layer["flowline"]["features"], padded, evidence6)
+    waterbodies = []
+    for row in raw_by_layer["waterbody"]["features"]:
         geom = clip_geometry(row["geometry"], padded)
-        if not geom:
-            continue
-        candidate = normalize_feature("flowline", row, geom, evidence6)
-        candidate["properties"]["_support_query_gnis"] = gnis_id
-        candidates_by_id[candidate["properties"]["source_id"]] = candidate
-    kept = support_bridges(named, list(candidates_by_id.values()))
-    support_names = {}
-    for feature, gnis_id in kept:
-        source_id = feature["properties"]["source_id"]
-        candidate = candidates_by_id[source_id]
-        candidate["properties"].pop("_support_query_gnis", None)
-        candidate["properties"]["support_for"] = gnis_id
-        candidate["properties"]["support_reason"] = "bridges_named_parts"
-        normalized["flowline"].append(candidate)
-        support_names[gnis_id] = next((item["properties"].get("name") for item in named
-                                       if item["properties"].get("gnis_id") == gnis_id), None)
+        if geom:
+            waterbodies.append(normalize_feature("waterbody", row, geom, evidence12))
+    normalized["waterbody"] = waterbodies
 
     old_by_source_layer = {"flowline": old_layers["waterways"], "waterbody": old_layers["waterbodies"]}
     diff = {}
@@ -259,15 +294,24 @@ def run():
         "service": SERVICE, "service_currentVersion": metadata.get("currentVersion"),
         "service_metadata": {key: metadata.get(key) for key in ("currentVersion", "documentInfo", "serviceDescription")},
         "retrieved_at_utc": retrieved_at,
-        "scope": "Douglas water only; named flowlines plus O1 supporting queries; all waterbodies",
+        "prior_failed_attempt_directory": PRIOR_RAW_ROOT.relative_to(ROOT).as_posix(),
+        "retrieval_strategy": "padded-envelope object-ID discovery; local exact name filter; local O1 derivation",
+        "scope": "Douglas water only; named flowlines plus locally derived O1 supporting features; all waterbodies",
+        "support_box_predicate": (
+            "Locally test each saved layer-6 geometry against the same 300 m gap-box envelope. "
+            "This is equivalent to the replaced esriGeometryEnvelope / esriSpatialRelIntersects "
+            "query; saved rows were first bounded by the padded-envelope object-ID query."
+        ),
         "extent_padding_deg": PAD_DEG, "clip_bounds_wgs84": list(padded.bounds),
         "county_bounds_wgs84": list(coverage.bounds), "queries": query_records,
         "count_id_timeout_seconds": COUNT_ID_TIMEOUT,
-        "support_gap_count": len(gap_boxes), "supporting_feature_count": len(kept),
-        "supporting_candidate_count_unique": len(candidates_by_id),
-        "supporting_features_by_water_class": dict(sorted(Counter(
-            feature["properties"]["water_class"] for feature, _ in kept).items())),
-        "supporting_gnis_names": support_names,
+        "local_filter_counts": {**flowline_counts,
+                                 "waterbodies": len(raw_by_layer["waterbody"]["features"]),
+                                 "waterbodies_canonical": len(waterbodies)},
+        "support_gap_count": flowline_counts["support_gap_count"],
+        "supporting_feature_count": flowline_counts["supporting_features_kept"],
+        "supporting_features_by_water_class": flowline_counts["supporting_features_by_water_class"],
+        "supporting_gnis_names": flowline_counts["supporting_gnis_names"],
         "before_sha256": before_hash, "preservation_hashes_before": preserve_before,
         "differences": diff,
         "legacy_ids_missing": legacy_missing, "legacy_ids_duplicate": legacy_duplicated,
@@ -304,11 +348,13 @@ def main():
     attempt = {
         "attempt": attempt_number,
         "started_at_utc": started_at,
+        "retrieval_strategy": "padded-envelope object-ID discovery; local exact name filter; local O1 derivation",
+        "prior_failed_attempt_directory": PRIOR_RAW_ROOT.relative_to(ROOT).as_posix(),
         "service": SERVICE,
         "layers": [6, 12],
         "extent_padding_deg": PAD_DEG,
         "primary_queries": [
-            {"layer": 6, "where": "gnis_name IS NOT NULL AND gnis_name <> ''",
+            {"layer": 6, "where": "1=1",
              "outFields": f"{m4a.OUT_FIELDS['flowline']},OBJECTID", "extent_wgs84": None,
              "page_size": m4a.PAGE_SIZE, "count_id_timeout_seconds": COUNT_ID_TIMEOUT},
             {"layer": 12, "where": "1=1",
