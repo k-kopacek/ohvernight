@@ -164,7 +164,8 @@ and every group, claim, exclusion and alias survive the mapping.
   jurisdiction carry an identity that other features can be related to;
   access stays unknown where it is not established; land keeps stable
   identity for later relationships to overnight and activity features; and
-  evidence coverage records which questions were checked for an area.
+  evidence coverage records which questions were checked for an area (concept
+  only; shape set by that milestone's specification).
 
 ## M6 — Trails / COTREX
 
@@ -189,7 +190,8 @@ and every group, claim, exclusion and alias survive the mapping.
   activities and motorized restrictions as claims or unknown; trailhead and
   staging identity where a source provides it; approach and access
   relationships that are source-backed, reviewed or unknown, never inferred
-  from distance; restriction evidence coverage; source reconciliation; and
+  from distance; restriction evidence coverage (concept only; shape set by
+  that milestone's specification); source reconciliation; and
   trail identity that survives a jurisdiction or region-package boundary.
 
 ## M7 — Camping / Dispersed Camping
@@ -204,8 +206,9 @@ and every group, claim, exclusion and alias survive the mapping.
   reservation requirements as claims; vehicle and access implications as
   constraints on routes; relationships to activities and trailheads only
   where established (geographic proximity is not evidence of practical
-  camping suitability); evidence coverage; freshness and seasonality; and
-  enough independent options that a backup can be offered.
+  camping suitability); evidence coverage (concept only; shape set by that
+  milestone's specification); freshness and seasonality; and a backup option
+  identified where an independent one exists, and its absence stated.
 
 ## M8 — Choose Your Adventure
 
@@ -224,19 +227,21 @@ and every group, claim, exclusion and alias survive the mapping.
   M7, following the trip-intent and adventure-candidate model in
   [adventure-model.md](docs/architecture/adventure-model.md). It is not
   filters on top of the map. Every candidate lists its unresolved unknowns.
-  M8 is the first milestone that needs
-  [continuous geographic Explore](docs/architecture/continuous-explore.md).
+  Whether
+  [continuous geographic Explore](docs/architecture/continuous-explore.md) is
+  implemented in or before M8 is the owner's decision when M8 is specified.
 
 ## Constraints that apply to every milestone
 
 - [Trust principles](docs/product/trust-principles.md) and the
   [regional data contract](v2/pipeline/docs/data-contract.md).
 - [Product principles](docs/product/product-principles.md).
-- From M5 onward, and at the close of M4 for the baseline, each milestone
-  ends with the product review in
+- From M5 onward each milestone ends with the product review in
   [product-scorecard.md](docs/product/product-scorecard.md), including a run
   of the
   [canonical Douglas dirt-bike scenario](docs/product/acceptance-scenario-douglas-dirt-bike.md).
+  One baseline run happens after M4 closes. It is not an M4 merge gate and
+  does not change "M4 is complete with A, B and C".
 - [Agent stack and workflow](docs/architecture/agent-stack.md), including
   human-approved merge authority.
 

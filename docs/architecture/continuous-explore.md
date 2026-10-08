@@ -21,19 +21,24 @@ place to them.
 
 - One shared Explore shell (`v2/explore/`) loads exactly one region per page
   load, chosen by the `region` query parameter, with `aspen` as the default.
-- The region loader refuses any path outside the active region's directory.
-  That is a deliberate M3 safety property, not an oversight.
+- The region loader refuses another region's directory, parent-relative,
+  absolute and remote paths, and requires display artifacts to sit in the
+  active region's `display/` directory. Some Aspen canonical files still live
+  at the `v2/` root. The restriction is a deliberate M3 safety property, not
+  an oversight.
 - Each region has its own manifest, coverage statement, fact coverage, display
   index and byte budgets. Search covers the active region only.
-- Source data is clipped at a regional boundary. Douglas water is the single
-  approved exception (kept to about 500 m beyond the county line so a river on
-  the boundary is not cut into pieces).
-- Outside the active region the map shows a basemap and nothing else. The
-  coverage statement says that nothing is known there; the map itself does not
-  mark where coverage ends.
-- Feature IDs are unique within a region. Nothing guarantees uniqueness across
-  regions, and nothing links a feature in one region to the same real-world
-  thing in another.
+- Source data is clipped at a regional boundary. Aspen water extends about
+  500 m beyond its extent. The same padding is approved for Douglas water in
+  M4-B (PLANNED, not on `main`), so that a river on the county line is not
+  cut into pieces.
+- Outside the active region the map shows a basemap and a thin dashed coverage
+  outline. Nothing distinguishes "not covered" from "covered, nothing here"
+  per kind of fact.
+- Feature IDs are unique across a region's feature-collection layers
+  (contract rule R21). Nothing guarantees uniqueness across regions, and
+  nothing links a feature in one region to the same real-world thing in
+  another.
 
 ## Desired future behaviour (PLANNED, no specification yet)
 
@@ -42,7 +47,9 @@ place to them.
 - Data loaded lazily as the user searches or pans. No requirement to preload
   all of Colorado.
 - Results that cross region and jurisdiction boundaries: a trail, river or
-  management unit is one result even when two packages each hold part of it.
+  management unit is one result even when two packages each hold part of it,
+  where source identifiers establish that it is one thing; never on geometry
+  or name alone.
 - A clear, on-map indication of where Ohvernight has coverage and where it has
   none.
 - No "Aspen app" versus "Douglas app" mental model.
@@ -76,7 +83,9 @@ These are constraints on later design, not a design.
    needs one user-facing identity (the M4 grouping work and the M6 trail
    identity requirement are the first two cases).
 4. **Clipping becomes a display concern, not an identity concern.** A feature
-   cut at a package edge is one feature with two delivered parts.
+   cut at a package edge is one feature with two delivered parts, where source
+   identifiers establish that the parts are the same feature; never on
+   geometry or name alone.
 5. **Budgets are per view, not per region.** The M3 byte and time budgets were
    set for one region at a time; a panning surface needs budgets for what is
    on screen and for what is retained in memory.
@@ -96,7 +105,9 @@ These are constraints on later design, not a design.
   [ADR-006](decisions/ADR-006-explore-rendering-architecture.md) and its
   reopening triggers are unchanged. A continuous surface is a likely moment
   for those triggers to be evaluated; it is not itself a decision to change
-  renderer.
+  renderer. This document is PLANNED direction without an approved
+  specification. It is not the approved product requirement of R-4; R-4 is
+  met when a specification requiring a multi-region view is approved.
 - No trust rule is relaxed to make a cross-region result look complete.
 
 ## Likely milestone
@@ -104,8 +115,8 @@ These are constraints on later design, not a design.
 - **M5 to M7** must not make this harder: each new source keeps stable,
   namespace-safe identities and does not assume that a region boundary is a
   real-world boundary.
-- **M8** is the first milestone that needs it, because a trip candidate near a
-  boundary is wrong if it can only see one side.
+- **M8** is the first milestone likely to need it, because a trip candidate
+  near a boundary is wrong if it can only see one side.
 - **Regional expansion after M8** is where a third and later region make the
   one-region-per-page model untenable.
 

@@ -25,6 +25,11 @@ are stated normatively in [trust-principles.md](trust-principles.md).
    ranking carry meaning; none may suggest more confidence than the data has.
 10. **Expand through shared contracts.** A new region uses the shared regional
     contract and evidence semantics, not one-off app semantics.
+
+Principles 11 to 15 state direction recorded 2026-10-08. The linked documents
+label what is CURRENT, PLANNED and FUTURE; none of these describes shipped
+behaviour unless that document says so.
+
 11. **One Explore surface.** Explore is ultimately one geographic discovery
     surface. Region packages are a data-delivery boundary, not a navigation
     boundary for the user. See
@@ -40,7 +45,8 @@ are stated normatively in [trust-principles.md](trust-principles.md).
 14. **Intent stays visible.** Location, activities, dates and, later, the
     vehicle and access profile stay primary and easy to change. Evidence
     detail and advanced filtering are secondary and are not where core
-    discovery controls live.
+    discovery controls live. Unknown, restriction and not-checked states are
+    not evidence detail; they stay with the result.
 15. **Every milestone answers a product question.** From M5 onward a
     milestone reports what a user can newly accomplish, measured against the
     [canonical acceptance scenario](acceptance-scenario-douglas-dirt-bike.md)
