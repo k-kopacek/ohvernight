@@ -1,5 +1,7 @@
 # Architecture audit — reconstructed durable record
 
+**Update, 2026-10-07:** the original audit was later recovered and is kept unchanged in [2026-10-01-architecture-audit.md](2026-10-01-architecture-audit.md). This record stays as the disposition of its findings.
+
 **This is not a verbatim copy of the original audit.** The original
 architecture audit was written outside the repository and was not preserved
 (see the M2 specification, section 1). This record is reconstructed from what
