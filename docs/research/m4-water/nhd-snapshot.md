@@ -270,8 +270,10 @@ The owner-authorized Douglas padded-water refresh did not obtain any feature
 response pages. The only saved source response is the service metadata; four
 attempts reached read-timeout or repeated HTTP 504 failures before a complete
 layer-6 count and object-ID plan could be saved. Attempt 3 was the final
-attempt under the initial owner decision; the owner later authorized attempt 4
-as one controlled retry. No M4-A response page was used, and canonical data,
+attempt under the initial owner decision. Attempt 4 was one controlled retry
+scheduled by the coordinator under the owner's instruction that a later retry
+may be made, with the same query policy, when the work reaches the point that
+needs the padded data. No M4-A response page was used, and canonical data,
 manifests and display artifacts were not changed.
 
 ### Service and query scope
@@ -305,7 +307,7 @@ manifests and display artifacts were not changed.
 | 1 — metadata response saved at `2026-10-07T20:52:11.910813Z`; the feature query followed immediately | Layer 6 count-only query with the intended named-flowline where-clause and padded envelope | Read timeout after the 90 second timeout policy and configured retries; failed, observed by the worker at `2026-10-07T21:01:17Z`. No count, ID plan or feature page was saved. |
 | 2 — started `2026-10-07T21:03:10.791689Z` | Layer 6 metadata endpoint `/6?f=json` | Repeated HTTP 504 responses; failed at `2026-10-07T21:03:24.193607Z`, before the count query. |
 | 3 — started `2026-10-07T21:21:13.336794Z` | Layer 6 count-only query with the same named-flowline where-clause and padded envelope; the layer-6 metadata response was saved | Repeated HTTP 504 responses; failed at `2026-10-07T21:21:29.489422Z`. This was the final attempt under the initial owner decision. |
-| 4 — started `2026-10-08T00:27:09.546312Z` | Layer 6 count-only query: `where=gnis_name IS NOT NULL AND gnis_name <> ''`, envelope `-105.33444166966446,39.1244790184437,-104.65558407460871,39.57119268762119` | Repeated HTTP 504 responses (`RetryError: too many 504 error responses`); failed at `2026-10-08T00:33:12.832201Z`, before the count query completed. This was the one later owner-authorized retry. |
+| 4 — started `2026-10-08T00:27:09.546312Z` | Layer 6 count-only query: `where=gnis_name IS NOT NULL AND gnis_name <> ''`, envelope `-105.33444166966446,39.1244790184437,-104.65558407460871,39.57119268762119` | Repeated HTTP 504 responses (`RetryError: too many 504 error responses`); failed at `2026-10-08T00:33:12.832201Z`, before the count query completed. This was the one controlled retry scheduled by the coordinator under the owner's retry-later instruction. |
 
 The saved service metadata and all four attempt records remain under the
 ignored `v2/pipeline/data/raw/m4b-douglas-water/` directory. No count or ID
