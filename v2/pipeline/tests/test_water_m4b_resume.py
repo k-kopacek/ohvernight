@@ -206,12 +206,15 @@ class BlockedResumeTests(unittest.TestCase):
                 if 'objectIds' in params and sum('objectIds' in c[2] for c in calls)==1:
                     raise requests.Timeout('page fixture timeout')
             transport,client=self.resumed(root,clock,fail)
-            with self.assertRaises(refresh.ResumeLater):
-                refresh.tiled_layer_query(transport,'flowline',6,fixture.EXTENT,refresh.m4a.OUT_FIELDS['flowline'])
+            refresh.tiled_layer_query(transport,'flowline',6,fixture.EXTENT,refresh.m4a.OUT_FIELDS['flowline'])
+            pages=[c for c in client.calls if 'objectIds' in c[2]]
+            self.assertEqual(len(pages),2)
+            self.assertGreaterEqual(pages[1][0]-pages[0][0],900)
             session_before=(root/'session.json').read_bytes()
             self.assertEqual(self.prepare(root,False)['resume_number'],1)
-            clock.sleep(900)
+            before=len(client.calls)
             refresh.tiled_layer_query(transport,'flowline',6,fixture.EXTENT,refresh.m4a.OUT_FIELDS['flowline'])
+            self.assertEqual(len(client.calls),before)
             self.assertEqual((root/'session.json').read_bytes(),session_before)
 
     def test_new_layer_completion_origin_survives_active_session_continuation(self):

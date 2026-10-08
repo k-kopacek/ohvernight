@@ -36,6 +36,7 @@ PAD_DEG = 0.005
 COUNT_ID_TIMEOUT = 180
 DISCOVERY_CAP = 150
 MAX_TILE_DEPTH = 2
+PAGE_RETRY_POLICY = {"version": 1, "max_attempts": 4, "min_retry_seconds": 900}
 
 
 def write_json(path: Path, value, *, indent=None):
@@ -165,7 +166,7 @@ class ResumeLater(RuntimeError):
     """One saved record page may resume after the fixed 15 minute interval."""
 
 
-def prepare_session(*, resume_blocked=False):
+def prepare_session(*, resume_blocked=False, now=time.time):
     """Consume the one explicit authorization before changing discovery state."""
     path = RAW_ROOT / "session.json"
     if (STAGING / "refresh-report.json").exists():
@@ -184,7 +185,17 @@ def prepare_session(*, resume_blocked=False):
                        original_blocked=session.pop("blocked"))
         write_json(path, session, indent=2)
     elif session and session.get("blocked"):
-        raise ExternalBlocked(session["blocked"])
+        legacy_page_block = False
+        for plan_path in sorted(RAW_ROOT.glob("douglas-co-*-plan.json")):
+            plan = json.loads(plan_path.read_text())
+            for number in plan.get("failed_pages", {}):
+                if session["blocked"] == f"layer {plan['layer_id']} page {number} failed twice":
+                    legacy_page_block = True
+        if not legacy_page_block:
+            raise ExternalBlocked(session["blocked"])
+        migrate_page_policy_session(session, path, now())
+        if session.get("blocked"):
+            raise ExternalBlocked(session["blocked"])
     elif session is None:
         session = {"retrieved_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
         write_json(path, session, indent=2)
@@ -202,6 +213,7 @@ def prepare_session(*, resume_blocked=False):
                 if tile["status"] == "complete":
                     tile["completed_in"] = "original"
             write_json(state_path, state, indent=2)
+    migrate_page_policy_session(session, path, now())
     return session
 
 
@@ -257,6 +269,11 @@ class SavedTransport:
                 response = self.client.get(url, params=params, timeout=timeout, allow_redirects=False)
                 record.update(status_code=response.status_code, response_text=response.text,
                               outcome="received")
+                if context and "page" in context:
+                    try:
+                        _request_payload(record, path)
+                    except ServiceFailure as error:
+                        record.update(outcome="service_failure", error=str(error))
             except (requests.Timeout, requests.ConnectionError) as error:
                 record.update(outcome="service_failure", error=str(error))
             except requests.RequestException as error:
@@ -266,27 +283,31 @@ class SavedTransport:
                 write_json(path, record, indent=2)
                 self.ledger["last_finished"] = self.now()
                 write_json(self.ledger_path, self.ledger, indent=2)
-        if record["outcome"] in {"interrupted", "service_failure"}:
-            raise ServiceFailure(record.get("error", "request interrupted; response unknown"))
-        if record["outcome"] == "fatal":
-            raise RuntimeError(record["error"])
-        status = record["status_code"]
-        if 500 <= status <= 599:
-            raise ServiceFailure(f"HTTP {status}")
-        if not 200 <= status < 300:
-            raise RuntimeError(f"HTTP {status}: {url}")
-        try:
-            value = json.loads(record["response_text"])
-        except ValueError as error:
-            raise RuntimeError(f"invalid JSON: {path}") from error
-        if not isinstance(value, dict):
-            raise RuntimeError(f"response is not an object: {path}")
-        if "error" in value:
-            code = value["error"].get("code") if isinstance(value["error"], dict) else None
-            if isinstance(code, int) and 500 <= code <= 599:
-                raise ServiceFailure(f"ArcGIS {value['error']}")
-            raise RuntimeError(f"ArcGIS {value['error']}")
-        return value
+        return _request_payload(record, path)
+
+
+def _request_payload(record, path):
+    if record["outcome"] in {"interrupted", "service_failure"}:
+        raise ServiceFailure(record.get("error", "request interrupted; response unknown"))
+    if record["outcome"] == "fatal":
+        raise RuntimeError(record["error"])
+    status = record["status_code"]
+    if 500 <= status <= 599:
+        raise ServiceFailure(f"HTTP {status}")
+    if not 200 <= status < 300:
+        raise RuntimeError(f"HTTP {status}: {record['url']}")
+    try:
+        value = json.loads(record["response_text"])
+    except ValueError as error:
+        raise RuntimeError(f"invalid JSON: {path}") from error
+    if not isinstance(value, dict):
+        raise RuntimeError(f"response is not an object: {path}")
+    if "error" in value:
+        code = value["error"].get("code") if isinstance(value["error"], dict) else None
+        if isinstance(code, int) and 500 <= code <= 599:
+            raise ServiceFailure(f"ArcGIS {value['error']}")
+        raise RuntimeError(f"ArcGIS {value['error']}")
+    return value
 
 
 def _spatial(extent):
@@ -448,6 +469,175 @@ def discover_tiles(transport, layer_id, extent, info, *, tile_order=None):
         raise
 
 
+def _page_params(plan, number):
+    start = (number - 1) * plan["page_size"]
+    batch = plan["object_ids"][start:start + plan["page_size"]]
+    return batch, {"f": "geojson", "objectIds": ",".join(map(str, batch)),
+                   "outFields": f"{plan['out_fields']},{plan['object_id_field']}", "outSR": 4326,
+                   "returnGeometry": "true", "returnZ": "false", "returnM": "false"}
+
+
+def reconcile_page_policy(plan, plan_path, now):
+    """Immutable request files, including interrupted ones, own attempt counts.
+
+    Rebuild after every process start, so a crash before the plan write cannot
+    drop a queue entry or reissue a spent request. Migration changes only the plan.
+    """
+    if plan.get("page_retry_policy") not in (None, PAGE_RETRY_POLICY):
+        raise RuntimeError("saved page retry policy changed")
+    if not plan.get("page_retry_policy"):
+        plan["page_retry_policy"] = dict(PAGE_RETRY_POLICY)
+        plan["page_policy_migrated_at_utc"] = datetime.fromtimestamp(now, timezone.utc).isoformat()
+    pages_dir = plan_path.with_name(plan_path.name.replace("-plan.json", "-pages"))
+    total = (len(plan["object_ids"]) + plan["page_size"] - 1) // plan["page_size"]
+    old_failures = plan.get("failed_pages", {})
+    old_states = plan.get("page_attempts", {})
+    states, queue, complete = {}, {}, []
+    for number in range(1, total + 1):
+        batch, params = _page_params(plan, number)
+        paths = sorted(pages_dir.glob(f"request-{number:04d}-*.json"),
+                       key=lambda path: int(path.stem.rsplit("-", 1)[1]))
+        attempts = [int(path.stem.rsplit("-", 1)[1]) for path in paths]
+        if attempts != list(range(1, len(paths) + 1)) or len(paths) > PAGE_RETRY_POLICY["max_attempts"]:
+            raise RuntimeError(f"page {number} has inconsistent immutable attempt files")
+        entry = {"attempts": len(paths), "next_eligible_epoch": 0, "status": "pending"}
+        for attempt, path in enumerate(paths, 1):
+            record = json.loads(path.read_text())
+            expected = (f"{SERVICE}/{plan['layer_id']}/query", params, 120, {"page": number, "attempt": attempt})
+            if (record["url"], record["params"], record["timeout"], record["context"]) != expected:
+                raise RuntimeError(f"saved request parameters changed: {path}")
+            entry["last_finished_epoch"] = record["finished_epoch"]
+            entry["next_eligible_epoch"] = record["finished_epoch"] + PAGE_RETRY_POLICY["min_retry_seconds"]
+            try:
+                page = _request_payload(record, path)
+            except ServiceFailure as error:
+                entry.update(status="queued", error=str(error))
+            else:
+                if not m4a._page_valid(page, batch, plan["object_id_field"]):
+                    raise RuntimeError(f"layer {plan['layer_id']} page {number} did not return its complete ID set")
+                entry.update(status="recoverable")
+        page_path = pages_dir / f"page-{number:04d}.json"
+        if page_path.exists():
+            if not m4a._page_valid(json.loads(page_path.read_text()), batch, plan["object_id_field"]):
+                raise RuntimeError(f"saved layer {plan['layer_id']} page {number} is incomplete")
+            entry["status"] = "complete"
+            complete.append(number)
+        elif entry["status"] == "queued":
+            # The old policy recorded failure at replay time, sometimes later
+            # than the request finished (interrupted page 52). Never shorten it.
+            old = old_failures.get(str(number), {})
+            entry["next_eligible_epoch"] = max(entry["next_eligible_epoch"],
+                old.get("finished_epoch", 0) + PAGE_RETRY_POLICY["min_retry_seconds"],
+                old_states.get(str(number), {}).get("next_eligible_epoch", 0))
+            if entry["attempts"] >= PAGE_RETRY_POLICY["max_attempts"]:
+                entry["status"] = "exhausted"
+            queue[str(number)] = dict(entry)
+        states[str(number)] = entry
+    plan.update(page_attempts=states, failed_pages=queue, completed_pages=complete)
+    write_json(plan_path, plan, indent=2)
+    return pages_dir
+
+
+def migrate_page_policy_session(session, session_path, now):
+    """Replayable activation; only obsolete page-failed-twice blocks lift."""
+    migrated = []
+    for plan_path in sorted(session_path.parent.glob("douglas-co-*-plan.json")):
+        plan = json.loads(plan_path.read_text())
+        reconcile_page_policy(plan, plan_path, now)
+        migrated.append(plan)
+    if "page_retry_policy" not in session:
+        session.update(page_retry_policy=dict(PAGE_RETRY_POLICY),
+                       page_policy_migrated_at_utc=datetime.fromtimestamp(now, timezone.utc).isoformat())
+    elif session["page_retry_policy"] != PAGE_RETRY_POLICY:
+        raise RuntimeError("saved session page retry policy changed")
+    for plan in migrated:
+        for number, entry in plan["page_attempts"].items():
+            if (session.get("blocked") == f"layer {plan['layer_id']} page {number} failed twice"
+                    and entry["attempts"] < PAGE_RETRY_POLICY["max_attempts"]):
+                session["page_policy_original_blocked"] = session.pop("blocked")
+    write_json(session_path, session, indent=2)
+
+
+def retrieve_record_pages(transport, plan, plan_path):
+    pages_dir = reconcile_page_policy(plan, plan_path, transport.now())
+    features = {}
+    config = water_display_config()
+
+    def accept(number, page):
+        batch, _ = _page_params(plan, number)
+        if not m4a._page_valid(page, batch, plan["object_id_field"]):
+            raise RuntimeError(f"layer {plan['layer_id']} page {number} did not return its complete ID set")
+        for row in page["features"]:
+            props = {str(key).lower(): value for key, value in row["properties"].items()}
+            source_id = props.get("permanent_identifier")
+            if not isinstance(source_id, str) or not source_id:
+                raise RuntimeError("missing permanent_identifier")
+            if source_id in features:
+                raise RuntimeError(f"permanent_identifier conflict or record under two object IDs: {source_id}")
+            ensure_supported_ftype(props.get("ftype"), config)
+            features[source_id] = row
+        page_path = pages_dir / f"page-{number:04d}.json"
+        if not page_path.exists():
+            write_json(page_path, page)
+        plan["page_attempts"][str(number)]["status"] = "complete"
+        plan["failed_pages"].pop(str(number), None)
+        if number not in plan["completed_pages"]:
+            plan["completed_pages"].append(number)
+            plan["completed_pages"].sort()
+        write_json(plan_path, plan, indent=2)
+
+    # Read/validate all accepted pages before attempting incomplete ones.
+    for key, entry in plan["page_attempts"].items():
+        number = int(key)
+        if entry["status"] == "complete":
+            accept(number, json.loads((pages_dir / f"page-{number:04d}.json").read_text()))
+        elif entry["status"] == "recoverable":
+            _, params = _page_params(plan, number)
+            attempt = entry["attempts"]
+            page = transport.request(pages_dir / f"request-{number:04d}-{attempt}.json",
+                f"{SERVICE}/{plan['layer_id']}/query", params, 120,
+                context={"page": number, "attempt": attempt})
+            accept(number, page)
+
+    while True:
+        pending = [int(key) for key, entry in plan["page_attempts"].items()
+                   if entry["status"] not in {"complete", "exhausted"}]
+        if not pending:
+            break
+        for number in pending:
+            entry = plan["page_attempts"][str(number)]
+            if transport.now() < entry["next_eligible_epoch"]:
+                continue
+            attempt = entry["attempts"] + 1
+            _, params = _page_params(plan, number)
+            path = pages_dir / f"request-{number:04d}-{attempt}.json"
+            try:
+                page = transport.request(path, f"{SERVICE}/{plan['layer_id']}/query", params, 120,
+                                         context={"page": number, "attempt": attempt})
+            except ServiceFailure as error:
+                record = json.loads(path.read_text())
+                entry.update(attempts=attempt, last_finished_epoch=record["finished_epoch"],
+                             next_eligible_epoch=record["finished_epoch"] + PAGE_RETRY_POLICY["min_retry_seconds"],
+                             error=str(error), status=("exhausted" if attempt >= PAGE_RETRY_POLICY["max_attempts"]
+                                                      else "queued"))
+                plan["failed_pages"][str(number)] = dict(entry)
+                write_json(plan_path, plan, indent=2)
+            else:
+                record = json.loads(path.read_text())
+                entry.update(attempts=attempt, last_finished_epoch=record["finished_epoch"])
+                accept(number, page)
+        pending = [entry for entry in plan["page_attempts"].values()
+                   if entry["status"] not in {"complete", "exhausted"}]
+        if pending:
+            transport.pause_until(min(entry["next_eligible_epoch"] for entry in pending))
+    exhausted = sorted(int(key) for key, entry in plan["page_attempts"].items() if entry["status"] == "exhausted")
+    if exhausted:
+        plan["exhausted_pages"] = exhausted
+        write_json(plan_path, plan, indent=2)
+        raise ExternalBlocked(f"layer {plan['layer_id']} record pages exhausted {PAGE_RETRY_POLICY['max_attempts']} attempts: {exhausted}")
+    return features
+
+
 def tiled_layer_query(transport, layer_name, layer_id, extent, out_fields):
     root = transport.root
     info = transport.request(root / f"layer-{layer_id}-metadata-response.json",
@@ -470,53 +660,9 @@ def tiled_layer_query(transport, layer_name, layer_id, extent, out_fields):
     else:
         plan = {**expected, "failed_pages": {}, "completed_pages": []}
         write_json(plan_path, plan, indent=2)
-    features = {}
-    config = water_display_config()
+    features = retrieve_record_pages(transport, plan, plan_path)
     base = f"{SERVICE}/{layer_id}/query"
     batches = [ids[start:start + m4a.PAGE_SIZE] for start in range(0, len(ids), m4a.PAGE_SIZE)]
-    for number, batch in enumerate(batches, 1):
-        pages_dir = root / f"douglas-co-{layer_name}-pages"
-        page_path = pages_dir / f"page-{number:04d}.json"
-        if page_path.exists():
-            page = json.loads(page_path.read_text())
-        else:
-            failure = plan["failed_pages"].get(str(number))
-            if failure and failure["failures"] >= 2:
-                raise ExternalBlocked(f"layer {layer_id} page {number} failed twice")
-            if failure and transport.now() < failure["finished_epoch"] + 900:
-                raise ResumeLater(f"layer {layer_id} page {number} may resume at epoch "
-                                  f"{failure['finished_epoch'] + 900}")
-            attempt = 2 if failure else 1
-            params = {"f": "geojson", "objectIds": ",".join(map(str, batch)),
-                      "outFields": f"{out_fields},{oid}", "outSR": 4326,
-                      "returnGeometry": "true", "returnZ": "false", "returnM": "false"}
-            try:
-                page = transport.request(pages_dir / f"request-{number:04d}-{attempt}.json",
-                                         base, params, 120, context={"page": number, "attempt": attempt})
-            except ServiceFailure as error:
-                plan["failed_pages"][str(number)] = {"failures": attempt,
-                                                     "finished_epoch": transport.now(), "error": str(error)}
-                write_json(plan_path, plan, indent=2)
-                if attempt == 2:
-                    raise ExternalBlocked(f"layer {layer_id} page {number} failed twice") from error
-                raise ResumeLater(f"layer {layer_id} page {number} failed; resume once after 900 seconds") from error
-            # Raw response is already saved; valid page files are never overwritten.
-            if not m4a._page_valid(page, batch, oid):
-                raise RuntimeError(f"layer {layer_id} page {number} did not return its complete ID set")
-            write_json(page_path, page)
-            plan["completed_pages"].append(number)
-            write_json(plan_path, plan, indent=2)
-        if not m4a._page_valid(page, batch, oid):
-            raise RuntimeError(f"saved layer {layer_id} page {number} is incomplete")
-        for row in page["features"]:
-            props = {str(key).lower(): value for key, value in row["properties"].items()}
-            source_id = props.get("permanent_identifier")
-            if not isinstance(source_id, str) or not source_id:
-                raise RuntimeError("missing permanent_identifier")
-            if source_id in features:
-                raise RuntimeError(f"permanent_identifier conflict or record under two object IDs: {source_id}")
-            ensure_supported_ftype(props.get("ftype"), config)
-            features[source_id] = row
     # Recheck each complete leaf without ever returning to the unreliable full envelope.
     # Verification is a single request per leaf, included in the discovery cap.
     if not plan.get("final_ids_verified"):

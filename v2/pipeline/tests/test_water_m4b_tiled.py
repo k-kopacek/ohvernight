@@ -256,36 +256,42 @@ class TiledTests(unittest.TestCase):
     def test_page_resume_reuses_discovery_waits_15_minutes_and_never_overwrites(self):
         for fail_twice in (False, True):
             failures = []
+            first_failure_call = []
             def hook(url, params, calls):
                 if "objectIds" in params and (not failures or fail_twice):
                     failures.append(True)
+                    if not first_failure_call:
+                        first_failure_call.append(len(calls))
                     return Response({}, 504)
             with self.subTest(fail_twice=fail_twice), tempfile.TemporaryDirectory() as directory:
                 transport, client, clock = self.transport(Path(directory), hook)
                 args = (transport, "flowline", 6, EXTENT, refresh.m4a.OUT_FIELDS["flowline"])
-                with self.assertRaises(refresh.ResumeLater):
-                    refresh.tiled_layer_query(*args)
-                before = len(client.calls)
-                with self.assertRaises(refresh.ResumeLater):
-                    refresh.tiled_layer_query(*args)
-                self.assertEqual(len(client.calls), before)
-                clock.value += 900
                 if fail_twice:
                     with self.assertRaises(refresh.ExternalBlocked):
                         refresh.tiled_layer_query(*args)
+                    pages = [call for call in client.calls if "objectIds" in call[2]]
+                    self.assertEqual(len(pages), 4)
+                    self.assertTrue(all(b[0]-a[0]>=900 for a,b in zip(pages,pages[1:])))
                     before = len(client.calls)
+                    requests_before = {p: p.read_bytes() for p in Path(directory).rglob("request-*.json")}
                     with self.assertRaises(refresh.ExternalBlocked):
                         refresh.tiled_layer_query(*args)
                     self.assertEqual(len(client.calls), before)
+                    self.assertEqual(requests_before, {p: p.read_bytes() for p in requests_before})
                 else:
                     fc, _ = refresh.tiled_layer_query(*args)
                     self.assertEqual(len(fc["features"]), 3)
+                    pages = [call for call in client.calls if "objectIds" in call[2]]
+                    self.assertEqual(len(pages), 2)
+                    self.assertGreaterEqual(pages[1][0]-pages[0][0], 900)
+                    # Only retry page and final leaf verification followed failure.
+                    self.assertEqual(len(client.calls) - first_failure_call[0], 5)
                     page = Path(directory) / "douglas-co-flowline-pages/page-0001.json"
                     saved = page.read_bytes(), page.stat().st_mtime_ns
+                    before = len(client.calls)
                     refresh.tiled_layer_query(*args)
                     self.assertEqual(saved, (page.read_bytes(), page.stat().st_mtime_ns))
-                    # Only retry page and final leaf verification were new network requests.
-                    self.assertEqual(len(client.calls) - before, 5)
+                    self.assertEqual(len(client.calls), before)
 
     def test_permanent_identifier_conflict_stops_before_staging(self):
         rows = json.loads(json.dumps(ROWS))
