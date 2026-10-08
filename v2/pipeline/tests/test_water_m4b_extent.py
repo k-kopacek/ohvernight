@@ -1,6 +1,7 @@
 import json
 import csv
 import sys
+import math
 import unittest
 from pathlib import Path
 
@@ -10,6 +11,7 @@ V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
 from refresh_m4b_douglas_water import (PAD_DEG, compare_layer, padded_water_geometry)  # noqa: E402
+import refresh_m4b_douglas_water as refresh  # noqa: E402
 
 
 class WaterM4BExtentTests(unittest.TestCase):
@@ -123,6 +125,53 @@ class WaterM4BExtentTests(unittest.TestCase):
         missing = compare_layer("waterways", [old], [], county, padded)
         self.assertFalse(missing["explained"])
         self.assertEqual(missing["removed_ids"], ["nhd-one"])
+
+    def test_containment_absolute_limits_and_both_threshold_boundaries(self):
+        limit = 1e-6
+        below = math.nextafter(limit, 0)
+        above = math.nextafter(limit, math.inf)
+        for area, distance, expected in (
+                (2.117038273201713e-10, 1e-9, True),
+                (below, below, True), (limit, below, True), (below, limit, True),
+                (limit, limit, True), (above, 0, False), (0, above, False),
+                (above, above, False), (math.inf, 0, False), (0, math.nan, False)):
+            with self.subTest(area=area, distance=distance):
+                self.assertEqual(refresh._padding_artifact_within_limits(area, distance), expected)
+
+    def test_small_metric_clip_artifact_passes_but_centimetre_and_metre_overflow_fail(self):
+        county = box(0, 0, 1, 1)
+        padded = county.buffer(0.005)
+        def feature(geometry):
+            return {"type": "Feature", "geometry": mapping(geometry),
+                    "properties": {"id": "nhd-one", "source_id": "one", "name": "Water",
+                                   "ftype": 390, "fcode": 39004}}
+        # Outside width about 0.1 micrometre and height about 3 mm: sub-mm².
+        tiny = box(0.5, 0.5, 1.005 + 1e-12, 0.50000003)
+        old = tiny.intersection(county)
+        outside = tiny.difference(padded)
+        area, distance = refresh._padding_residual_metrics(outside, padded)
+        self.assertGreaterEqual(area, 0)
+        self.assertLess(area, 1e-6)
+        self.assertGreater(distance, 0)
+        self.assertLess(distance, 1e-6)
+        self.assertTrue(compare_layer("waterbodies", [feature(old)], [feature(tiny)], county, padded)["explained"])
+        for overflow_m in (0.01, 1):
+            with self.subTest(overflow_m=overflow_m):
+                new = LineString([(0.5, 0.5), (1.005 + overflow_m / 111320, 0.5)])
+                old = new.intersection(county)
+                self.assertFalse(compare_layer("waterways", [feature(old)], [feature(new)], county, padded)["explained"])
+
+    def test_containment_allowance_cannot_change_exact_county_reclip(self):
+        county = box(0, 0, 1, 1)
+        padded = county.buffer(0.005)
+        def feature(geometry):
+            return {"type": "Feature", "geometry": mapping(geometry),
+                    "properties": {"id": "nhd-one", "source_id": "one", "name": "River",
+                                   "ftype": 460, "fcode": 46006}}
+        old = LineString([(0.5, 0.5), (1, 0.5)])
+        for new in (LineString([(0.5, 0.5 + 1e-12), (1.005 + 1e-12, 0.5)]),
+                    LineString([(0.6, 0.5), (1.005 + 1e-12, 0.5)])):
+            self.assertFalse(compare_layer("waterways", [feature(old)], [feature(new)], county, padded)["explained"])
 
 
 if __name__ == "__main__":

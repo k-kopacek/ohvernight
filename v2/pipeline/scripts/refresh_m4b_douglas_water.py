@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import sys
 import time
 from collections import Counter
@@ -37,6 +38,8 @@ COUNT_ID_TIMEOUT = 180
 DISCOVERY_CAP = 150
 MAX_TILE_DEPTH = 2
 PAGE_RETRY_POLICY = {"version": 1, "max_attempts": 4, "min_retry_seconds": 900}
+PADDING_ARTIFACT_MAX_AREA_M2 = 1e-6
+PADDING_ARTIFACT_MAX_DISTANCE_M = 1e-6
 
 
 def write_json(path: Path, value, *, indent=None):
@@ -103,6 +106,56 @@ def _feature_map(features):
     return result
 
 
+def _padding_artifact_within_limits(area_m2, maximum_distance_m):
+    return (math.isfinite(area_m2) and math.isfinite(maximum_distance_m)
+            and 0 <= area_m2 <= PADDING_ARTIFACT_MAX_AREA_M2
+            and 0 <= maximum_distance_m <= PADDING_ARTIFACT_MAX_DISTANCE_M)
+
+
+def _padding_residual_metrics(outside, padded):
+    """Measure the native residual in local equirectangular metres.
+
+    This affine projection preserves the source's straight geographic edges;
+    projecting only vertices into a curved projection would change the clip.
+    """
+    from pyproj import Transformer
+    from shapely import make_valid
+    from shapely.ops import transform
+
+    centre = padded.centroid
+    local_crs = (f"+proj=eqc +lat_ts={centre.y} +lat_0={centre.y} "
+                 f"+lon_0={centre.x} +datum=WGS84 +units=m +no_defs")
+    project = Transformer.from_crs(4326, local_crs, always_xy=True).transform
+    projected = transform(project, outside)
+    area_m2 = projected.area
+    residual = make_valid(projected)
+    boundary = transform(project, padded)
+    if residual.is_empty or boundary.covers(residual):
+        return area_m2, 0.0
+    # Containment of the entire residual, not just its vertices, bounds its
+    # directed distance to the padded polygon. Polygonal buffers give a
+    # conservative upper bound; they do not change the acceptance limit.
+    low, high = 0.0, PADDING_ARTIFACT_MAX_DISTANCE_M
+    while not boundary.buffer(high, quad_segs=256).covers(residual):
+        high *= 2
+        if not math.isfinite(high):
+            raise ValueError("cannot measure padding residual distance")
+    for _ in range(40):
+        middle = (low + high) / 2
+        if boundary.buffer(middle, quad_segs=256).covers(residual):
+            high = middle
+        else:
+            low = middle
+    return area_m2, high
+
+
+def _existing_feature_within_padding(geometry, padded):
+    outside = geometry.difference(padded)
+    if outside.is_empty:
+        return True
+    return _padding_artifact_within_limits(*_padding_residual_metrics(outside, padded))
+
+
 def compare_layer(layer_id, old_features, new_features, county, padded, tolerance=1e-10):
     old_by_id, new_by_id = _feature_map(old_features), _feature_map(new_features)
     old_ids, new_ids = set(old_by_id), set(new_by_id)
@@ -120,8 +173,9 @@ def compare_layer(layer_id, old_features, new_features, county, padded, toleranc
         if not bg.equals(ag):
             # Independent clips can interpolate county-edge points differently
             # from direct old/new subtraction. Test the approved invariant
-            # without a numeric tolerance or changing either geometry.
-            within_padding = ag.difference(padded).is_empty
+            # County reclip stays exact; only padded containment has the
+            # owner-approved absolute metric allowance for clip residuals.
+            within_padding = _existing_feature_within_padding(ag, padded)
             county_part_unchanged = bg.equals(ag.intersection(county))
             if within_padding and county_part_unchanged:
                 changed_geometry.append(ident)
