@@ -117,15 +117,13 @@ def compare_layer(layer_id, old_features, new_features, county, padded, toleranc
                 ap.get("source_id"), ap.get("ftype"), ap.get("fcode")):
             other_changes.append(ident)
         bg, ag = shape(before["geometry"]), shape(after["geometry"])
-        if not bg.equals_exact(ag, tolerance):
-            grown_part = ag.difference(bg)
-            lost_part = bg.difference(ag)
-            padded_strip = padded.difference(county)
-            grows_only_into_strip = (lost_part.is_empty or
-                                     (lost_part.length <= tolerance and lost_part.area <= tolerance))
-            growth_inside_strip = (not grown_part.is_empty and
-                                   padded_strip.buffer(tolerance).covers(grown_part))
-            if grows_only_into_strip and growth_inside_strip:
+        if not bg.equals(ag):
+            # Independent clips can interpolate county-edge points differently
+            # from direct old/new subtraction. Test the approved invariant
+            # without a numeric tolerance or changing either geometry.
+            within_padding = ag.difference(padded).is_empty
+            county_part_unchanged = bg.equals(ag.intersection(county))
+            if within_padding and county_part_unchanged:
                 changed_geometry.append(ident)
             else:
                 other_changes.append(ident)

@@ -77,6 +77,53 @@ class WaterM4BExtentTests(unittest.TestCase):
         self.assertFalse(report["explained"])
         self.assertEqual(report["other_existing_changes"], ["nhd-one"])
 
+    def test_difference_guard_uses_exact_county_reclip_for_interpolated_endpoints(self):
+        county = box(0, 0, 1, 1)
+        padded = county.buffer(0.005)
+        source = LineString([(0.3333333333333333, 0.12121212121212),
+                             (1.004, 0.923456789)])
+        def feature(geometry):
+            return {"type": "Feature", "geometry": mapping(geometry),
+                    "properties": {"id": "nhd-one", "source_id": "one", "name": "River",
+                                   "ftype": 460, "fcode": 46006}}
+        old = source.intersection(county)
+        new = source.intersection(padded)
+        self.assertTrue(old.equals_exact(new.intersection(county), 0))
+        report = compare_layer("waterways", [feature(old)], [feature(new)], county, padded)
+        self.assertTrue(report["explained"])
+        self.assertEqual(report["geometry_grew_ids"], ["nhd-one"])
+
+    def test_difference_guard_rejects_every_unapproved_existing_feature_change(self):
+        county = box(0, 0, 1, 1)
+        padded = county.buffer(0.005)
+        def feature(points, **overrides):
+            props = {"id": "nhd-one", "source_id": "one", "name": "River",
+                     "ftype": 460, "fcode": 46006}
+            props.update(overrides)
+            return {"type": "Feature", "geometry": mapping(LineString(points)),
+                    "properties": props}
+        old = feature([(0.5, 0.5), (1, 0.5)])
+        extended = [(0.5, 0.5), (1, 0.5), (1.004, 0.5)]
+        cases = {
+            "inside_county_change": feature([(0.5, 0.5001), (1, 0.5), (1.004, 0.5)]),
+            "inside_change_below_old_tolerance": feature([(0.5, 0.5 + 1e-11), (1, 0.5)]),
+            "shrinkage": feature([(0.6, 0.5), (1, 0.5)]),
+            "beyond_padding": feature([(0.5, 0.5), (1, 0.5), (1.006, 0.5)]),
+            "padding_overflow_below_old_tolerance": feature([(0.5, 0.5), (1, 0.5), (1.005 + 1e-11, 0.5)]),
+            "renamed": feature(extended, name="Other"),
+            "source_id_changed": feature(extended, source_id="other"),
+            "type_changed": feature(extended, ftype=336),
+            "code_changed": feature(extended, fcode=46003),
+        }
+        for label, new in cases.items():
+            with self.subTest(change=label):
+                report = compare_layer("waterways", [old], [new], county, padded)
+                self.assertFalse(report["explained"])
+                self.assertTrue(report["other_existing_changes"] or report["name_changed_ids"])
+        missing = compare_layer("waterways", [old], [], county, padded)
+        self.assertFalse(missing["explained"])
+        self.assertEqual(missing["removed_ids"], ["nhd-one"])
+
 
 if __name__ == "__main__":
     unittest.main()
