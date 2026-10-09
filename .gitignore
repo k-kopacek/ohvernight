@@ -51,3 +51,7 @@ v2/pipeline/data/processed/*
 *.tar
 *.tar.gz
 *.tgz
+
+# Staged display publication recovery siblings
+v2/regions/*/.display-backup*
+v2/regions/*/.*-display-*

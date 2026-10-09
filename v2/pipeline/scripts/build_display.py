@@ -237,12 +237,44 @@ def _encoded(value: Any) -> bytes:
     return (_canonical_json(value) + '\n').encode('utf-8')
 
 
+def _remove_path(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+
+
+def _recover_display_siblings(output_dir: Path, region_id: str) -> None:
+    if output_dir.is_symlink():
+        raise ValueError(f'Refusing symlinked display directory: {output_dir}')
+    parent = output_dir.parent
+    backups = sorted(parent.glob('.display-backup*'))
+    stages = sorted(parent.glob(f'.{region_id}-display-*'))
+    if len(backups) > 1:
+        raise RuntimeError(f'Ambiguous display backups in {parent}; inspect and retain exactly one before rebuilding')
+    if not output_dir.exists() and backups:
+        backups[0].replace(output_dir)
+        print(f'Restored stale display backup for {region_id}', flush=True)
+    elif output_dir.exists() and backups:
+        _remove_path(backups[0])
+    for stage in stages:
+        if stage.is_dir() and not stage.is_symlink():
+            shutil.rmtree(stage)
+        else:
+            stage.unlink()
+
+
 def build_region(region_id: str, root: Path = ROOT, write: bool = False) -> dict[str, Any]:
+    output_dir = root / 'regions' / region_id / 'display'
+    if write and output_dir.is_symlink():
+        raise ValueError(f'Refusing symlinked display directory: {output_dir}')
+    if write:
+        output_dir.parent.mkdir(parents=True, exist_ok=True)
+        _recover_display_siblings(output_dir, region_id)
     manifest = _read_json(root / 'regions' / region_id / 'region.json')
     layers = [layer for layer in manifest['layers'] if layer['format'] == 'feature_collection']
     built = [build_layer(manifest, layer, root) for layer in layers]
     built.append(build_coverage(manifest, root))
-    output_dir = root / 'regions' / region_id / 'display'
     entries = []
     artifacts: dict[str, bytes] = {}
     for value, entry in built:
@@ -283,18 +315,36 @@ def build_region(region_id: str, root: Path = ROOT, write: bool = False) -> dict
         artifacts[alias_path] = alias_data
     index_data = (_canonical_json(index) + '\n').encode('utf-8')
     artifacts[f"regions/{region_id}/display/index.json"] = index_data
+    output_relative = Path('regions') / region_id / 'display'
+    for relative in artifacts:
+        artifact_path = Path(relative)
+        if artifact_path.parent != output_relative:
+            raise ValueError(f'Artifact must be directly inside display directory: {relative}')
     if write:
         output_dir.parent.mkdir(parents=True, exist_ok=True)
         stage = Path(tempfile.mkdtemp(prefix=f'.{region_id}-display-', dir=output_dir.parent))
-        backup = output_dir.with_name(f'.{output_dir.name}-backup-{os.getpid()}')
+        current_umask = os.umask(0)
+        os.umask(current_umask)
+        stage.chmod(0o777 & ~current_umask)
+        backup = output_dir.with_name('.display-backup')
         moved_old = False
         try:
+            artifact_names = {Path(relative).name for relative in artifacts}
+            if output_dir.exists():
+                for existing in output_dir.iterdir():
+                    if existing.name in artifact_names:
+                        continue
+                    destination = stage / existing.name
+                    if existing.is_dir() and not existing.is_symlink():
+                        shutil.copytree(existing, destination, symlinks=True)
+                    elif existing.is_symlink():
+                        destination.symlink_to(os.readlink(existing))
+                    else:
+                        shutil.copy2(existing, destination)
             for relative, data in artifacts.items():
                 destination = stage / Path(relative).name
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_bytes(data)
-            if backup.exists():
-                shutil.rmtree(backup)
             if output_dir.exists():
                 output_dir.replace(backup)
                 moved_old = True
@@ -306,14 +356,14 @@ def build_region(region_id: str, root: Path = ROOT, write: bool = False) -> dict
                     moved_old = False
                 raise
             if backup.exists():
-                shutil.rmtree(backup)
+                _remove_path(backup)
         finally:
             if stage.exists():
                 shutil.rmtree(stage)
             if backup.exists() and not output_dir.exists():
                 backup.replace(output_dir)
             elif backup.exists():
-                shutil.rmtree(backup)
+                _remove_path(backup)
     return {'manifest': manifest, 'index': index, 'artifacts': artifacts}
 
 
