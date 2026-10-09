@@ -6,9 +6,11 @@
  // Free text copied from a source row is shown only where an agency page exists to compare it against.
  const agencyPage=f=>f.properties.rec1stop_url||f.properties.usda_portal_url,DESCRIPTIVE=['important_info','activity_type_list','directions'],WITHHELD='Descriptive text from the source is withheld: it cannot be tied to an agency page for this place.';
  const withheld=f=>!f.properties.activities&&!agencyPage(f)&&DESCRIPTIVE.some(key=>f.properties[key]&&f.properties[key]!=='No Data');
- const kind=f=>f.properties.activities?'Trail segment':f.properties.site_type==='TRAILHEAD'?'Trailhead':f.properties.site_type==='DISPERSED_AREA'?'Dispersed camping area':'Campground';
+ const readableType=value=>value.split(/[_\s]+/).filter(Boolean).map(part=>part[0]+part.slice(1).toLowerCase()).join(' ');
+ const kind=f=>f.properties.activities?'Trail segment':f.properties.site_type==='TRAILHEAD'?'Trailhead':f.properties.site_type==='DISPERSED_AREA'?'Dispersed camping area':f.properties.site_type==='CAMPGROUND'?'Campground':f.properties.site_type?readableType(f.properties.site_type):'Recreation site';
  function rows(trails,sites,area,mode,query,activity){const q=query.toLowerCase().trim();return mode==='trails'?trails.filter(f=>T.matches(f,q,activity)):(mode==='camping'?[...(area?[area]:[]),...D.camping(sites)]:sites.filter(f=>f.properties.site_type==='TRAILHEAD')).filter(f=>name(f).toLowerCase().includes(q));}
  function buildPlan(records,saved,trip,notes,exportedAt){return {exported_at:exportedAt,trip,saved:saved.map(id=>{const f=records.get(id);return {id,name:name(f),type:kind(f),source:source(f),source_fetched:f.properties.evidence?.retrieved_at};}),notes,limitations:'Research only. Closures, road connections, camping permission, vehicle suitability and availability are unconfirmed.'};}
+ const sourceLinkLabel=f=>agencyPage(f)?'Publisher page ↗':'Source ↗';
  function attach(shell){
   const {element:el,button,$}=shell,region=shell.region,caps=region.config.capabilities,keys=region.config.storage_keys,M=scope.ExploreMap,E=scope.ExploreEvidence;
   const trailEntry=region.registry.find(x=>x.kind==='trails'),siteEntry=region.registry.find(x=>x.kind==='recreation_sites');
@@ -21,7 +23,7 @@
   function records(){return new Map([...trails(),...D.camping(sites()),...sites().filter(f=>f.properties.site_type==='TRAILHEAD'),...(area?[area]:[])].map(f=>[f.properties.id,f]));}
   const persist=()=>{try{if(caps.saved_list){localStorage.setItem(keys.plan,JSON.stringify(saved));localStorage.setItem(keys.notes,notes);}localStorage.setItem(keys.trip,JSON.stringify(trip));}catch{$('summary').textContent='Browser storage unavailable; download your plan to keep it.';}};
   const paragraph=(box,text)=>box.append(el('p',text));
-  const link=(label,url)=>{const node=el('a',label),safe=E.safeUrl(url);if(!safe)return el('p','Official link unavailable');node.href=safe;node.target='_blank';node.rel='noopener noreferrer';return node;};
+  const link=(label,url)=>{const node=el('a',label),safe=E.safeUrl(url);if(!safe)return el('p','Source link unavailable');node.href=safe;node.target='_blank';node.rel='noopener noreferrer';return node;};
   function download(filename,body,type){const u=URL.createObjectURL(new Blob([body],{type})),a=el('a');a.href=u;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),10000);}
   function dialog(title){const node=el('dialog',undefined,'explore-dialog'),head=el('div',undefined,'explore-heading'),body=el('div'),close=button('×',()=>node.close());close.setAttribute('aria-label','Close '+title);head.append(el('h1',title),close);node.append(head,body);$('map').parentNode.append(node);node.addEventListener('close',()=>node.opener?.focus());return {node,body,show(){node.opener=document.activeElement;shell.openDialog(node);}};}
   const browser={body:el('div')},filters=el('details',undefined,'explore-filters');filters.append(el('summary','Filters'));browser.body.append(button('Results',()=>shell.showList($('list-body'))),filters);const plan=caps.saved_list?dialog('Saved research'):null,inputs={};
@@ -44,7 +46,7 @@
    if(shell.extrasFailed)paragraph(box,'Listings could not load');for(const id of saved){const f=records().get(id);if(f)box.append(result(f));}if(shell.isListActive(browser.body))renderBrowse();}
   function detail(entry,f,box,actions=box){
    if(!f.properties.activities&&!['CAMPGROUND','TRAILHEAD','DISPERSED_AREA'].includes(f.properties.site_type))return;
-   const p=f.properties;box.append(link(p.activities||agencyPage(f)?'Official listing / source ↗':'Source data service ↗',source(f)));paragraph(actions,'Published source · current access unconfirmed');
+   const p=f.properties;box.append(link(sourceLinkLabel(f),source(f)));paragraph(actions,'Published source · current access unconfirmed');
    if(caps.saved_list){actions.append(button(saved.includes(p.id)?'Remove from saved':'Save to plan',()=>{if(saved.includes(p.id))saved=saved.filter(x=>x!==p.id);else if(saved.length<40)saved.push(p.id);persist();render();show(f);}));paragraph(actions,'Saving a place does not confirm it is suitable or available.');}
    if(p.activities&&caps.gpx_export){box.append(button('Download segment GPX',()=>download((p.trail_number||p.id)+'.gpx',D.gpx(f),'application/gpx+xml')));paragraph(box,'This is a county-clipped segment, not a complete route. GPX does not provide turn-by-turn guidance or confirm rideable connections.');}
    if(f.geometry?.type==='Point'){const [lon,lat]=f.geometry.coordinates;box.append(link('Directions to facility ↗',`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`));paragraph(box,'Check approach roads and trailer parking before travel. Directions are for this facility, not a verified riding route.');}
@@ -52,7 +54,9 @@
     for(const [a,r] of Object.entries(p.activities)){if(trip.activity&&a!==trip.activity)continue;const rules=Object.entries(r).filter(([,v])=>v).map(([k,v])=>`${({managed:'source field "managed"',accpt:'source field "accepted"',disc:'source field "discouraged"',restricted:'source field "restricted"'})[k]}: ${v}`);if(rules.length)paragraph(box,D.activities[a]+': '+rules.join('; '));}
     paragraph(box,'These source dates can be incomplete or surprising. Verify the current motor-vehicle map and agency alerts. No difficulty, width, direction or bike-registration eligibility has been verified.');
     for(const [label,list] of [['Campgrounds nearby by straight-line distance',D.camping(sites())],['Trailheads nearby by straight-line distance',sites().filter(f=>f.properties.site_type==='TRAILHEAD')]]){box.append(el('h2',label));const nearby=list.map(x=>({f:x,d:T.distanceMiles(x.geometry.coordinates,f.geometry)})).filter(x=>x.d<=5).sort((a,b)=>a.d-b.d).slice(0,3);if(!nearby.length)paragraph(box,'None in this imported inventory within five straight-line miles.');nearby.forEach(x=>box.append(result(x.f,`${x.d.toFixed(1)} straight-line miles · connection unverified`)));}
-   }else{for(const [key,label] of [['restrictions','Published restrictions'],['important_info','Important information'],['activity_type_list','Listed activities'],['fee_description','Fees (verify current price)'],['open_season','Published season (may be historical)'],['water_availability','Water'],['restroom_availability','Restrooms'],['directions','Agency directions']])if(p[key]&&p[key]!=='No Data'&&(agencyPage(f)||!DESCRIPTIVE.includes(key)))box.append(el('h2',label),el('p',p[key]));
+   }else{
+    const sourceFields=[['restrictions','Published restrictions'],['important_info','Important information'],['activity_type_list','Listed activities'],['fee_description','Fees (verify current price)'],['open_season','Published season (may be historical)'],['water_availability','Water'],['restroom_availability','Restrooms'],['directions','Agency directions']];
+    for(const [key,label] of sourceFields){if(DESCRIPTIVE.includes(key)&&!agencyPage(f))continue;const value=p[key];if(value&&value!=='No Data')box.append(el('h2',label),el('p',value));else if(['restrictions','fee_description','open_season','water_availability','restroom_availability'].includes(key))box.append(el('h2',label),el('p','Not stated in this source record'));}
     if(withheld(f))paragraph(box,WITHHELD);
     paragraph(box,'Stay limits, live availability and vehicle suitability are not verified. A nearby motorcycle trail does not permit riding an unlicensed bike through this campground.');if(f===area)paragraph(box,'Area listing only: individual campsites and access points have not been mapped.');
     if(f.geometry?.type==='Point'){box.append(el('h2','Trails for selected activity nearby by straight-line distance'));const near=trails().filter(x=>T.matches(x,'',trip.activity)).map(x=>({f:x,d:T.distanceMiles(f.geometry.coordinates,x.geometry)})).filter(x=>x.d<=5).sort((a,b)=>a.d-b.d).slice(0,5);near.forEach(x=>box.append(result(x.f,`${x.d.toFixed(1)} straight-line miles · connection unverified`)));if(!near.length)paragraph(box,'No matching imported segments within five straight-line miles.');}}
@@ -60,5 +64,5 @@
   }
   return {render,detail,search(){renderBrowse();shell.showList(browser.body);},get trip(){return trip;},get saved(){return saved;}};
  }
- const api={rows,buildPlan,attach,agencyPage,withheld,DESCRIPTIVE,WITHHELD};if(typeof module!=='undefined')module.exports=api;scope.ExploreBrowse=api;
+ const api={rows,buildPlan,attach,agencyPage,sourceLinkLabel,kind,withheld,DESCRIPTIVE,WITHHELD};if(typeof module!=='undefined')module.exports=api;scope.ExploreBrowse=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

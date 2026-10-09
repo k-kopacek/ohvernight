@@ -9,3 +9,8 @@ test('T6/17.3: inventory de-duplicates RIDB and evaluates with each originating 
  const trip={arrive:'2026-09-25',depart:'2026-09-26',vehicle:'passenger_car'};
  assert.deepEqual(C.evaluate(region,trip,'2026-09-26',Date.parse('2026-09-26')),merged.map(p=>R.evaluate(Trust.applyRules(p,region.rules,Date.parse('2026-09-26')),trip,'2026-09-26',{max_age_hours:p.source_is_search?168:720})));
 });
+
+test('planner links stay neutral unless a record identifies a search result',()=>{
+ assert.equal(C.sourceLinkLabel({source:'https://example.test/facility'}),'Source ↗');
+ assert.equal(C.sourceLinkLabel({source:'https://example.test/search',source_is_search:true}),'Source search ↗');
+});
