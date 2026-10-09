@@ -351,6 +351,17 @@ families of named spurs in Aspen; Hunter Creek (2194) against Hunter Valley
 
 ---
 
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Verified: both named Aspen trail IDs exist, are named DIFFICULT CREEK with trail number 2146, share the exact endpoint coordinate, and have equal activity objects; neither ID exists in Douglas. The claim that an approved user-facing grouping exists is not made.
+
+The water feature Difficult Creek and the trail Difficult Creek Trail are different namespaces.
+Never match a trail to a water feature by name. Aspen trail records usfs-trail-8921819 and
+usfs-trail-8923909 (trail number 2146) are grouping candidates only; no reviewed grouping exists.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+(Both IDs exist in Aspen and none in Douglas: verified. Shared endpoint, merge result and equal activity
+objects: UNVERIFIED; may rest on rounded display geometry.)
+
 ## 4. How competitors model it (HERMES-SOURCED)
 
 Everything in this section is **H**, from `hermes/m6b-…`. Trailforks and
@@ -387,6 +398,18 @@ Huts Trail", `seasonal_1: winter`). What the slots mean is undocumented (U).
 Common to all: canonical source segments stay as published; grouping is a
 separate table or property; no geometry is invented; a group is an identity,
 not a statement that the trail may be used.
+
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Not verified: the referenced `v2/pipeline/scripts/lib/water.py` is absent from origin/main, so its grouping implementation cannot be corroborated on this base. The block retains its UNVERIFIED marker.
+
+Unreviewed observation: reuse boundary with water grouping (lib/water.py).
+Technique that may carry over: six-decimal endpoint keys, sorted components, input immutability,
+canonical-to-display maps, legacy aliases.
+Rules that must not carry over: GNIS names, perennial propagation, O1 bridges, connector rules.
+group_flowlines must not be applied to trails as it stands.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+UNVERIFIED: Hermes did not open lib/water.py; the claim about what the module does is Codex's.
 
 ### Model A — group by source trail number, or by `TRAIL_CN`
 
@@ -557,6 +580,16 @@ For a specification to accept, amend or reject. Written for Model A2 / D.
   its restrictions remain visible on the ground it covers.
 - **TG12.** The set of members of a group equals the set of canonical
   segments whose group reference is that group ID. (M4 G7.)
+
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Not verified as a data fact; this is explicitly an invariant candidate, not an observed multi-route segment.
+
+Invariant candidate: membership is many-to-many.
+One source segment may belong to several official routes; a route may have disconnected display parts.
+Water grouping assigns each flowline to one group; trails must not copy that rule.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+UNVERIFIED as a data fact: no multi-route segment was shown; this is a design constraint.
 
 ### Stable-id scheme (options, not a choice)
 
@@ -837,6 +870,37 @@ Each has a one-line recommendation for discussion. None is decided.
 - Every trail source has a transport record and one freshness policy.
 
 ---
+
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Verified against origin/main: `nearbyTrails()` uses five straight-line miles, sorts by distance, de-duplicates on `(trail_number || id) + "|" + name`, and keeps three; `matches()` searches only name and trail number. End-to-end saved-alias consistency remains a proposed test, not verified.
+
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Verified: 123 Aspen and 102 Douglas display trail IDs are unique; Douglas has 73/73 road records carrying `source_route_id`. Key replacement and alias migration scenarios remain proposed tests, not verified.
+
+Additional test cases for an M6 specification (add only those missing):
+- source key replacement (a republished service changes object IDs)
+- two routes that cross with no shared node
+- alias round trip: old saved ID -> alias -> current ID -> same segment
+- alias migration: missing old IDs, changed namespaces, sanitisation collisions, one-to-many
+  replacements, aliases that point to an excluded feature
+- never clear aliases to make a build pass; never compare rows by position
+- before refreshing into saved selections, verify permanent keys and change history (zero repeated IDs
+  today does not show stability after a republish)
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+(Zero repeated trail IDs: verified. Roads using source_route_id in Douglas: UNVERIFIED.)
+
+
+Test requirement: presentation de-duplication is not identity.
+v2/trail-discovery.js nearbyTrails() keeps segments within 5 straight-line miles, sorts by distance,
+drops repeats of the key (trail_number || id) + '|' + name, and keeps the first three (lines 25-38).
+A farther segment with the same name and number can vanish from "nearby" while search and selection still
+target that canonical segment. If trail_number is empty the key falls back to the id.
+An M6 test must show that search, detail, selection, nearby and saved aliases all resolve to the same segment.
+This describes current presentation behaviour; it is not an identity rule.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+(Hermes read lines 25-38 on this branch. Whether the fallback matters for real data: UNVERIFIED.)
 
 ## 12. Risks
 

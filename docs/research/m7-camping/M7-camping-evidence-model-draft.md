@@ -289,6 +289,28 @@ Past its age, an `allowed` falls to not established; everything else stays and i
 - **Vehicle designation** — remains on the road layer. A place record may point at a road ID; the designation is shown as a road fact.
 - **Ownership and management** — remain map context. Neither is an input to a mode claim.
 
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Not a measured repository fact; these are proposed design dimensions. The existing section does not state either item in this wording.
+
+Add to the dimension list (identity, geometry, inventory, setup, permission, operations, restriction,
+stay/permit, availability, transport):
+- transport: a partial or failed refresh must not publish an inventory that looks complete.
+- stay window: the departure day is part of the trip when evaluating restrictions.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+UNVERIFIED whether section 4.2 already says this; the Codex review did not diff the wording.
+
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Verified: `09_reviewed_sites.py` requires point geometry inside the pilot AOI, ID/name, valid review and operating dates, five named supported claims, a selected vehicle, `sleeping_setup == "inside_vehicle"`, site confirmation, and source evidence. The curation template and script are Aspen-specific.
+
+Current limitation: the curated reviewed-site template and 09_reviewed_sites.py are specific to Aspen
+and to vehicle sleeping (inside_vehicle). They are not a general tent / RV / hammock model.
+The script requires a real Point, a confirmed site, valid review and operating dates, a compatible
+vehicle/sleeping setup, and evidence for five named fields.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+UNVERIFIED: inside_vehicle appears in v2/pipeline/docs/curation.md, but Hermes did not open the script.
+
 ### 4.3 Contract touchpoints
 
 `[READ IN REPO]` for what exists; `[INFERENCE]` for the implications.
@@ -462,6 +484,16 @@ Each with a one-line recommendation. All recommendations are `[INFERENCE]`.
 
 ---
 
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Verified: ADR-005 makes positive claims fail closed without complete reviewed evidence and assigns trust-policy changes to the owner. The exact process requirement for future vocabulary/producer fields is a recommendation in this block, not a current validator rule.
+
+Process rule: setup vocabulary (tent-only, trailer or RV dimensions, high clearance, capacity),
+any activity/setup vocabulary, any new fact_coverage policy and any new producer field require a reviewed
+amendment to the data contract (ADR-005; v2/pipeline/docs/data-contract.md) before use.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+(Rule follows from the contract; Hermes did not re-read the contract text for this block.)
+
 ## 9. Risks and failure modes
 
 How a user is fined, moved on or turned around because of Ohvernight. All `[INFERENCE]` unless marked.
@@ -537,6 +569,17 @@ All `[INFERENCE]`.
 34. Key hygiene: no artifact, log line, URL or fixture contains an API key; RIDB tests run offline with no key.
 
 ---
+
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Not verified as a complete gap analysis: the existing section already covers injected time, precedence, stale restrictions/support, unknown dimensions, and several trip-date cases. The remaining listed cases are proposed additions; no tests were run.
+
+Evaluator tests (add only those missing): injected dates; fact-specific review age; full-trip restriction
+starting on departure day; indefinite orders; malformed seasonality; stale positive vs stale negative;
+tentative identity; tent/vehicle mismatch; unknown dimensions; partial source failure;
+cross-jurisdiction rules. A stale restriction stays in force and is flagged; a stale supportive claim is unknown.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+UNVERIFIED which of these section 10 already lists.
 
 ## 11. What was intentionally not done
 

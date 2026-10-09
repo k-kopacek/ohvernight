@@ -73,6 +73,18 @@ merge conservatively.
 | Fire restrictions | Aspen `fire_restriction_stage` is a page-hash change monitor; status is `unknown` and stage is null by design (`06_fetch_fire_stage_monitor.py`) | No stage is known anywhere | DFPC, BLM, county sheriffs; not standardized |
 | Recreation permissions | `recreation_permission: none` until M4-C adds a small registry | Unknown for nearly every water | Operator pages, reviewed by hand |
 
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Verified against origin/main: `adventureOptions()` selects campground/dispersed places, uses `matches()` (managed/accepted raw strings), limits to five straight-line miles and three de-duplicated trail rows, then sorts excluded status last and by nearest distance. It is a distance listing, not a permission or date verdict.
+
+Current behaviour (v2/trail-discovery.js, lines 25-38): adventureOptions() takes campground and dispersed
+places, finds trails within 5 straight-line miles (up to 3, de-duplicated by trail_number-or-id plus name),
+and sorts places with status "excluded" last, then by nearest trail distance. This is a distance listing.
+It is not a date-evaluated or permission-evaluated result and not a verified-adventure engine.
+See docs/architecture/adventure-model.md section 1.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+(Lines 25-38 read by Hermes. UI wording and the managed/accpt filter: UNVERIFIED.)
+
 INFERENCE: of the sixteen inputs the brief lists, three can constrain results
 with reviewed evidence today (dates against a reviewed rule, vehicle against a
 reviewed rule, water activity against a reviewed claim), three can be computed
@@ -97,6 +109,16 @@ say so, rather than collect sixteen and silently ignore twelve.
 - Dates, vehicle and list filters do not hide map geometry today
   (`system-overview.md`). INFERENCE: M8 results should keep that property;
   the map remains the free-discovery alternative.
+
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Verified: regional data contract note N4 says `evidence.confidence` differs for the same source across regions; the other items are proposed ranking constraints, not measured runtime behavior.
+
+Additional ranking constraints: deterministic tie-break on stable IDs; keep the raw facts behind each rank
+term; measure freshness per fact, not by a document's generated_at; do not read evidence.confidence in a
+score (the data contract note N4 says it differs across regions); never penalise a region for missing data.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+UNVERIFIED: that evidence.confidence is formally "deprecated"; N4 notes the cross-region difference.
 
 ## 3. Candidate architectures
 
@@ -397,6 +419,18 @@ Tests that would go with any option:
 | Time independence | Validation of the pair table reads no clock |
 | Determinism | Same inputs, same order; ties broken by ID |
 
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Not measured; this is an acceptance-test proposal and was not run.
+
+Acceptance fixtures: unknown vs unsupported region or activity; absent vs empty vs failed inventory;
+historical evaluated trips; restriction beginning mid-trip or on departure day; stale positive and stale
+negative; activity conflicts; missing dimensions; proximity without connection; duplicate cross-source
+options; group aliases; ordering invariance. Include a no-result explanation and a pointer to free Explore
+instead of manufacturing itinerary certainty.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+(Test list; not run.)
+
 ## 6. Owner decisions this raises
 
 1. May an unknown ever change a result's position (A), or only what is said
@@ -434,3 +468,20 @@ Tests that would go with any option:
 - Whether the NWS API can be called from the browser within its terms; the
   browser test harness blocks all non-local requests, so a live call would
   also need a testing approach.
+
+
+## Appendix — Query envelope
+
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Not measured; this is explicitly a design proposal, not a schema.
+
+Query envelope, seven dimensions (design input, not a schema):
+1 geography: coverage boundary kept separate from search radius
+2 dates: ISO, timezone, whole trip including departure day
+3 activities: unsupported coverage is not permission
+4 overnight: candidate geometry is not an option
+5 vehicle/setup: unknown is retained, not defaulted
+6 distance/access: direct-distance basis; routing only from a reviewed source
+7 evidence context: pinned data versions, evaluator version, injected time
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+(Design proposal; nothing measured.)

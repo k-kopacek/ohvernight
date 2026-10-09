@@ -212,6 +212,20 @@ layer's `PVT` polygon.
 
 ## 5. Use, surface and season fields
 
+
+> **Verification against origin/main (`bb85785ea98c8d5fb8d5694a36744b4f96a6161a`):** Verified: the two display files contain 123 Aspen and 102 Douglas segments; recomputation found 40/27 all-null hiking records, 8/26 mountain-biking records, and 4/0 motorcycling records. Canonical files were not used, as the block states.
+
+Unknown-use counts, display snapshot of 2026-10-08
+Segments in which all four raw strings (managed, accpt, disc, restricted) are null for an activity.
+Null means unknown. It does not mean permitted, and it does not mean prohibited.
+  hiking:           Aspen 40 of 123 segments;  Douglas 27 of 102
+  mountain biking:  Aspen  8;                  Douglas 26
+  motorcycling:     Aspen  4;                  Douglas  0
+Counted from v2/regions/<region>/display/trails.geojson, not canonical data. Counts will change on refresh.
+Source: Codex reconnaissance at commit 2795625, 2026-10-08; measured facts spot-checked by Hermes
+(Hermes re-ran these six counts with jq on the display files; canonical data not checked.)
+
+
 | Field | Aspen (n = 123) | Douglas (n = 102) |
 |---|---|---|
 | `surface` | 123 present: native material 119, snow 3, imported loose 1 | 102 present: native material 98, imported compacted 4 |
