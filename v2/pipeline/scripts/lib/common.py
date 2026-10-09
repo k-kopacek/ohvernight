@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from pathlib import Path
 from shapely.geometry import shape, mapping
@@ -26,7 +27,10 @@ def properties(feature):
     return {k.lower(): v for k, v in feature["properties"].items()}
 
 def clip_geometry(geometry, boundary=None):
-    geom = make_valid(shape(geometry)).intersection(boundary if boundary is not None else aoi())
+    original = shape(geometry)
+    if not original.is_valid:
+        logging.getLogger(__name__).warning("Invalid geometry repaired during clipping")
+    geom = make_valid(original).intersection(boundary if boundary is not None else aoi())
     return None if geom.is_empty else mapping(geom)
 
 def write_fc(filename, features):
