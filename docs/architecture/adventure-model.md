@@ -51,9 +51,9 @@ Both regions ship straight-line distance listings today:
   row marked "connection unverified".
 
 These are distance listings. They are not relationships in the sense of this
-document, and nothing in this model may be populated from them. Whether their
-present wording is clear enough about that is raised as an owner question in
-the pull request that adds this document.
+document, and nothing in this model may be populated from them. PR #19
+resolved the earlier wording question by labeling the listings as straight-line
+distance; the current app uses that wording.
 
 ## 2. Entities
 

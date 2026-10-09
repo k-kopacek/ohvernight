@@ -226,10 +226,11 @@ everywhere the tester looked.
 Two baseline observations are under audit. Neither is recorded here as a
 finding that the app is wrong.
 
-- **Trail use-date semantics.** For the trip dates the app marked a large
-  share of the dirt-bike segments as outside published use dates, from the
-  source's "accepted use" date strings. What that source field means has not
-  been established.
+- **Trail use-date semantics.** For the trip dates the app marked 40 of 76
+  motorcycling segments outside published use dates. Of those 40, 38 carry
+  only the source's `accepted` range `12/01-03/14`, and 2 carry only the same
+  range in `managed`. The source-field meaning and whether this date verdict is
+  appropriate remain under audit; this scenario does not record it as a finding.
 - **Directions text.** On at least two recreation-site records the text shown
   as agency directions appears to describe a different destination.
 
