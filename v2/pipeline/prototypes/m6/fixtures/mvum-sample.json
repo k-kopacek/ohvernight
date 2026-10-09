@@ -1,0 +1,124 @@
+{
+  "source": "saved Package 4 MVUM sample responses, trimmed to identifier, name, symbol and motorcycle designation/date fields; geometry removed",
+  "records": [
+    {
+      "source_layer": "EDW_MVUM_01/MapServer/1",
+      "attributes": {
+        "objectid": 14954803,
+        "globalid": "{5FE99C82-17E2-4D80-8546-92955DF46E6C}",
+        "rte_cn": "5826010465",
+        "id": "502",
+        "name": "JACKSON CREEK SOUTH",
+        "symbol": "12",
+        "motorcycle": "open",
+        "motorcycle_datesopen": "01/01-03/14,04/02-12/31",
+        "adminorg": "021211",
+        "securityid": "0212",
+        "districtname": "South Platte Ranger District",
+        "forestname": "Pike and San Isabel National Forests"
+      }
+    },
+    {
+      "source_layer": "EDW_MVUM_01/MapServer/1",
+      "attributes": {
+        "objectid": 14954738,
+        "globalid": "{7535AA68-9EDE-433D-B8C8-00B34D00CD87}",
+        "rte_cn": "5831010465",
+        "id": "503",
+        "name": "WATSON PARK",
+        "symbol": "2",
+        "motorcycle": "open",
+        "motorcycle_datesopen": "01/01-03/14,05/16-12/31",
+        "adminorg": "021211",
+        "securityid": "0212",
+        "districtname": "South Platte Ranger District",
+        "forestname": "Pike and San Isabel National Forests"
+      }
+    },
+    {
+      "source_layer": "EDW_MVUM_01/MapServer/2",
+      "attributes": {
+        "objectid": 4971077,
+        "globalid": "{5B04381C-97E0-409C-A0C9-F694711B2F25}",
+        "rte_cn": null,
+        "id": "770.B",
+        "name": null,
+        "symbol": "9",
+        "motorcycle": "open",
+        "motorcycle_datesopen": "01/01-12/31",
+        "adminorg": "021211",
+        "securityid": "0212",
+        "districtname": "South Platte Ranger District",
+        "forestname": "Pike and San Isabel National Forests"
+      }
+    },
+    {
+      "source_layer": "EDW_MVUM_01/MapServer/1",
+      "attributes": {
+        "objectid": 14947378,
+        "globalid": "{B5B69789-8B78-49C9-B200-D1E03EAAC26E}",
+        "rte_cn": "5724010465",
+        "id": "563",
+        "name": "DAKAN MTN",
+        "symbol": "2",
+        "motorcycle": "open",
+        "motorcycle_datesopen": "04/02-11/30",
+        "adminorg": "021211",
+        "securityid": "0212",
+        "districtname": "South Platte Ranger District",
+        "forestname": "Pike and San Isabel National Forests"
+      }
+    },
+    {
+      "source_layer": "EDW_MVUM_01/MapServer/2",
+      "attributes": {
+        "objectid": 4971138,
+        "globalid": "{9B5F5F69-659A-4CEE-92AC-051C42EEFDC5}",
+        "rte_cn": null,
+        "id": "767",
+        "name": null,
+        "symbol": "6",
+        "motorcycle": "open",
+        "motorcycle_datesopen": "05/16-11/30",
+        "adminorg": "021211",
+        "securityid": "0212",
+        "districtname": "South Platte Ranger District",
+        "forestname": "Pike and San Isabel National Forests"
+      }
+    },
+    {
+      "source_layer": "EDW_MVUM_01/MapServer/2",
+      "attributes": {
+        "objectid": 4971539,
+        "globalid": "{45F3401B-34DC-4714-8DEB-78ED94993064}",
+        "rte_cn": null,
+        "id": "679",
+        "name": null,
+        "symbol": "8",
+        "motorcycle": "open",
+        "motorcycle_datesopen": "06/01-11/30",
+        "adminorg": "021211",
+        "securityid": "0212",
+        "districtname": "South Platte Ranger District",
+        "forestname": "Pike and San Isabel National Forests"
+      }
+    },
+    {
+      "source_layer": "EDW_MVUM_01/MapServer/1",
+      "attributes": {
+        "objectid": 14954606,
+        "globalid": "{707DF18D-7644-469C-A0A4-1BA88770D32C}",
+        "rte_cn": "5838010465",
+        "id": "507",
+        "name": "RIM",
+        "symbol": "12",
+        "motorcycle": "open",
+        "motorcycle_datesopen": "12/01-03/14",
+        "adminorg": "021211",
+        "securityid": "0212",
+        "districtname": "South Platte Ranger District",
+        "forestname": "Pike and San Isabel National Forests"
+      }
+    }
+  ]
+}
