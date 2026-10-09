@@ -4,6 +4,7 @@ from pathlib import Path
 from lib.arcgis_client import query_layer_geojson
 from lib.common import bbox, clip_geometry, properties
 from lib.evidence import make_evidence, now
+from lib.trail_drift import report_trail_drift
 
 URL = 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_TrailNFSPublishWithDataStatus_01/MapServer'
 ACTIVITIES = {
@@ -40,6 +41,7 @@ def main():
     if not features:
         raise ValueError('Empty trail pilot; previous snapshot preserved')
     target = Path(__file__).resolve().parents[2] / 'trails.geojson'
+    report_trail_drift(target, features)
     temporary = target.with_suffix('.tmp')
     temporary.write_text(json.dumps({'type': 'FeatureCollection', 'generated_at': now(),
                                     'scope': 'Aspen pilot boundary; clipped trail segments',
