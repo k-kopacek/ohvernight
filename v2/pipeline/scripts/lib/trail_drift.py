@@ -19,15 +19,19 @@ def report_trail_drift(previous_path, current_features, label='trails', douglas=
         old_features = previous['features']
         old = {}
         for feature in old_features:
-            props = feature['properties']
-            feature_id = props['id']
+            props = feature.get('properties') or {}
+            feature_id = props.get('id')
+            if feature_id is None:
+                raise ValueError('prior feature is missing properties.id')
             if feature_id in old:
                 raise ValueError(f'duplicate prior feature id {feature_id}')
             old[feature_id] = feature
         current = {}
         for feature in current_features:
-            props = feature['properties']
-            feature_id = props['id']
+            props = feature.get('properties') or {}
+            feature_id = props.get('id')
+            if feature_id is None:
+                raise ValueError('prior feature is missing properties.id')
             if feature_id in current:
                 raise ValueError(f'duplicate current feature id {feature_id}')
             current[feature_id] = feature
