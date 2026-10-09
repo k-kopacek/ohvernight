@@ -45,9 +45,35 @@
   "reservoir_eligible_fcodes": [43600, 43613, 43615, 43617, 43618, 43619, 43621],
   "reservoir_ineligible_fcodes": [43601, 43603, 43604, 43605, 43606, 43607, 43608, 43609, 43610, 43611, 43612, 43614, 43623, 43624, 43625, 43626],
   "unnamed_waterbody_min_area_sqkm": 0.02,
-  "non_claim_hosts": [],
+  "non_claim_hosts": [
+    "facebook.com",
+    "reddit.com",
+    "youtube.com",
+    "instagram.com",
+    "alltrails.com",
+    "wikiloc.com",
+    "tripadvisor.com"
+  ],
   "expected_major_rivers": {
-    "aspen": [],
-    "douglas-co": []
+    "aspen": [
+      {"gnis_id": "00174812", "minimum_drawn_fraction": 0.8},
+      {"gnis_id": "00180078", "minimum_drawn_fraction": 0.8},
+      {"gnis_id": "00180007", "minimum_drawn_fraction": 0.8},
+      {"gnis_id": "00175217", "minimum_drawn_fraction": 0.8},
+      {"gnis_id": "00180061", "minimum_drawn_fraction": 0.8}
+    ],
+    "douglas-co": [
+      {"gnis_id": "00201759", "minimum_drawn_fraction": 0.8},
+      {"gnis_id": "00183363", "minimum_drawn_fraction": 0.8},
+      {"gnis_id": "00185069", "minimum_drawn_fraction": 0.8},
+      {"gnis_id": "00185068", "minimum_drawn_fraction": 0.8},
+      {"gnis_id": "00181657", "minimum_drawn_fraction": 0.8}
+    ]
+  },
+  "pending_external_source_refresh": {
+    "region_id": "douglas-co",
+    "gnis_id": "00201759",
+    "state": "PENDING_EXTERNAL_SOURCE_REFRESH",
+    "reason": "The source's perennial South Platte seed segment is outside the committed M4-A Douglas extent; one padded NHD refresh is required before production grouping can be confirmed."
   }
 }

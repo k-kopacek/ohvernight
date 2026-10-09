@@ -1,0 +1,10 @@
+case,expected_explained,actual_explained,passed
+extension_into_padding,True,True,True
+inside_county_changed,False,False,True
+inside_county_changed_1e_minus11,False,False,True
+feature_shrank,False,False,True
+beyond_padding,False,False,True
+beyond_padding_1e_minus11,False,False,True
+renamed,False,False,True
+retyped,False,False,True
+changed_fcode,False,False,True

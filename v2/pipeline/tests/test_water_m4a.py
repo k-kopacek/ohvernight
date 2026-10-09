@@ -111,8 +111,16 @@ class WaterM4ATests(unittest.TestCase):
                                                                   43625, 43626])
         self.assertFalse(set(config["reservoir_eligible_fcodes"]) & set(config["reservoir_ineligible_fcodes"]))
         self.assertEqual(config["unnamed_waterbody_min_area_sqkm"], 0.02)
-        self.assertEqual(config["non_claim_hosts"], [])
-        self.assertEqual(config["expected_major_rivers"], {"aspen": [], "douglas-co": []})
+        self.assertEqual(set(config["non_claim_hosts"]),
+                         {"facebook.com", "reddit.com", "youtube.com", "instagram.com",
+                          "alltrails.com", "wikiloc.com", "tripadvisor.com"})
+        self.assertEqual({region: [row["gnis_id"] for row in rows]
+                          for region, rows in config["expected_major_rivers"].items()},
+                         {"aspen": ["00174812", "00180078", "00180007", "00175217", "00180061"],
+                          "douglas-co": ["00201759", "00183363", "00185069", "00185068", "00181657"]})
+        self.assertEqual(config["pending_external_source_refresh"]["state"],
+                         "PENDING_EXTERNAL_SOURCE_REFRESH")
+        self.assertEqual(config["pending_external_source_refresh"]["gnis_id"], "00201759")
         self.assertEqual([row["fcode"] for row in config["snapshot_unknown_fcodes"]],
                          [33400, 33600, 39000, 42800, 42802, 42803, 42807, 42813,
                           43601, 43612, 43613, 43619, 43624, 46600, 55800])

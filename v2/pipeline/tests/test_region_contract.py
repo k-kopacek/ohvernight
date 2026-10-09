@@ -22,9 +22,16 @@ class RegionContractTests(unittest.TestCase):
     def load(self, relative):
         return json.loads((V2 / relative).read_text())
 
-    def test_usgs_nhd_scope_strings_match_origin_main(self):
+    def layer_features(self, layer):
+        value = self.load(layer["path"])
+        for token in layer.get("pointer", "").lstrip("/").split("/") if layer.get("pointer") else []:
+            token = token.replace("~1", "/").replace("~0", "~")
+            value = value[int(token)] if isinstance(value, list) else value[token]
+        return value["features"]
+
+    def test_usgs_nhd_scope_strings_match_approved_literals(self):
         expected = {
-            "aspen": "Hydrography retained for setback screening. Feature type, flow permanence and size are not carried. A name does not indicate recreational usefulness, public access or seasonal flow.",
+            "aspen": "USGS National Hydrography Dataset, retired by USGS in 2023 and no longer maintained. Flowlines, areas and waterbodies with the source's type and hydrographic category; also used for setback screening. The source does not establish recreation, access or permission, or present-day flow.",
             "douglas-co": "Named waterbodies and flowlines only, selected by name. A display subset, not complete hydrology. A name does not indicate recreational usefulness, public access, fishing or paddling permission.",
         }
         for region_id, scope in expected.items():
@@ -38,8 +45,7 @@ class RegionContractTests(unittest.TestCase):
             for layer in manifest["layers"]:
                 if layer.get("kind") != "water":
                     continue
-                document = self.load(layer["path"])
-                features = document["layers"][layer["id"]]["features"]
+                features = self.layer_features(layer)
                 mislabeled = [feature.get("properties", {}).get("id") for feature in features
                               if "elevation_ft" in feature.get("properties", {})]
                 self.assertEqual(mislabeled, [], f"{manifest['region']['id']}/{layer['id']}")
@@ -56,11 +62,15 @@ class RegionContractTests(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text())
             region = manifest["region"]["id"]
             actual = Counter()
+            seen_canonical_refs = set()
             for layer in manifest["layers"]:
                 if layer.get("kind") != "water":
                     continue
-                document = self.load(layer["path"])
-                features = document["layers"][layer["id"]]["features"]
+                canonical_ref = (layer["path"], layer.get("pointer", ""))
+                if canonical_ref in seen_canonical_refs:
+                    continue
+                seen_canonical_refs.add(canonical_ref)
+                features = self.layer_features(layer)
                 for feature in features:
                     actual.update(feature["properties"].get("legacy_ids", []))
             expected = pinned_by_region.get(region, Counter())
@@ -73,7 +83,15 @@ class RegionContractTests(unittest.TestCase):
         reports = {p.parent.name: validate_region(p, V2) for p in manifests}
         self.assertEqual(reports["aspen"]["unrecorded_status_layers"], ["trails"])
         self.assertEqual(reports["douglas-co"]["unrecorded_status_layers"], ["roads", "trails"])
-        self.assertEqual(set(reports["aspen"]["legacy_transport"]), {"land_ownership", "wilderness", "mvum_roads", "hydrology", "fire_restriction_stage", "dispersed_corridors", "dispersed_corridor_points", "leads", "reviewed_sites", "ridb_options"})
+        self.assertEqual(set(reports["aspen"]["legacy_transport"]), {"land_ownership", "wilderness", "mvum_roads", "water_streams", "water_bodies", "fire_restriction_stage", "dispersed_corridors", "dispersed_corridor_points", "leads", "reviewed_sites", "ridb_options"})
+
+    def test_M4B_water_limitation_is_pinned_for_both_layers(self):
+        expected = ("Rivers, streams, lakes and reservoirs selected from source type codes. Displayed streams and lakes are coded perennial; some reservoirs have no hydrographic category stated by the source. Unnamed streams and intermittent water are not shown. A mapped water feature is not evidence of access or of any allowed activity.")
+        for region in ('aspen', 'douglas-co'):
+            manifest = self.load(f'regions/{region}/region.json')
+            water_layers = [layer for layer in manifest['layers'] if layer.get('kind') == 'water']
+            self.assertEqual(len(water_layers), 2)
+            self.assertTrue(all(layer['limitations'] == expected for layer in water_layers))
 
     def test_declared_surface_and_fact_dimensions(self):
         expected = {
@@ -85,12 +103,16 @@ class RegionContractTests(unittest.TestCase):
             manifest = self.load(path.relative_to(V2))
             self.assertEqual({layer["path"] for layer in manifest["layers"]} | {manifest["coverage"]["path"]} | ({manifest["rules"]["path"]} if manifest["rules"] else set()), expected[path.parent.name])
             self.assertEqual(set(manifest["fact_coverage"]), dimensions)
+            canonical_layer_ids = {layer.get("pointer", "").rstrip("/").split("/")[-1]
+                                   for layer in manifest["layers"]
+                                   if layer["path"] == ("map-data-v2.json" if path.parent.name == "aspen"
+                                                        else "regions/douglas-co/research.json")}
             if path.parent.name == "aspen":
                 data = self.load("map-data-v2.json")
-                self.assertTrue(set(data["layers"]) <= {layer["id"] for layer in manifest["layers"]})
+                self.assertTrue(set(data["layers"]) <= canonical_layer_ids)
             else:
                 data = self.load("regions/douglas-co/research.json")
-                self.assertTrue(set(data["layers"]) - {"coverage"} <= {layer["id"] for layer in manifest["layers"]})
+                self.assertTrue(set(data["layers"]) - {"coverage"} <= canonical_layer_ids)
 
     def test_fact_coverage_statements_are_normative_literals(self):
         expected = {
@@ -283,6 +305,9 @@ class RegionContractTests(unittest.TestCase):
     def test_water_R67_rejects_wrong_fixed_table_classification(self):
         self.assert_water_rule("R67", lambda m, c, cfg, a, d: c[0][1]["properties"].update(water_class="canal_ditch"))
 
+    def test_water_R67_rejects_a_canonical_fcode_mutation(self):
+        self.assert_water_rule("R67", lambda m, c, cfg, a, d: c[0][1]["properties"].update(fcode=46003))
+
     def test_water_R68_rejects_missing_display_alias(self):
         self.assert_water_rule("R68", lambda m, c, cfg, a, d: a.clear())
 
@@ -464,6 +489,13 @@ class RegionContractTests(unittest.TestCase):
 
     def test_R21_duplicate_ids(self):
         self.assert_rule("R21", lambda m, d: d["data.json"]["layers"]["water"]["features"].append(copy.deepcopy(d["data.json"]["layers"]["water"]["features"][0])))
+
+    def test_R21_shared_canonical_pointer_is_counted_once(self):
+        manifest, docs = self.base()
+        duplicate_declaration = copy.deepcopy(manifest["layers"][0])
+        duplicate_declaration["id"] = "water_display_copy"
+        manifest["layers"].append(duplicate_declaration)
+        self.valid(manifest, docs)
 
     def test_R22_geometry_constraints(self):
         for mutate in (lambda m, d: d["data.json"]["layers"]["water"]["features"][0].update(geometry=None), lambda m, d: d["data.json"]["layers"]["water"]["features"][0]["geometry"].update(coordinates=[2, 2]), lambda m, d: d["data.json"]["layers"]["water"]["features"][0]["geometry"].update(type="LineString")):
