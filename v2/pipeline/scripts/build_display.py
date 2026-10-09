@@ -10,6 +10,9 @@ import argparse
 import copy
 import hashlib
 import json
+import os
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -247,10 +250,6 @@ def build_region(region_id: str, root: Path = ROOT, write: bool = False) -> dict
         complete = {**entry, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
         entries.append(complete)
         artifacts[entry['path']] = data
-        if write:
-            target = root / entry['path']
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(data)
     transport = {}
     for layer in manifest['layers']:
         reference = layer.get('status_ref')
@@ -282,15 +281,39 @@ def build_region(region_id: str, root: Path = ROOT, write: bool = False) -> dict
             'sha256': hashlib.sha256(alias_data).hexdigest(),
         }
         artifacts[alias_path] = alias_data
-        if write:
-            target = root / alias_path
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(alias_data)
     index_data = (_canonical_json(index) + '\n').encode('utf-8')
     artifacts[f"regions/{region_id}/display/index.json"] = index_data
     if write:
-        output_dir.mkdir(parents=True, exist_ok=True)
-        (output_dir / 'index.json').write_bytes(index_data)
+        output_dir.parent.mkdir(parents=True, exist_ok=True)
+        stage = Path(tempfile.mkdtemp(prefix=f'.{region_id}-display-', dir=output_dir.parent))
+        backup = output_dir.with_name(f'.{output_dir.name}-backup-{os.getpid()}')
+        moved_old = False
+        try:
+            for relative, data in artifacts.items():
+                destination = stage / Path(relative).name
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(data)
+            if backup.exists():
+                shutil.rmtree(backup)
+            if output_dir.exists():
+                output_dir.replace(backup)
+                moved_old = True
+            try:
+                stage.replace(output_dir)
+            except Exception:
+                if moved_old and backup.exists():
+                    backup.replace(output_dir)
+                    moved_old = False
+                raise
+            if backup.exists():
+                shutil.rmtree(backup)
+        finally:
+            if stage.exists():
+                shutil.rmtree(stage)
+            if backup.exists() and not output_dir.exists():
+                backup.replace(output_dir)
+            elif backup.exists():
+                shutil.rmtree(backup)
     return {'manifest': manifest, 'index': index, 'artifacts': artifacts}
 
 
