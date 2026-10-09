@@ -569,7 +569,7 @@ A note on numbering: the watchlist's closing recommendation describes "M7" as sn
 
 ## Appendix A — HTTP requests
 
-Twenty GET attempts with `curl`, no credentials, official hosts only. Responses saved under `/Users/kylekopacek/.claude/jobs/1af2c3f1/tmp/m7/` as `resp_<name>`; the log is `urls.log` in the same directory.
+Twenty GET attempts with `curl`, no credentials, official hosts only. Responses were saved outside the repository as `resp_<name>`; a local request log is in the same directory.
 
 | # | URL | Result | Saved as |
 |---:|---|---|---|

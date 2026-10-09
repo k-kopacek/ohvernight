@@ -357,9 +357,8 @@ M5 must not state, style, order or imply any of the following:
 ## Appendix A — requests made
 
 All 25 were HTTP GET with `curl`, metadata or attribute-only, no geometry.
-All returned HTTP 200. Responses are saved outside the repository in
-`/Users/kylekopacek/.claude/jobs/1af2c3f1/tmp/m5-gate/` with the request log
-`urls.log`. Request 9 returned no rows (a multipoint filter the server did
+All returned HTTP 200. The responses and request log `urls.log` are saved
+outside the repository. Request 9 returned no rows (a multipoint filter the server did
 not honour) and is not relied on.
 
 | # | Saved as | URL |

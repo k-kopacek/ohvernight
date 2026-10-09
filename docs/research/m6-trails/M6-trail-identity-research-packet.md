@@ -1,8 +1,7 @@
 # M6 trail identity — research packet
 
 Prepared 2026-10-07. Preparation only: nothing here is decided, implemented
-or ingested, and `ROADMAP.md` is unchanged. Companion file:
-[M6-source-matrix.md](M6-source-matrix.md).
+or ingested, and `ROADMAP.md` is unchanged. Companion file `M6-source-matrix.md` was not written.
 
 ## How statements are marked
 
@@ -880,10 +879,9 @@ Each has a one-line recommendation for discussion. None is decided.
 
 25 HTTP GET requests, all with `curl`, on 2026-10-07. Metadata, or attribute
 queries with `returnGeometry=false` and at most 20 records (or statistics or
-a count). No geometry was requested and nothing was ingested. Responses are
-saved under `/Users/kylekopacek/.claude/jobs/1af2c3f1/tmp/m6-packet/` with
-the file names below; `urls.log` there holds the exact URLs with status
-codes. All returned HTTP 200.
+a count). No geometry was requested and nothing was ingested. Responses were
+saved outside the repository with the file names below; a local request log
+holds the exact URLs with status codes. All returned HTTP 200.
 
 Hosts: `data.fs.usda.gov`, `apps.fs.usda.gov`, `services5.arcgis.com`
 (CPW's ArcGIS Online organisation), `www.arcgis.com`.
