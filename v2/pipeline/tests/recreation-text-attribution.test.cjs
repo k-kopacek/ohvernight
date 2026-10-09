@@ -15,6 +15,7 @@ function render(feature,savedList=false){
 }
 const texts=nodes=>nodes.map(n=>n.textContent);
 const byName=name=>sites.find(f=>f.properties.name===name);
+const haversineMiles=(a,b)=>{const rad=n=>n*Math.PI/180,[lon1,lat1]=a.map(rad),[lon2,lat2]=b.map(rad),dlat=lat2-lat1,dlon=lon2-lon1,h=Math.sin(dlat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dlon/2)**2;return 3958.7613*2*Math.asin(Math.sqrt(h));};
 test('a record with no agency page shows no descriptive source text and says it is withheld',()=>{
  const f=byName('RAMPART ENTRANCE'),p=f.properties,out=texts(render(f));
  a.ok(p.directions&&p.important_info&&p.activity_type_list&&!p.usda_portal_url&&!p.rec1stop_url,'fixture record still has text and no agency page');
@@ -55,6 +56,7 @@ test('Other listed sites keeps exactly the 14 non-campground, non-trailhead reco
 test('other-site detail displays attributed source fields and suppresses absent, placeholder and status values',()=>{
  const cabin=byName('CABIN RIDGE PS'),topaz=byName('TOPAZ POINT'),cabinText=texts(render(cabin)).join('\n'),topazText=texts(render(topaz)).join('\n');
  const cabinNodes=texts(render(cabin)),credit=cabinNodes.indexOf('Published by the Forest Service — not reviewed by Ohvernight');a.ok(credit>=0);
+ a.equal(cabinNodes[credit+1],'Fields the source leaves blank are not shown. A blank field does not mean none or no fee.');
  a.ok(credit<cabinNodes.indexOf('Source site type')&&credit<cabinNodes.indexOf('Published restrictions (source text)'),'attribution precedes source facts');
  for(const key of ['fee_description','restrictions','restroom_availability','water_availability'])a.ok(cabinText.includes(cabin.properties[key]),key+' is byte-for-byte source text');
  a.ok(cabinText.includes('Source site type')&&cabinText.includes('Picnic site'));
@@ -63,7 +65,15 @@ test('other-site detail displays attributed source fields and suppresses absent,
  a.deepEqual(texts(render(topaz)).filter(x=>['Source site type','Published restrictions (source text)','Listed activities (source text)','Fee information (source text; may be historical)','Season text (source; may be historical)','Water details (source text)','Restroom details (source text)','Important information (source text)','Directions (source text; route and conditions not reviewed)'].includes(x)),['Source site type','Season text (source; may be historical)','Water details (source text)','Restroom details (source text)']);
  const dakan=byName('DAKAN'),dakanText=texts(render(dakan)).join('\n');
  a.ok(dakanText.includes(dakan.properties.restroom_availability));a.ok(!dakanText.includes('N/A')&&!dakanText.includes('No Data'));
+ const nearbyRows=feature=>render(feature).filter(n=>n.dataset.feature).map(n=>({id:n.dataset.feature,label:n.children[0].textContent,distance:n.children[1].textContent}));
+ const cabinRows=nearbyRows(cabin),cabinTh=byName('CABIN RIDGE TH'),devilsCg=byName('DEVILS HEAD CG');
+ for(const candidate of [cabinTh,devilsCg]){const row=cabinRows.find(x=>x.id===candidate.properties.id);a.ok(row,'Cabin Ridge lists '+candidate.properties.name);a.equal(row.distance,`${haversineMiles(cabin.geometry.coordinates,candidate.geometry.coordinates).toFixed(1)} straight-line miles · connection unverified`);}
+ a.ok(!cabinRows.some(x=>x.id===cabin.properties.id),'a point never lists itself');
+ const trailheadText=texts(render(cabinTh));a.ok(trailheadText.includes('Trails for selected activity nearby by straight-line distance'),'trailhead retains its existing trail-proximity section');a.ok(!trailheadText.includes('None in this imported inventory within five straight-line miles.'),'trailhead does not show the point-to-point nearby-section empty state');
+ const campgroundText=texts(render(devilsCg));a.ok(campgroundText.includes('Trails for selected activity nearby by straight-line distance')&&campgroundText.includes('No matching imported segments within five straight-line miles.'),'campground trail-to-point section retains its existing line-distance behavior');a.ok(!campgroundText.includes('Campgrounds nearby by straight-line distance'),'campground retains its existing section set');
+ const topazFeature=topaz,devilsTh=byName('DEVILS HEAD TH'),topazRow=nearbyRows(topazFeature).find(x=>x.id===devilsTh.properties.id);a.ok(topazRow,'Topaz Point lists Devils Head TH');a.equal(topazRow.distance,`${haversineMiles(topazFeature.geometry.coordinates,devilsTh.geometry.coordinates).toFixed(1)} straight-line miles · connection unverified`);
  for(const name of ['CABIN RIDGE PS','TOPAZ POINT','DAKAN']){const detail=texts(render(byName(name)));a.ok(detail.includes('Campgrounds nearby by straight-line distance'),name+' keeps campground proximity section');a.ok(detail.includes('Trailheads nearby by straight-line distance'),name+' keeps trailhead proximity section');}
+ const isolated={type:'Feature',geometry:{type:'Point',coordinates:[0,0]},properties:{id:'isolated-point',name:'Isolated point',site_type:'PICNIC SITE',evidence:{source_url:'https://example.test/layer'}}},isolatedText=texts(render(isolated));a.equal(isolatedText.filter(x=>x==='None in this imported inventory within five straight-line miles.').length,2);
  for(const f of sites.filter(x=>!['CAMPGROUND','TRAILHEAD','DISPERSED_AREA'].includes(x.properties.site_type))){
   const rendered=texts(render(f)),full=rendered.join('\n');
   a.ok(!full.includes(f.properties.seasonal_operational_status),'operational status stays hidden for '+f.properties.name);
@@ -76,8 +86,7 @@ test('other-site detail displays attributed source fields and suppresses absent,
   if(!page&&B.withheld(f))a.ok(rendered.includes(B.WITHHELD),'unattributed descriptive text stays withheld for '+f.properties.name);
   // Raw publisher values are checked above and intentionally excluded from the app-copy scan: this source snapshot itself includes "DAY USE AREA", "Day Use", and "NOT ALLOWED".
   const raw=['site_type','restrictions','activity_type_list','fee_description','open_season','water_availability','restroom_availability','important_info','directions'].map(key=>f.properties[key]).filter(value=>typeof value==='string'&&value);raw.push(B.kind(f));
-  const allowedCautions=['Saving a place does not confirm it is suitable or available.','Check approach roads and trailer parking before travel. Directions are for this facility, not a verified riding route.'];
-  for(const caution of allowedCautions)if(full.includes(caution))a.ok(allowedCautions.includes(caution),'only listed existing cautionary copy is exempt from affirmative-claim scan');
+  const allowedCautions=['Saving a place does not confirm it is suitable or available.','Check approach roads and trailer parking before travel. Directions are for this facility, not a verified riding route.','Fields the source leaves blank are not shown. A blank field does not mean none or no fee.'];
   const appCopy=allowedCautions.concat(raw).reduce((text,value)=>text.split(value).join(''),full);
   a.doesNotMatch(appCopy,/\b(open|closed|allowed|permitted|legal|free|suitable|good for|recommended|verified|day use)\b/i,'Ohvernight-added wording carries no status or suitability claim for '+f.properties.name);
  }
