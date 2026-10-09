@@ -19,6 +19,7 @@
   const ridb=region.registry.find(x=>x.format==='place_list'&&x.statusRef);
   return Trust.sourceSummary({layers:{fire_restriction_stage:region.layers.get(entry?.id)?.data}},region.placeDocuments?.[ridb?.id],now);
  }
+ function sourceLinkLabel(place){return place.source_is_search?'Source search ↗':'Source ↗';}
  function attach(shell){
   const region=shell.region,config=region.config,caps=config.capabilities;
   if(!caps.trip_planner)return caps.trail_season_check?scope.ExploreBrowse.attach(shell):null;
@@ -33,7 +34,7 @@
   const ids=new Set(inventory(region).map(x=>x.place.id));for(const slot of ['a','b'])if(!ids.has(plan[slot]))plan[slot]=null;
   const persist=()=>{try{localStorage.setItem(config.storage_keys.trip,JSON.stringify({trip,plan}));}catch{}};
   const trailEntry=()=>region.registry.find(x=>x.kind==='trails'),trails=()=>region.layers.get(trailEntry()?.id)?.data?.features||[];
-  const link=(label,url)=>{const node=el('a',label),safe=E.safeUrl(url);if(!safe)return el('p','Official link unavailable');node.href=safe;node.target='_blank';node.rel='noopener noreferrer';return node;};
+  const link=(label,url)=>{const node=el('a',label),safe=E.safeUrl(url);if(!safe)return el('p','Source link unavailable');node.href=safe;node.target='_blank';node.rel='noopener noreferrer';return node;};
   const paragraph=(box,text)=>box.append(el('p',text));
   function dialog(title){
    const node=el('dialog',undefined,'explore-dialog'),heading=el('div',undefined,'explore-heading'),body=el('div');
@@ -74,7 +75,7 @@
   function showPlace(place){shell.showDetail(entryFor(place),place);}
   const resort=()=>resorts.find(x=>x.id===trip.resort);
   function miles(place){const a=place.coordinates,b=resort()?.coordinates;if(!b)return Infinity;const rad=Math.PI/180,dlat=(a[1]-b[1])*rad,dlon=(a[0]-b[0])*rad,h=Math.sin(dlat/2)**2+Math.cos(a[1]*rad)*Math.cos(b[1]*rad)*Math.sin(dlon/2)**2;return 6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))/1609.344;}
-  function result(place){const node=button('',()=>showPlace(place));node.className='explore-result';node.dataset.place=place.id;node.append(el('strong',place.name),el('small',place.label),el('small',miles(place).toFixed(1)+' mi straight-line'),el('small','Official listing · trip needs confirmation'));return node;}
+  function result(place){const node=button('',()=>showPlace(place));node.className='explore-result';node.dataset.place=place.id;node.append(el('strong',place.name),el('small',place.label),el('small',miles(place).toFixed(1)+' mi straight-line'),el('small','Sourced listing · trip needs confirmation'));return node;}
   function render(){
    places=evaluate(region,trip);const box=$('list-body');box.replaceChildren(toolbar);
    const failed=region.registry.filter(x=>x.format==='place_list'&&x.kind==='overnight_inventory').some(x=>!Array.isArray(region.places[x.id]));
@@ -111,7 +112,7 @@
    if(entry.kind==='destinations'){trip.resort=feature.id;persist();render();return;}
    if(entry.format==='place_list'&&entry.kind==='overnight_inventory'){
     const p=places.find(p=>p.id===feature.id);if(!p)return;
-    box.append(link(p.kind==='lodging'?'Official site & booking ↗':p.source_is_search?'Find official listing on Recreation.gov ↗':'Official listing & camping details ↗',p.source));
+    box.append(link(sourceLinkLabel(p),p.source));
     paragraph(actions,p.label);for(const text of [p.tripNote,p.note])paragraph(box,text);box.append(el('h3','Before you commit'));for(const text of p.unknowns||[])paragraph(box,text);
     for(const slot of ['a','b']){const node=button(slot==='a'?(plan.a===p.id?'Saved as Plan A':'Save as Plan A'):(plan.b===p.id?'Saved as backup':'Save as backup'),()=>{const other=slot==='a'?'b':'a';plan[slot]=plan[slot]===p.id?null:p.id;if(plan[other]===p.id)plan[other]=null;persist();render();showPlace(p);});node.dataset.save=slot;node.setAttribute('aria-pressed',String(plan[slot]===p.id));actions.append(node);}
     paragraph(actions,'Saving a place does not confirm it is suitable or available.');box.append(link('Open directions ↗','https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(p.coordinates[1]+','+p.coordinates[0])));
@@ -125,5 +126,5 @@
   }
   return {render,detail,pins(entry){return entry.kind==='overnight_inventory'?inventory(region).filter(x=>x.entry.id===entry.id).map(x=>x.place):region.places[entry.id];},get trip(){return trip;},get plan(){return plan;}};
  }
- const api={inventory,evaluate,sourceSummary,attach};if(typeof module!=='undefined')module.exports=api;scope.ExploreCapabilities=api;
+ const api={inventory,evaluate,sourceSummary,sourceLinkLabel,attach};if(typeof module!=='undefined')module.exports=api;scope.ExploreCapabilities=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
