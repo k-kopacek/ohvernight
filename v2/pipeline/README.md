@@ -69,8 +69,9 @@ is kept (A10). The local benchmark is CPU/main-thread dominated; concurrent
 fetching showed no measurable local timing improvement. A8 avoids deliberately
 serialising independent network requests in real use; its benefit under real
 network latency remains unmeasured. PR B's heap threshold (115% of same-session
-base) and architecture trigger R-5 (66 MB) are different controls. PR B is not
-merged, and the real-device matrix is still owed by the owner.
+base) and architecture trigger R-5 (66 MB) are different controls. PR B is
+merged and M3 is complete. The final iPhone Safari validation passed; iPad
+and Android device checks remain unverified and deferred.
 
 ## Actual dispersed sites
 
