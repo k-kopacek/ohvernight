@@ -15,7 +15,7 @@ states the exact scope.
 | M1 | Verification Baseline / Repo Hygiene | **Complete** |
 | M2 | Regional Data Contract + Evidence Semantics | **Complete** |
 | M3 | Unified Mobile-First Explore Architecture | **Complete** |
-| M4 | Functional Recreational Water | **In progress — specification approved 2026-10-06; M4-A next** |
+| M4 | Functional Recreational Water | **In progress — M4-A complete; M4-B PAUSED_BY_OWNER** |
 | M5 | Land Classification v1 | Planned |
 | M6 | Trails / COTREX | Planned |
 | M7 | Camping / Dispersed Camping | Planned |
@@ -135,13 +135,15 @@ Deferred beyond M3, each recorded so it is not lost:
   this milestone
   ([ADR-004](docs/architecture/decisions/ADR-004-hermes-research-operations-role.md)).
 
-Status: research complete ([docs/research/m4-water/](docs/research/m4-water/))
-and a [specification](docs/specs/M4-functional-recreational-water.md) is
+Status: research is complete ([docs/research/m4-water/](docs/research/m4-water/))
+and the [specification](docs/specs/M4-functional-recreational-water.md) was
 approved by the owner on 2026-10-06 (decisions D1–D12 and O1–O9, including
-the exact wording). Delivery is four
-sequential pull requests: M4-A source preservation, M4-B functional water
-display, M4-C reviewed official recreation claims, and an optional M4-D for
-CPW structured data. M4 is complete with A, B and C.
+the exact wording). M4-A source preservation merged in PR #12. M4-B is in
+progress on draft PR #17, PAUSED_BY_OWNER on 2026-10-08 at checkpoint 45f877d
+(retrieval complete and validated; padded Douglas integration, South Platte
+validation, wording, performance sessions, device check and owner approval
+outstanding). M4-C reviewed official recreation claims and optional M4-D for
+CPW structured data remain later delivery stages.
 
 Technical debt recorded by M4 (owner decision D1): USGS retired the National
 Hydrography Dataset on 1 October 2023. M4 uses a documented NHD snapshot as a
