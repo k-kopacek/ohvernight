@@ -17,6 +17,12 @@ be said plainly when it is.
 ## Scorecard
 
 Lightweight on purpose. Each line is recorded with its previous value.
+There are two canonical scenarios,
+[Scenario A](acceptance-scenario-douglas-dirt-bike.md) (Douglas dirt-bike with
+overnight planning) and
+[Scenario B](acceptance-scenario-rampart-day-use.md) (Rampart dirt-bike with
+family day use). "Canonical scenario" below means each of them, reported
+separately.
 Measures taken from the scenario use the scenario's names and its
 [definitions](acceptance-scenario-douglas-dirt-bike.md#definitions) of viable
 trip, critical question, within policy and planning step. "Viable" is never a
@@ -73,9 +79,10 @@ What still forces the user into other apps or sites, by name.
 What remains unknown and why.
 
 ### ACCEPTANCE SCENARIO RESULT
-How the
-[canonical Douglas dirt-bike scenario](acceptance-scenario-douglas-dirt-bike.md)
-performs now against the previous milestone, measure by measure.
+How each canonical scenario,
+[Scenario A](acceptance-scenario-douglas-dirt-bike.md) and
+[Scenario B](acceptance-scenario-rampart-day-use.md), performs now against the
+previous milestone, measure by measure. Both are reported.
 
 The review is written by the coordinator, from a scenario run by a dedicated
 tester who did not implement the work. An automated check passing is not a
