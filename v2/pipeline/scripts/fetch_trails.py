@@ -40,6 +40,21 @@ def main():
     if not features:
         raise ValueError('Empty trail pilot; previous snapshot preserved')
     target = Path(__file__).resolve().parents[2] / 'trails.geojson'
+    # Compare normalized attributes with the last published snapshot before replacing it.
+    if target.exists():
+        previous = json.loads(target.read_text())
+        old_by_id = {f['properties']['id']: f['properties'] for f in previous.get('features', [])}
+        changed = []
+        for feature in features:
+            props = feature['properties']
+            old = old_by_id.get(props['id'])
+            if old is not None:
+                fields = sorted(k for k, value in props.items() if k != 'evidence' and old.get(k) != value)
+                if fields:
+                    changed.append((props['id'], fields))
+        if changed:
+            print(f'Attribute drift detected for {len(changed)} existing trail records: ' +
+                  '; '.join(f"{feature_id} ({', '.join(fields)})" for feature_id, fields in changed))
     temporary = target.with_suffix('.tmp')
     temporary.write_text(json.dumps({'type': 'FeatureCollection', 'generated_at': now(),
                                     'scope': 'Aspen pilot boundary; clipped trail segments',
