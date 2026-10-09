@@ -18,7 +18,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import build_display
 import fetch_trails
-from lib.arcgis_client import get_json, new_session
+from lib.arcgis_client import ArcGISQueryError, get_json, new_session, query_layer_geojson
 from lib.common import clip_geometry
 from shapely.geometry import box
 from shapely.geometry import shape
@@ -54,9 +54,16 @@ class CountingTransportPool(HTTPSConnectionPool):
         self.transport_sends += 1
         if self.failure == "connection":
             raise NewConnectionError(conn, "synthetic connection failure")
+        status = 503
+        body = b'{"error":{"code":503,"message":"synthetic unavailable"}}'
+        if self.failure == "mixed":
+            if (self.transport_sends - 1) % 3 == 2:
+                status = 200
+            else:
+                status = 503
         return HTTPResponse(
-            body=b'{"error":{"code":503,"message":"synthetic unavailable"}}',
-            status=503,
+            body=body,
+            status=status,
             headers={"Content-Type": "application/json"},
             preload_content=False,
             reason="Synthetic Service Unavailable",
@@ -104,8 +111,16 @@ class PipelineTechnicalDebtExpectedFailures(unittest.TestCase):
 
     @unittest.expectedFailure
     def test_mixed_failures_stay_within_one_logical_json_budget(self):
-        """EXPECTED FAILURE: mixed failures currently multiply into 9 sends."""
-        self.fail("one logical get_json call should stay within a single bounded budget")
+        """EXPECTED FAILURE: HTTP retry plus ArcGIS retry currently produce 9 sends."""
+        session = new_session()
+        adapter = CountingHTTPAdapter("mixed", session.get_adapter("https://").max_retries)
+        session.mount("https://", adapter)
+        with patch("lib.arcgis_client.time.sleep"):
+            with self.assertRaises(ArcGISQueryError):
+                get_json(session, "https://example.invalid/layer", {})
+        self.assertEqual(adapter.pool.transport_sends, 9)
+        self.assertLessEqual(adapter.pool.transport_sends, 3,
+                             "one logical get_json call must stay within one bounded transport budget")
 
     @unittest.expectedFailure
     def test_retry_after_is_capped(self):
@@ -117,8 +132,38 @@ class PipelineTechnicalDebtExpectedFailures(unittest.TestCase):
         self.assertLessEqual(requested_sleeps[0], 60)
 
     def test_persistent_page_bisect_measurement(self):
-        """Measurement: 100-ID persistent failure makes 24 sends (7 levels x 3)."""
-        self.assertEqual(24, 3 + 6 * 3 + 3)
+        """Measure transport sends along one failed spine of a 100-ID page.
+
+        The coordinator's prior measurement was 24 sends. This synthetic 100-ID
+        replay measures 21 (seven failing batches x three adapter sends); record
+        both values because the difference may reflect page-depth/counting details.
+        """
+        ids = list(range(100))
+        transport_sends = 0
+        def fake_get_json(client, url, params, timeout=90):
+            nonlocal transport_sends
+            if params.get("returnCountOnly"):
+                return {"count": len(ids)}
+            if params.get("returnIdsOnly"):
+                return {"objectIds": ids}
+            batch = list(map(int, params["objectIds"].split(",")))
+            if 0 in batch:
+                transport_sends += 3
+                raise requests.exceptions.RetryError("synthetic persistent page failure")
+            return {"type": "FeatureCollection", "features": [
+                {"type": "Feature", "id": value,
+                 "properties": {"OBJECTID": value},
+                 "geometry": {"type": "Point", "coordinates": [0, 0]}}
+                for value in batch
+            ]}
+        with patch("lib.arcgis_client.describe_layer", return_value={
+                "maxRecordCount": 100,
+                "fields": [{"name": "OBJECTID", "type": "esriFieldTypeOID"}],
+        }), patch("lib.arcgis_client.get_json", side_effect=fake_get_json):
+            with self.assertRaises(requests.exceptions.RetryError):
+                query_layer_geojson("https://example.invalid/MapServer", 0,
+                                    (-1, -1, 1, 1), page_size=100, max_pages=2)
+        self.assertEqual(transport_sends, 21)
 
     @unittest.expectedFailure
     def test_real_trail_publish_reports_attribute_change_under_stable_id(self):
