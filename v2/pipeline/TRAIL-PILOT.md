@@ -25,3 +25,49 @@ Stable keys: hiking, horseback_riding, mountain_biking, motorcycling, atv, four_
 Each stores the original USFS `managed`, `accpt`, `disc`, `restricted` strings. These retain published date ranges; they are not Boolean permissions. Missing values remain null/unknown. The interface labels each source field separately and does not resolve contradictory records or evaluate dates. E-bike permissions must not be inferred from bicycle records. Add e-bike classes and water activities when corresponding source integration is implemented.
 
 Geometry is clipped; no distance, full-route continuity, navigation, current closure check or campsite access connection is inferred. Next work: activity-specific discovery and evidence-backed nearby camping associations, followed by geographic expansion.
+
+## Trail layer fields as published on 2026-10-09
+
+UNVERIFIED AGAINST LIVE LAYER: the single layer-description request failed TLS certificate verification before returning data. The table below records the 39 locally required field names; live aliases and types were not captured and must not be inferred.
+
+| Name | Alias | Type |
+|---|---|---|
+| `objectid` | Not verified | Not verified |
+| `trail_name` | Not verified | Not verified |
+| `trail_no` | Not verified | Not verified |
+| `hiker_pedestrian_managed` | Not verified | Not verified |
+| `hiker_pedestrian_accpt` | Not verified | Not verified |
+| `hiker_pedestrian_disc` | Not verified | Not verified |
+| `hiker_pedestrian_restricted` | Not verified | Not verified |
+| `pack_saddle_managed` | Not verified | Not verified |
+| `pack_saddle_accpt` | Not verified | Not verified |
+| `pack_saddle_disc` | Not verified | Not verified |
+| `pack_saddle_restricted` | Not verified | Not verified |
+| `bicycle_managed` | Not verified | Not verified |
+| `bicycle_accpt` | Not verified | Not verified |
+| `bicycle_disc` | Not verified | Not verified |
+| `bicycle_restricted` | Not verified | Not verified |
+| `motorcycle_managed` | Not verified | Not verified |
+| `motorcycle_accpt` | Not verified | Not verified |
+| `motorcycle_disc` | Not verified | Not verified |
+| `motorcycle_restricted` | Not verified | Not verified |
+| `atv_managed` | Not verified | Not verified |
+| `atv_accpt` | Not verified | Not verified |
+| `atv_disc` | Not verified | Not verified |
+| `atv_restricted` | Not verified | Not verified |
+| `fourwd_managed` | Not verified | Not verified |
+| `fourwd_accpt` | Not verified | Not verified |
+| `fourwd_disc` | Not verified | Not verified |
+| `fourwd_restricted` | Not verified | Not verified |
+| `snowshoe_managed` | Not verified | Not verified |
+| `snowshoe_accpt` | Not verified | Not verified |
+| `snowshoe_disc` | Not verified | Not verified |
+| `snowshoe_restricted` | Not verified | Not verified |
+| `xcountry_ski_managed` | Not verified | Not verified |
+| `xcountry_ski_accpt` | Not verified | Not verified |
+| `xcountry_ski_disc` | Not verified | Not verified |
+| `xcountry_ski_restricted` | Not verified | Not verified |
+| `snowmobile_managed` | Not verified | Not verified |
+| `snowmobile_accpt` | Not verified | Not verified |
+| `snowmobile_disc` | Not verified | Not verified |
+| `snowmobile_restricted` | Not verified | Not verified |
