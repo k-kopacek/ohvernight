@@ -4,10 +4,14 @@ Each expected failure expresses the smallest desirable safety property; the test
 runner's expected-failure result documents that main does not yet satisfy it.
 """
 import json
+import logging
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+import warnings
+from contextlib import redirect_stdout
+from io import StringIO
 from unittest.mock import patch
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
@@ -15,9 +19,14 @@ sys.path.insert(0, str(SCRIPTS))
 
 import build_display
 import fetch_trails
-from lib.arcgis_client import ArcGISQueryError, get_json, new_session, query_layer_geojson
+from lib.arcgis_client import get_json, new_session
 from lib.common import clip_geometry
 from shapely.geometry import box
+from shapely.geometry import shape
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3 import HTTPSConnectionPool, HTTPResponse
+from urllib3.exceptions import NewConnectionError
 
 
 class JsonResponse:
@@ -68,42 +77,134 @@ class SnapshotDriftSession:
         return JsonResponse({"type": "FeatureCollection", "features": [self.feature]})
 
 
-class PipelineTechnicalDebtExpectedFailures(unittest.TestCase):
-    @unittest.expectedFailure
-    def test_retry_fanout_has_one_bounded_attempt_budget(self):
-        """EXPECTED FAILURE: adapter and JSON layers compound one logical request."""
-        adapter_attempts = new_session().get_adapter("https://").max_retries.total + 1
-        fake = ArcGISErrorSession()
-        with patch("lib.arcgis_client.time.sleep"):
-            with self.assertRaises(ArcGISQueryError):
-                get_json(fake, "https://example.invalid/layer", {})
-        # HTTPAdapter permits 3 attempts and get_json makes 3 calls on its own:
-        # a single logical request can therefore reach the transport up to 9 times.
-        self.assertLessEqual(adapter_attempts * fake.calls, 3,
-                             "retry layers multiply a request beyond the single run budget")
+class CountingTransportPool(HTTPSConnectionPool):
+    """In-memory urllib3 pool that counts each transport attempt."""
+    def __init__(self, failure):
+        super().__init__("example.invalid")
+        self.failure = failure
+        self.transport_sends = 0
 
-    @unittest.expectedFailure
-    def test_stable_object_ids_detect_changed_attributes(self):
-        """EXPECTED FAILURE: identical ID sets do not flag a renamed source row."""
-        saved_snapshot = {"objectid": 7, "trail_name": "ORIGINAL NAME"}
-        result = query_layer_geojson(
-            "https://example.invalid/MapServer", 0, (0, 0, 1, 1),
-            session=SnapshotDriftSession(), page_size=10,
+    def _validate_conn(self, conn):
+        # The pool never opens a socket; _make_request supplies the response.
+        pass
+
+    def _make_request(self, conn, method, url, **kwargs):
+        self.transport_sends += 1
+        if self.failure == "connection":
+            raise NewConnectionError(conn, "synthetic connection failure")
+        return HTTPResponse(
+            body=b'{"error":{"code":503,"message":"synthetic unavailable"}}',
+            status=503,
+            headers={"Content-Type": "application/json"},
+            preload_content=False,
+            reason="Synthetic Service Unavailable",
         )
-        current = result["features"][0]["properties"]
-        self.assertEqual(current.get("trail_name"), saved_snapshot["trail_name"],
-                         "changed name under a stable object ID needs a drift report")
+
+
+class CountingHTTPAdapter(HTTPAdapter):
+    """Real HTTPAdapter retry logic over a counting, socket-free pool."""
+    def __init__(self, failure, max_retries):
+        super().__init__(max_retries=max_retries)
+        self.pool = CountingTransportPool(failure)
+        self.adapter_send_calls = 0
+
+    def get_connection_with_tls_context(self, request, verify, proxies=None, cert=None):
+        return self.pool
+
+    def send(self, request, **kwargs):
+        self.adapter_send_calls += 1
+        return super().send(request, **kwargs)
+
+
+class PipelineTechnicalDebtExpectedFailures(unittest.TestCase):
+    def test_transport_failures_use_one_adapter_budget_without_json_retry_fanout(self):
+        """Pin actual transport attempts for status and connection failures."""
+        measurements = {}
+        for failure, expected_exception in (
+            ("status", requests.exceptions.RetryError),
+            ("connection", requests.exceptions.ConnectionError),
+        ):
+            session = new_session()
+            configured_retries = session.get_adapter("https://").max_retries
+            adapter = CountingHTTPAdapter(failure, configured_retries)
+            session.mount("https://", adapter)
+            with patch("lib.arcgis_client.time.sleep"):
+                with self.assertRaises(expected_exception):
+                    get_json(session, "https://example.invalid/layer", {})
+            measurements[failure] = adapter.pool.transport_sends
+            self.assertEqual(adapter.pool.transport_sends, configured_retries.total + 1)
+            self.assertEqual(adapter.adapter_send_calls, 1,
+                             "get_json must not multiply a transport exception")
+        self.assertEqual(measurements, {"status": 3, "connection": 3})
 
     @unittest.expectedFailure
-    def test_geometry_repair_reports_when_make_valid_changes_topology(self):
-        """EXPECTED FAILURE: clip_geometry repairs invalid input with no audit result."""
+    def test_real_trail_publish_reports_attribute_change_under_stable_id(self):
+        """EXPECTED FAILURE: real refresh replaces a renamed ID without a drift signal."""
+        row = lambda name: {
+            "type": "Feature", "id": 7,
+            "properties": {"OBJECTID": 7, "TRAIL_NAME": name, "TRAIL_NO": "007"},
+            "geometry": {"type": "LineString", "coordinates": [[-106.2, 39.2], [-106.1, 39.3]]},
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "v2"
+            (root / "pipeline" / "scripts").mkdir(parents=True)
+            (root / "trails.geojson").write_text('{"old":"snapshot"}')
+            published_path = root / "trails.geojson"
+            outputs = []
+            logs = []
+            with patch.object(fetch_trails, "__file__", str(root / "pipeline" / "scripts" / "fetch_trails.py")), \
+                 patch.object(fetch_trails, "query_layer_geojson") as query:
+                for name in ("ORIGINAL NAME", "RENAMED UNDER SAME ID"):
+                    query.return_value = {"features": [row(name)]}
+                    output = StringIO()
+                    with redirect_stdout(output):
+                        result = fetch_trails.main()
+                    outputs.append(json.loads(published_path.read_text()))
+                    logs.append(output.getvalue())
+                    self.assertIsNone(result)
+            before, after = outputs
+            self.assertEqual(before["features"][0]["properties"]["id"],
+                             after["features"][0]["properties"]["id"])
+            self.assertEqual(before["features"][0]["properties"]["name"], "ORIGINAL NAME")
+            self.assertEqual(after["features"][0]["properties"]["name"], "RENAMED UNDER SAME ID")
+            drift_signal = any(
+                term in logs[1].lower()
+                for term in ("attribute changed", "attribute drift", "changed record", "snapshot diff")
+            )
+            self.assertTrue(drift_signal,
+                            "second real publish overwrote the changed name without a drift report, log, or return signal")
+
+    @unittest.expectedFailure
+    def test_geometry_repair_change_has_no_warning_log_or_exception_signal(self):
+        """EXPECTED FAILURE: clip_geometry changes invalid geometry without a diagnostic."""
         invalid_bowtie = {
             "type": "Polygon",
             "coordinates": [[[0, 0], [2, 2], [0, 2], [2, 0], [0, 0]]],
         }
-        result = clip_geometry(invalid_bowtie, box(-1, -1, 3, 3))
-        self.assertIn("repair_report", result,
-                      "geometry repair needs a caller-visible changed/unchanged diagnostic")
+        original = shape(invalid_bowtie)
+        emitted_logs = []
+        handler = logging.Handler()
+        handler.emit = lambda record: emitted_logs.append(record)
+        root_logger = logging.getLogger()
+        root_logger.addHandler(handler)
+        try:
+            with warnings.catch_warnings(record=True) as emitted_warnings:
+                warnings.simplefilter("always")
+                result = clip_geometry(invalid_bowtie, box(-1, -1, 3, 3))
+        finally:
+            root_logger.removeHandler(handler)
+        repaired = shape(result)
+        coordinate_count = lambda geom: sum(
+            len(poly.exterior.coords) + sum(len(ring.coords) for ring in poly.interiors)
+            for poly in ([geom] if geom.geom_type == "Polygon" else geom.geoms)
+            if poly.geom_type == "Polygon"
+        )
+        changed = original.area != repaired.area or coordinate_count(original) != coordinate_count(repaired)
+        self.assertTrue(changed, "synthetic bow-tie must change after the real clip/repair path")
+        self.assertEqual(emitted_warnings, [], "repair must not warn in this code path")
+        self.assertEqual(emitted_logs, [], "repair must not log in this code path")
+        self.assertTrue(emitted_warnings or emitted_logs,
+                        "make_valid changed the output but produced no warning or log diagnostic")
 
     @unittest.expectedFailure
     def test_failed_display_build_preserves_the_previous_directory(self):
