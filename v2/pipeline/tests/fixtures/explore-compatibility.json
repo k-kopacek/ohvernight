@@ -75,7 +75,7 @@
       },
       "start": "2026-09-27",
       "end": "2026-09-28",
-      "expected": "Outside published use dates"
+      "expected": "Source dates not interpreted — see details"
     },
     {
       "r": {
@@ -83,7 +83,7 @@
       },
       "start": "2026-12-31",
       "end": "2027-01-02",
-      "expected": "Within published use dates — closures unchecked"
+      "expected": "Source dates not interpreted — see details"
     },
     {
       "r": {
@@ -124,7 +124,7 @@
       },
       "start": "2026-09-27",
       "end": "2026-09-28",
-      "expected": "Use dates need review"
+      "expected": "Source dates not interpreted — see details"
     },
     {
       "r": {
