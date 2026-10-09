@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # M5 preliminary research gate — land
 
 Prepared 2026-10-07 for the owner. This is preparation only: it decides

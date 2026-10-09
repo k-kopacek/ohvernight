@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # Customer discovery interview kit
 
 **Summary.** This kit helps the owner interview real Colorado outdoor travellers about trips they actually took. It does not pitch Ohvernight and never asks "would you use this?". It contains a screener, consent and note rules, a 30-minute core script, eight segment plans (dispersed campers, hikers, anglers, paddlers, hunters, off-road users, RV/trailer users, multi-activity weekend travellers), the signals that would support or weaken each of the seven bets in `docs/research/product-opportunities/product-bets.md`, red flags for politeness, ten no-cost places to find people, a one-page synthesis template and a stopping rule. Nothing here is to be run, sent or published until the owner decides to. No business decision is made here.

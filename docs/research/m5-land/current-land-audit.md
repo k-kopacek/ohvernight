@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # M5 input — what the repository holds for land today
 
 Read-only audit, 2026-10-07. Measured from the files in the

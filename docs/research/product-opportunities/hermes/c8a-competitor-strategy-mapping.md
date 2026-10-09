@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # C8A — Competitor Strategy, Mapping and Navigation Apps
 
 > Hermes report (GPT-5.6 luna), 2026-10-07, stored as returned. HERMES-SOURCED: web research only, no repository access. Nothing here is verified by the coordinator unless another document says so, and nothing is decided.

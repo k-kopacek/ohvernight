@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # Map accessibility design recommendations
 
 Date: 2026-10-07. Status: recommendations only. No production file was changed and nothing here is decided. The owner decides every item marked "owner decision".

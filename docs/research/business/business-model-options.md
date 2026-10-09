@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # Business model options
 
 Status: options for the owner, written 2026-10-07. This document does not

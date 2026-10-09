@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # M8 ranking architecture options
 
 Status: design options for the owner, written 2026-10-07. Nothing here is a

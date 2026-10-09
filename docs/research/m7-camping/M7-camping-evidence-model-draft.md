@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # M7 camping evidence model — draft
 
 > Preparation only. Nothing here is decided, nothing is implemented, and `ROADMAP.md` is unchanged.

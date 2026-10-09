@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # M4 water design: adversarial depth audit
 
 Read-only audit by an independent reviewer on 2026-10-07, against the approved

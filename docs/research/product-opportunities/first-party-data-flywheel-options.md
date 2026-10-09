@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # First-party data flywheel options
 
 Status: design options for the owner, written 2026-10-07. Not a decision, not

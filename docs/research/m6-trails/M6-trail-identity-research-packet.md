@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # M6 trail identity — research packet
 
 Prepared 2026-10-07. Preparation only: nothing here is decided, implemented

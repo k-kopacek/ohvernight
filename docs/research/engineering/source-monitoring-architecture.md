@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # Source-monitoring architecture
 
 Status: a future design for the owner to consider, written 2026-10-07. Not a

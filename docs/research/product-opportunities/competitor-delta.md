@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # Competitor delta
 
 Status: analysis for the owner, written 2026-10-07. Not a decision and not a

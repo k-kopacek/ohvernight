@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # MVP experiments: cheapest useful validation per opportunity
 
 **Summary.** The seven Tier 1 opportunities in `docs/research/product-opportunities/idea-fairy-report.md` (pairing, access confidence, freshness, adventure matching, saved-trip monitoring, trip feasibility, offline package) are the same seven bets in `product-bets.md`, so this file has seven experiments plus one cross-cutting demand test (E8). Each gives HYPOTHESIS, EXPERIMENT, COST, TIME, SUCCESS THRESHOLD, FAILURE THRESHOLD and WHAT WE LEARN, followed by the experiment's own trust risk and what it does not prove. Thresholds are numbers fixed before the test. **No experiment takes payment, collects card details, or presents a fake purchase.** Where a price is tested, it is by stated choice among labelled options only, with a visible line that nothing is for sale. Nothing here is to be run, built or published until the owner decides to; no business decision is made here. The recommended order for the first three and the stop condition are at the end.

@@ -1,3 +1,5 @@
+DRAFT - UNREVIEWED
+
 # M6 input — what the repository holds for trails today
 
 Read-only audit, 2026-10-07. Measured from the files in the
