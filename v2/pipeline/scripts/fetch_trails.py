@@ -32,7 +32,9 @@ def normalize(row, evidence, boundary=None):
     }}
 
 def main():
-    fc = query_layer_geojson(URL, 0, bbox(), required_fields=['objectid', 'trail_name', 'trail_no'],
+    fc = query_layer_geojson(URL, 0, bbox(), required_fields=['objectid', 'trail_name', 'trail_no'] +
+                            [f'{prefix}_{suffix}' for prefix in ACTIVITIES.values()
+                             for suffix in ('managed', 'accpt', 'disc', 'restricted')],
                             page_size=100, max_pages=20, timeout=45)
     evidence = make_evidence(URL + '/0', 'USDA Forest Service', 'high', 'arcgis_rest_query',
                              notes='Source retrieval only; current access and closures unverified.')
