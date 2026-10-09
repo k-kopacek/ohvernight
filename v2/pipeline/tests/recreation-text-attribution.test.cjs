@@ -63,6 +63,7 @@ test('other-site detail displays attributed source fields and suppresses absent,
  a.deepEqual(texts(render(topaz)).filter(x=>['Source site type','Published restrictions (source text)','Listed activities (source text)','Fee information (source text; may be historical)','Season text (source; may be historical)','Water details (source text)','Restroom details (source text)','Important information (source text)','Directions (source text; route and conditions not reviewed)'].includes(x)),['Source site type','Season text (source; may be historical)','Water details (source text)','Restroom details (source text)']);
  const dakan=byName('DAKAN'),dakanText=texts(render(dakan)).join('\n');
  a.ok(dakanText.includes(dakan.properties.restroom_availability));a.ok(!dakanText.includes('N/A')&&!dakanText.includes('No Data'));
+ for(const name of ['CABIN RIDGE PS','TOPAZ POINT','DAKAN']){const detail=texts(render(byName(name)));a.ok(detail.includes('Campgrounds nearby by straight-line distance'),name+' keeps campground proximity section');a.ok(detail.includes('Trailheads nearby by straight-line distance'),name+' keeps trailhead proximity section');}
  for(const f of sites.filter(x=>!['CAMPGROUND','TRAILHEAD','DISPERSED_AREA'].includes(x.properties.site_type))){
   const rendered=texts(render(f)),full=rendered.join('\n');
   a.ok(!full.includes(f.properties.seasonal_operational_status),'operational status stays hidden for '+f.properties.name);
@@ -75,10 +76,12 @@ test('other-site detail displays attributed source fields and suppresses absent,
   if(!page&&B.withheld(f))a.ok(rendered.includes(B.WITHHELD),'unattributed descriptive text stays withheld for '+f.properties.name);
   // Raw publisher values are checked above and intentionally excluded from the app-copy scan: this source snapshot itself includes "DAY USE AREA", "Day Use", and "NOT ALLOWED".
   const raw=['site_type','restrictions','activity_type_list','fee_description','open_season','water_availability','restroom_availability','important_info','directions'].map(key=>f.properties[key]).filter(value=>typeof value==='string'&&value);raw.push(B.kind(f));
-  const appCopy=raw.reduce((text,value)=>text.split(value).join(''),full);
+  const allowedCautions=['Saving a place does not confirm it is suitable or available.','Check approach roads and trailer parking before travel. Directions are for this facility, not a verified riding route.'];
+  for(const caution of allowedCautions)if(full.includes(caution))a.ok(allowedCautions.includes(caution),'only listed existing cautionary copy is exempt from affirmative-claim scan');
+  const appCopy=allowedCautions.concat(raw).reduce((text,value)=>text.split(value).join(''),full);
   a.doesNotMatch(appCopy,/\b(open|closed|allowed|permitted|legal|free|suitable|good for|recommended|verified|day use)\b/i,'Ohvernight-added wording carries no status or suitability claim for '+f.properties.name);
  }
- const saved=texts(render(byName('CABIN RIDGE PS'),true));a.ok(saved.includes('Save to plan')&&saved.includes('Saving stores this source record in your saved list.'));
+ const saved=texts(render(byName('CABIN RIDGE PS'),true));a.ok(saved.includes('Save to plan')&&saved.includes('Saving a place does not confirm it is suitable or available.'));
 });
 test('a non-page record still withholds descriptive text while showing structured fields',()=>{
  const f={type:'Feature',geometry:null,properties:{id:'synthetic-other',name:'Synthetic',site_type:'PICNIC SITE',water_availability:'No',directions:'Unattributed directions',important_info:'Unattributed details',activity_type_list:'HIKING',evidence:{source_url:'https://example.test/layer'}}};
