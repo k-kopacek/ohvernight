@@ -238,10 +238,13 @@ and every group, claim, exclusion and alias survive the mapping.
 - [Product principles](docs/product/product-principles.md).
 - From M5 onward each milestone ends with the product review in
   [product-scorecard.md](docs/product/product-scorecard.md), including a run
-  of the
-  [canonical Douglas dirt-bike scenario](docs/product/acceptance-scenario-douglas-dirt-bike.md).
-  One baseline run happens after M4 closes. It is not an M4 merge gate and
-  does not change "M4 is complete with A, B and C".
+  of the canonical acceptance scenarios
+  ([A, Douglas dirt-bike with overnight](docs/product/acceptance-scenario-douglas-dirt-bike.md)
+  and
+  [B, Rampart family day use](docs/product/acceptance-scenario-rampart-day-use.md)).
+  Scenario A’s baseline run happens after M4 closes; Scenario B’s baseline ran
+  on 2026-10-08 against main at `bb85785`. Neither is an M4 merge gate, and
+  these runs do not change "M4 is complete with A, B and C".
 - [Agent stack and workflow](docs/architecture/agent-stack.md), including
   human-approved merge authority.
 

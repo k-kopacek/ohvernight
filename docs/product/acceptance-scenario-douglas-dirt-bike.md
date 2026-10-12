@@ -7,6 +7,10 @@ result is recorded in the product review (see
 [product-scorecard.md](product-scorecard.md)). It is not an automated test, it
 replaces no engineering gate, and it is not a merge gate for M4.
 
+This is **Scenario A**. [Scenario B](acceptance-scenario-rampart-day-use.md),
+the Rampart family day-use and dirt-bike outing, runs beside it and does not
+replace it.
+
 ## Why this scenario
 
 Douglas County and the nearby Front Range motorized trail systems exercise
@@ -113,9 +117,10 @@ What is known about the starting point, from the repository at `main` on
 - A Browse finder for trails, camping and trailheads, with an activity
   selector, a date check against published trail seasons, a camping-vehicle
   selector, a saved plan and GPX export.
-- Straight-line listings: "Campgrounds nearby" and "Trailheads nearby" under a
-  trail, and "Nearby trails for selected activity" under a point site, within
-  five straight-line miles, each row marked "connection unverified".
+- Straight-line listings: "Campgrounds nearby by straight-line distance" and
+  "Trailheads nearby by straight-line distance" under a trail, and "Trails for
+  selected activity nearby by straight-line distance" under a point site,
+  within five straight-line miles, each row marked "connection unverified".
 
 **CURRENT, absent in Douglas:**
 
@@ -147,8 +152,9 @@ The expected baseline, as a prediction to be tested and not a result:
 ## Keeping it stable
 
 - The scenario text changes only by pull request.
-- A second canonical scenario (for example an Aspen fishing and camping
-  weekend once M4-C lands) may be added beside this one. It does not replace
-  it.
+- [Scenario B](acceptance-scenario-rampart-day-use.md) was added beside this
+  one on 2026-10-08. A further scenario (for example an Aspen fishing and
+  camping weekend once M4-C lands) may be added the same way. None replaces
+  this one.
 - Results are kept in order, one per milestone, so the product has a
   longitudinal baseline.

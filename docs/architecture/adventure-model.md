@@ -41,17 +41,19 @@ Both regions ship straight-line distance listings today:
 - **Aspen planner.** `v2/trail-discovery.js` computes straight-line distance
   between an overnight place and trail geometry and lists up to three within
   five miles (`nearbyTrails`, `adventureOptions`). `v2/explore/capabilities.js`
-  shows them as "Camping nearby", "Trails nearby" and the activity-plus-camping
-  pilot list, in regions with the `trip_planner` capability.
-- **Douglas Browse.** `v2/explore/browse.js` lists "Campgrounds nearby" and
-  "Trailheads nearby" under a trail, and "Nearby trails for selected activity"
-  under a point site, each within five straight-line miles and each row marked
-  "connection unverified".
+  shows them as "Camping nearby by straight-line distance", "Trails nearby by
+  straight-line distance" and the activity-plus-camping pilot list, in regions
+  with the `trip_planner` capability.
+- **Douglas Browse.** `v2/explore/browse.js` lists "Campgrounds nearby by
+  straight-line distance" and "Trailheads nearby by straight-line distance"
+  under a trail, and "Trails for selected activity nearby by straight-line
+  distance" under a point site, each within five straight-line miles and each
+  row marked "connection unverified".
 
 These are distance listings. They are not relationships in the sense of this
-document, and nothing in this model may be populated from them. Whether their
-present wording is clear enough about that is raised as an owner question in
-the pull request that adds this document.
+document, and nothing in this model may be populated from them. PR #19
+resolved the earlier wording question by labeling the listings as straight-line
+distance; the current app uses that wording.
 
 ## 2. Entities
 
