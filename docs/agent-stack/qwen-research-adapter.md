@@ -316,6 +316,15 @@ allowed. This validation is not proof of endpoint ownership, authentication,
 network exposure or factual correctness. The original model tag/parameters,
 prompt, input/output validators and one-request behavior remain unchanged.
 
+A separate staging fix determines a repository boundary from actual ancestor
+Git metadata, rather than assuming the adapter is always in the package layout.
+This preserves the recovered private-temporary-copy launch recipe; a copied
+adapter must not misclassify the filesystem root as a repository. Resolution
+errors fail as unreadable settings. This adds only ancestor metadata checks and
+reads no canonical evidence. The packaged adapter SHA-256 is
+`6355f8a69cc384fb0fc25c341d0fea44540fd577e9e3ef1b0e2a7ba15cc07e4c`;
+the runner pins that hash before execution.
+
 Missing, unreadable, invalid or repository-resolving setting paths return
 `ENDPOINT_SETTING_MISSING`, `ENDPOINT_SETTING_UNREADABLE`,
 `ENDPOINT_SETTING_INVALID`, or `ENDPOINT_SETTING_IN_REPOSITORY` before any request.
