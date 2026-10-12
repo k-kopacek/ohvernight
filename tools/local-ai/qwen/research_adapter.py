@@ -7,12 +7,15 @@ import argparse
 import hashlib
 import ipaddress
 import json
+import os
+import pwd
 import re
 import sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from datetime import date
 from urllib.parse import urlsplit
 
 MODEL = "qwen3:8b"
@@ -40,19 +43,61 @@ class EndpointConfigurationError(ValueError):
         super().__init__(code)
 
 
+class ExposureReviewError(ValueError):
+    code = "EXPOSURE_REVIEW_REQUIRED"
+
+
+def installation_home():
+    """POSIX account database, independent of the parent's HOME environment."""
+    return Path(pwd.getpwuid(os.getuid()).pw_dir)
+
+
+def repository_root(path):
+    """Inspect target ancestry even when the adapter itself is staged elsewhere."""
+    return next((parent for parent in (path, *path.parents)
+                 if (parent / ".git").exists()), None)
+
+
+def exposure_review_setting_path():
+    return installation_home() / ".config" / "ohvernight" / "qwen-exposure-review.json"
+
+
+def require_owner_exposure_review(*, today=None):
+    """Only the owner sets this acknowledgement; agents must never write it."""
+    try:
+        path = exposure_review_setting_path().resolve()
+        if repository_root(path) is not None:
+            raise ValueError("Acknowledgement must remain outside Git")
+        with path.open("rb") as setting:
+            raw = setting.read(1025)
+        if len(raw) > 1024:
+            raise ValueError("Oversized acknowledgement")
+        value = parse_json(raw)
+        if (type(value) is not dict
+                or set(value) != {"owner_exposure_review_acknowledged", "reviewed_at"}
+                or value["owner_exposure_review_acknowledged"] is not True
+                or type(value["reviewed_at"]) is not str
+                or re.fullmatch(r"\d{4}-\d{2}-\d{2}", value["reviewed_at"]) is None):
+            raise ValueError("Invalid acknowledgement")
+        if date.fromisoformat(value["reviewed_at"]) > (today if today is not None else date.today()):
+            raise ValueError("Future review date")
+    except (OSError, ValueError, RuntimeError):
+        raise ExposureReviewError("Owner exposure review required") from None
+    return value["reviewed_at"]
+
+
 def endpoint_setting_path():
     """The single installation setting; no per-request or CLI override."""
-    return Path.home() / ".config" / "ohvernight" / "qwen-endpoint"
+    return installation_home() / ".config" / "ohvernight" / "qwen-endpoint"
 
 
 def configured_endpoint():
     try:
         path = endpoint_setting_path().resolve()
-        repository = next((parent for parent in Path(__file__).resolve().parents
-                           if (parent / ".git").exists()), None)
+        repository = repository_root(path)
     except (OSError, RuntimeError):
         raise EndpointConfigurationError("ENDPOINT_SETTING_UNREADABLE") from None
-    if repository is not None and (path == repository or repository in path.parents):
+    if repository is not None:
         raise EndpointConfigurationError("ENDPOINT_SETTING_IN_REPOSITORY")
     try:
         with path.open("rb") as setting:
@@ -194,6 +239,7 @@ def main():
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", args.run_id):
         parser.error("invalid run id")
     try:
+        require_owner_exposure_review()
         endpoint = configured_endpoint()
         with args.input.open("rb") as source:
             raw = source.read(MAX_INPUT_BYTES + 1)
@@ -216,6 +262,9 @@ def main():
                           "input_sha256": hashlib.sha256(raw).hexdigest(),
                           "result": result, "explanations": "advisory; human review required"}), flush=True)
         return 0
+    except ExposureReviewError as error:
+        print(json.dumps({"event": "rejected", "run_id": args.run_id,
+                          "failure_code": error.code}), flush=True)
     except EndpointConfigurationError as error:
         print(json.dumps({"event": "failed", "run_id": args.run_id,
                           "failure_code": error.code}), flush=True)

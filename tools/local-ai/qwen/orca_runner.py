@@ -5,11 +5,10 @@ provide independently inspected Orca/process observation implementations.
 """
 import hashlib
 import json
-import re
 import shlex
 import time
 import uuid
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Protocol
 
@@ -17,7 +16,7 @@ import research_adapter as adapter
 from ohvernight_bridge import ADVISORY_LABEL, MAX_BRIDGE_BYTES
 
 ADAPTER_VERSION = "step1-installation-endpoint"
-EXPECTED_ADAPTER_SHA256 = "6355f8a69cc384fb0fc25c341d0fea44540fd577e9e3ef1b0e2a7ba15cc07e4c"
+EXPECTED_ADAPTER_SHA256 = "7b726317fd53291ae7ea4f9b4217837645a493645b3a4b2580c83e6ada54c8bd"
 MINIMAL_ENVIRONMENT = {"PATH": "/usr/bin:/bin"}
 METADATA_FIELDS = {
     "run_id", "utc_start", "utc_end", "adapter_sha256", "adapter_version", "model",
@@ -60,37 +59,8 @@ class RunFailure(Exception):
         super().__init__(code)
 
 
-def exposure_review_setting_path():
-    return Path.home() / ".config" / "ohvernight" / "qwen-exposure-review.json"
-
-
 def require_owner_exposure_review():
-    """Require the owner's dated local acknowledgement; never create it.
-
-    URL validation cannot prove that an unauthenticated wildcard listener is
-    isolated. This acknowledgement follows the owner's exposure inspection,
-    and is distinct from endpoint installation and from live-pilot approval.
-    """
-    try:
-        path = exposure_review_setting_path().expanduser().resolve()
-        repo_root = Path(__file__).resolve().parents[3]
-        if path == repo_root or repo_root in path.parents:
-            raise ValueError("Acknowledgement must remain outside Git")
-        with path.open("rb") as setting:
-            raw = setting.read(1025)
-        if len(raw) > 1024:
-            raise ValueError("Oversized acknowledgement")
-        value = adapter.parse_json(raw)
-        if (type(value) is not dict
-                or set(value) != {"owner_exposure_review_acknowledged", "reviewed_at"}
-                or value["owner_exposure_review_acknowledged"] is not True
-                or type(value["reviewed_at"]) is not str
-                or re.fullmatch(r"\d{4}-\d{2}-\d{2}", value["reviewed_at"]) is None):
-            raise ValueError("Invalid acknowledgement")
-        date.fromisoformat(value["reviewed_at"])
-    except (OSError, ValueError, RuntimeError):
-        raise RunFailure("EXPOSURE_REVIEW_REQUIRED") from None
-    return value["reviewed_at"]
+    adapter.require_owner_exposure_review()
 
 
 def structurally_validate_completion(event, run_id, digest, records):
@@ -151,8 +121,8 @@ def run_advisory(raw, interface, *, run_root=None, python_executable="python3", 
         # Validate the one installation setting before launching any process.
         # The child independently reads the same fixed file; never pass the URL
         # in its command, environment, output metadata, or caller arguments.
-        adapter.configured_endpoint()
         require_owner_exposure_review()
+        adapter.configured_endpoint()
         try:
             records = adapter.validate_records(adapter.parse_json(raw))
         except (ValueError, TypeError):
@@ -171,7 +141,7 @@ def run_advisory(raw, interface, *, run_root=None, python_executable="python3", 
         event = interface.completion(receipt, run_id=run_id, timeout_s=timeout_s)
         rows = structurally_validate_completion(event, run_id, digest, records)
         structurally_valid = True
-    except adapter.EndpointConfigurationError as error:
+    except (adapter.EndpointConfigurationError, adapter.ExposureReviewError) as error:
         code = error.code
     except RunFailure as error:
         code = error.code

@@ -47,7 +47,7 @@ model `qwen3:8b` and its original parameters remain fixed.
 
 The service has no API authentication, and its listener was last observed on a
 wildcard interface. Live use remains gated on the owner's network exposure
-review; permitted URL syntax does not establish isolation. The runner requires
+review; permitted URL syntax does not establish isolation. Both the runner and standalone adapter CLI require
 the owner to set a separate outside-Git file,
 `~/.config/ohvernight/qwen-exposure-review.json`, after that review:
 
@@ -57,18 +57,23 @@ the owner to set a separate outside-Git file,
 
 Replace the date placeholder with the actual review date. Missing, unreadable,
 malformed, undated or inside-repository acknowledgements fail with
-`EXPOSURE_REVIEW_REQUIRED` before launch. The runner never creates or updates
-this file. Offline tests use synthetic files or mocked acknowledgements and need
+`EXPOSURE_REVIEW_REQUIRED` before launch; the CLI emits a rejected event before
+reading the endpoint or constructing a request. Future dates fail. Agents must
+never create the acknowledgement: only the owner does. No maximum age policy
+is implemented; the owner must decide a proposed age limit. Offline tests use synthetic files or mocked acknowledgements and need
 no real owner setting. Acknowledgement does not authorize inference or Step 2.
 
 `run_advisory` takes the resulting bytes and an injected execution interface.
-There is no enabled concrete execution backend or executable live-run command
-in this draft. A separately approved pilot must provide an inspected interface
+There is no enabled concrete Orca execution backend in this draft. The standalone
+adapter CLI is an executable live-inference entry point, independently gated on
+the same owner acknowledgement and endpoint validation. It does not provide the
+runner's byte guard, completion consumption or cleanup confirmation. A separately approved pilot must provide an inspected interface
 using `orca terminal create --command`, exact-handle completion reads, and
 independent confirmation of terminal closure and adapter-process exit. A create
 receipt alone is insufficient. No retry, fallback or model switching is allowed.
 The command builder clears the child environment and selects isolated Python
-with bytecode disabled. A missing completion, cleanup or correlation fails.
+with bytecode disabled. Parent and child both resolve the POSIX account home
+via `pwd.getpwuid(os.getuid()).pw_dir`, ignoring HOME. A missing completion, cleanup or correlation fails.
 
 Default run storage is the user's cache, outside the repository. An explicit
 `run_root` can select another outside-repository directory. Input and metadata

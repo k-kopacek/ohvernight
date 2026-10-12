@@ -73,7 +73,7 @@ class IntegrationTests(unittest.TestCase):
 
     def test_missing_owner_exposure_acknowledgement_refuses_launch(self):
         self.exposure_patch.stop()
-        with patch.object(runner, "exposure_review_setting_path", return_value=Path(self.temp.name) / "missing.json"):
+        with patch.object(adapter, "exposure_review_setting_path", return_value=Path(self.temp.name) / "missing.json"):
             fake = FakeExecution(self.raw)
             result = runner.run_advisory(self.raw, fake, run_root=self.temp.name)
         self.assertEqual(result["failure_code"], "EXPOSURE_REVIEW_REQUIRED")

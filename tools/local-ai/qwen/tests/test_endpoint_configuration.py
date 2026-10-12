@@ -27,6 +27,8 @@ class EndpointTests(unittest.TestCase):
         self.path = Path(self.temp.name) / "endpoint"
         p = patch.object(adapter, "endpoint_setting_path", return_value=self.path)
         p.start(); self.addCleanup(p.stop)
+        p = patch.object(adapter, "require_owner_exposure_review", return_value="synthetic-owner-review")
+        p.start(); self.addCleanup(p.stop)
         p = patch.object(socket, "socket", side_effect=AssertionError("No network"))
         p.start(); self.addCleanup(p.stop)
 
@@ -66,7 +68,9 @@ class EndpointTests(unittest.TestCase):
         with patch.object(Path,"open",side_effect=PermissionError()):
             with self.assertRaises(adapter.EndpointConfigurationError) as caught:adapter.configured_endpoint()
         self.assertEqual(caught.exception.code,"ENDPOINT_SETTING_UNREADABLE")
-        with patch.object(adapter,"endpoint_setting_path",return_value=Path(adapter.__file__)):
+        repository = Path(self.temp.name) / "synthetic-repository"
+        repository.mkdir(); (repository / ".git").mkdir()
+        with patch.object(adapter,"endpoint_setting_path",return_value=repository / "endpoint"):
             with self.assertRaises(adapter.EndpointConfigurationError) as caught:adapter.configured_endpoint()
         self.assertEqual(caught.exception.code,"ENDPOINT_SETTING_IN_REPOSITORY")
 

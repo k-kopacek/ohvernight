@@ -22,7 +22,9 @@ public-repository privacy rule wins. The first import commit substitutes only
 the private endpoint literal with `http://ENDPOINT_NOT_CONFIGURED:11434/api/chat`
 in the adapter and its original test. Fixtures have no occurrences and remain
 byte-identical. A later focused commit introduces the installation setting and
-updates the endpoint-specific assertion; no other original behavior is changed.
+updates the endpoint-specific assertion. Subsequent reviewed fixes enforce the
+owner exposure gate in both entry paths; each recovered-adapter change is
+separate from the import and listed in the private report.
 The private report contains exact original-to-import unified diffs. Public PR
 provenance diffs withhold the original literal. Hashes of originals containing
 that literal are private because they can reveal it by offline enumeration.
@@ -296,10 +298,10 @@ The single endpoint setting is a file outside the repository:
 `~/.config/ohvernight/qwen-endpoint`. It contains one complete URL, optionally
 followed by one newline. No endpoint environment variable, caller argument or
 per-run endpoint choice exists; tooling never creates the setting automatically.
-Installation requires explicit owner authorization. Standard
-Python home-directory resolution can consult HOME; isolated child execution
-uses a cleared environment and resolves the account home normally. Apart from
-home resolution, the adapter does not read environment values.
+Installation requires explicit owner authorization. On the POSIX execution host,
+both parent and child resolve the same home from `pwd.getpwuid(os.getuid()).pw_dir`,
+ignoring HOME. No endpoint, acknowledgement or cache path is chosen through
+ambient environment values.
 
 The URL must use the original `http` scheme; a literal loopback address or IPv4
 within Tailscale's CGNAT block (`100.64.0.0/10`); port 11434; exact `/api/chat` path; and no
@@ -309,14 +311,15 @@ allowed. This validation is not proof of endpoint ownership, authentication,
 network exposure or factual correctness. The original model tag/parameters,
 prompt, input/output validators and one-request behavior remain unchanged.
 
-A separate staging fix determines a repository boundary from actual ancestor
-Git metadata, rather than assuming the adapter is always in the package layout.
-This preserves the recovered private-temporary-copy launch recipe; a copied
-adapter must not misclassify the filesystem root as a repository. Resolution
-errors fail as unreadable settings. This adds only ancestor metadata checks and
-reads no canonical evidence. The packaged adapter SHA-256 is
-`6355f8a69cc384fb0fc25c341d0fea44540fd577e9e3ef1b0e2a7ba15cc07e4c`;
-the runner pins that hash before execution.
+The recovered manual recipe copies the standalone adapter to a private temporary
+folder; the packaged runner executes its pinned repository copy instead. Both
+remain gated. Repository checks inspect the SETTING TARGET's actual ancestor Git
+metadata, even if the adapter is outside Git, rather than inferring a root from
+its installation depth or skipping checks outside a checkout. This supports the
+manual staging recipe without accepting settings in a different Git checkout.
+Resolution errors fail closed. The packaged adapter SHA-256 is
+`7b726317fd53291ae7ea4f9b4217837645a493645b3a4b2580c83e6ada54c8bd`;
+its source contains no private endpoint literal, and the runner pins that hash.
 
 Missing, unreadable, invalid or repository-resolving setting paths return
 `ENDPOINT_SETTING_MISSING`, `ENDPOINT_SETTING_UNREADABLE`,
@@ -328,7 +331,7 @@ Live use is blocked pending the owner's network exposure review
 (`BLOCKED_NETWORK_EXPOSURE`), independently of offline packaging and URL checks.
 No listener, firewall or network changes are authorized by this package.
 
-The runner requires a dated owner-set acknowledgement at the fixed outside-Git
+Both the runner and standalone adapter CLI require a dated owner-set acknowledgement at the fixed outside-Git
 path `~/.config/ohvernight/qwen-exposure-review.json`:
 
 ```json
@@ -336,18 +339,24 @@ path `~/.config/ohvernight/qwen-exposure-review.json`:
 ```
 
 The owner supplies the actual calendar date after inspecting exposure. Exact keys,
-boolean true and a valid ISO calendar date are required; oversized, unreadable,
+boolean true and a valid ISO calendar date no later than today are required; oversized, unreadable,
 missing, malformed or repository-resolving settings fail closed with
-`EXPOSURE_REVIEW_REQUIRED` before process launch or runtime input creation. The
-runner never writes this setting, and its contents do not enter run metadata.
+`EXPOSURE_REVIEW_REQUIRED` before process launch or runtime input creation. Agents must never create this acknowledgement file: only the owner does. Neither
+entry path writes it, and its contents do not enter run metadata.
 The setting records an explicit owner acknowledgement, not independently verified
 firewall state, freshness or live-pilot approval. Offline tests mock this gate or
 use synthetic acknowledgement files; they require no real owner acknowledgement.
-The runner validates the setting before terminal creation and the adapter
-validates it before reading input/sending a request. No URL is copied into the
+Future dates are rejected. Maximum acknowledgement age remains an owner decision;
+a bounded age is proposed, but no expiration policy is silently implemented.
+The runner checks exposure review before endpoint configuration or terminal
+creation. The adapter CLI independently checks the same acknowledgement before
+reading its endpoint, input, constructing a request or opening the network. A
+missing/invalid acknowledgement emits a rejected event with the specific
+`EXPOSURE_REVIEW_REQUIRED` code and exit 1. No URL is copied into the
 command, minimal environment or run metadata. A later pilot must keep the
 installation setting fixed throughout each run. The file is local/private and
-must never be committed. Offline tests cover every validation/error branch,
+must never be committed. Offline tests cover missing/invalid settings, dated exposure review, pre-request
+CLI refusal,
 loopback/CGNAT boundaries, Unicode errors, wrong scheme/port/path, credentials,
 query/fragment, public/LAN/hostname rejection, redirects and proxy refusal.
 
@@ -415,8 +424,10 @@ unresolved measurement; runtime metadata uses token count null.
 Preserve `orca terminal create --command`; the command builder selects an
 explicit Python executable with `env -i PATH=/usr/bin:/bin`, `-I` and `-B`.
 All execution/process observations are delegated to an injectable interface;
-imports do not call Orca or the network. No concrete live backend is enabled in
-this offline draft. A later approved pilot needs an independently inspected
+imports do not call Orca or the network. No concrete Orca backend is enabled in
+this offline draft. The standalone adapter CLI remains an executable inference
+entry point, enforcing its own owner exposure review and endpoint checks; it
+does not provide the runner's byte guard, correlation consumer or cleanup proof. A later approved pilot needs an independently inspected
 interface implementation and a release of the context/security gates.
 
 A run succeeds only with a runner-generated unique run ID, a completion read
