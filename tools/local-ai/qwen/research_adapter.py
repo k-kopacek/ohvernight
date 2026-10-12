@@ -5,6 +5,7 @@ fields preserve the supplied structured evidence; explanations are advisory.
 """
 import argparse
 import hashlib
+import http.client
 import ipaddress
 import json
 import os
@@ -270,6 +271,9 @@ def main():
                           "failure_code": error.code}), flush=True)
     except ValueError as error:
         print(json.dumps({"event": "rejected", "run_id": args.run_id, "reason": str(error)}), flush=True)
+    except http.client.HTTPException:
+        print(json.dumps({"event": "failed", "run_id": args.run_id,
+                          "failure_code": "HTTP_PROTOCOL_ERROR"}), flush=True)
     except (OSError, urllib.error.URLError):
         print(json.dumps({"event": "failed", "run_id": args.run_id,
                           "reason": "input or endpoint unavailable; no automatic retry"}), flush=True)
