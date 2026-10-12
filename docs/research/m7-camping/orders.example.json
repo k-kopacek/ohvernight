@@ -1,0 +1,99 @@
+{
+  "schema_version": "illustrative-m7-orders-1",
+  "status": "DRAFT - UNREVIEWED RESEARCH",
+  "illustrative_only": true,
+  "checked_at": "2026-10-09",
+  "sites": [
+    {"id": "site:cabin-ridge-picnic-area", "name": "Cabin Ridge Picnic Area"},
+    {"id": "site:cabin-ridge-trailhead", "name": "Cabin Ridge Trailhead"},
+    {"id": "site:dutch-fred-trailhead", "name": "Dutch Fred Trailhead"},
+    {"id": "site:flat-rocks-campground", "name": "Flat Rocks Campground"},
+    {"id": "site:topaz-point-picnic-area", "name": "Topaz Point Picnic Area"}
+  ],
+  "instruments": [
+    {
+      "id": "order:psicc-2022-08",
+      "issuing_unit": "Pike-San Isabel National Forests and Cimarron and Comanche National Grasslands",
+      "order_number_as_printed": "PSICC-2022-08",
+      "instrument_type": "signed_forest_order",
+      "title": "Camping and parking near listed roads",
+      "effective": {"from": "2022-07-20T00:01:00-06:00", "through": "2027-07-20", "unless_rescinded": true},
+      "geographic_scope_as_stated": "The Described Areas are all NFS lands within 1/4 mile of the centerline of the Described Roads, Highways and County Roads as shown on Exhibit A.",
+      "prohibitions_as_quoted": [
+        "Camping within the Described Areas unless in a developed campground or a designated dispersed campsite provided by the Forest Service that is posted with signs. 36 C.F.R. 261.58(e)",
+        "Parking on the Described Roads or within the Described Areas unless in a developed campground or a designated parking site provided by the Forest Service that is posted with signs. 36 C.F.R. 261.58(g)"
+      ],
+      "supersedes": [{"instrument_id": "order:psicc-2017-11", "basis": "The order states it replaces PSICC-2017-11."}],
+      "evidence": [{"source": "https://www.fs.usda.gov/sites/nfs/files/r02/psicc/publication/alerts/fseprd1060368.pdf", "kind": "order_pdf", "checked_at": "2026-10-09T05:02:00Z"}, {"source": "https://www.fs.usda.gov/sites/nfs/files/r02/psicc/publication/alerts/Order%202022-08%20table.pdf", "kind": "exhibit_b_road_table", "checked_at": "2026-10-09T05:02:00Z"}],
+      "site_relations": [
+        {"site_id": "site:cabin-ridge-picnic-area", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "source-backed", "evidence": "Exhibit B lists road 300.R CABIN RIDGE PG."},
+        {"site_id": "site:cabin-ridge-trailhead", "type": "constrained_by", "applicability": "unknown", "origin": "unknown", "evidence": "The archive gives no site-specific inclusion for Cabin Ridge Trailhead under this order."},
+        {"site_id": "site:dutch-fred-trailhead", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "derived", "derivation": "Road 506 DUTCH FRED is listed; the archived site point is about 440 m from NFSR 300 and within 1/4 mile of listed road 506 based on the archived road geometry. The mapped end of road 506 is about 300 m from the site point.", "evidence": "Archive section C1; quarter-mile scope in the order; Exhibit B lists road 506."},
+        {"site_id": "site:flat-rocks-campground", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "source-backed", "evidence": "Exhibit B lists road 300.T FLAT ROCK CG."},
+        {"site_id": "site:topaz-point-picnic-area", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "source-backed", "evidence": "Exhibit B lists road 300.M TOPAZ POINT PG."}
+      ]
+    },
+    {
+      "id": "order:02-12-00-23-07",
+      "issuing_unit": "Pike-San Isabel National Forests and Cimarron and Comanche National Grasslands",
+      "order_number_as_printed": "02-12-00-23-07",
+      "instrument_type": "signed_forest_order",
+      "title": "Food storage and bear attractants",
+      "effective": {"from": "2023-06-06T00:01:00-06:00", "through": "2028-06-05T23:59:00-06:00", "unless_rescinded": true},
+      "geographic_scope_as_stated": "All NFS lands located on the Pike-San Isabel National Forests & Cimarron and Comanche National Grasslands, which includes the Pikes Peak, South Platte, South Park, Leadville, Salida and San Carlos Ranger Districts.",
+      "prohibitions_as_quoted": ["Possessing or leaving unattended any food ..., any refuse ..., or other bear attractants (such as bird feeders, cooking equipment, personal care products, and coolers), unless it is: a. Stored inside a hard-sided vehicle or camper. b. Stored inside a securable container or vehicle constructed of a solid, non-pliable material ... c. Suspended at least ten feet above the ground and four feet from any tree ... d. Being eaten, prepared for eating, or transported in a motor vehicle. 36 C.F.R. 261.58(cc)"],
+      "evidence": [{"source": "https://www.fs.usda.gov/sites/nfs/files/r02/psicc/publication/alerts/fseprd1112291.pdf", "kind": "order_pdf", "checked_at": "2026-10-09T05:02:00Z"}],
+      "site_relations": [
+        {"site_id": "site:cabin-ridge-picnic-area", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "unknown", "evidence": "Archive says YES under forest-wide scope, but does not provide a site-specific source-named road or township/distance derivation for this relation."},
+        {"site_id": "site:cabin-ridge-trailhead", "type": "constrained_by", "applicability": "unknown", "origin": "unknown", "evidence": "No site-specific order applicability is recorded in the archive."},
+        {"site_id": "site:dutch-fred-trailhead", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "unknown", "evidence": "Archive says YES under forest-wide scope, but does not provide a site-specific source-named road or township/distance derivation for this relation."},
+        {"site_id": "site:flat-rocks-campground", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "unknown", "evidence": "Archive says YES under forest-wide scope, but does not provide a site-specific source-named road or township/distance derivation for this relation."},
+        {"site_id": "site:topaz-point-picnic-area", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "unknown", "evidence": "Archive says YES under forest-wide scope, but does not provide a site-specific source-named road or township/distance derivation for this relation."}
+      ]
+    },
+    {
+      "id": "order:02-12-00-24-04",
+      "issuing_unit": "Pike National Forest",
+      "order_number_as_printed": "02-12-00-24-04",
+      "instrument_type": "signed_forest_order",
+      "title": "Pike National Forest occupancy and use restrictions",
+      "effective": {"from": "2024-05-03T00:01:00-06:00", "through": "2026-12-01T23:59:00-07:00", "unless_rescinded": true},
+      "geographic_scope_as_stated": "South Platte Ranger District in Douglas County - T. 7 S. R. 69 W; T. 8 S. R. 69 W; T. 8 S. R. 70 W; T. 9 S. R. 68 W. T. 9 S. R. 69 W. T. 9 S. R. 70 W; T. 10 S. R. 68 W; T. 10 S. R. 69 W and T. 10 S. R. 70 W - #3 within the area",
+      "prohibitions_as_quoted": ["Building, maintaining, attending or using a fire, campfire, or stove fire except in Forest Service developed recreation sites and designated dispersed campsites. 36 C.F.R. 261.52(a)"],
+      "evidence": [{"source": "https://www.fs.usda.gov/sites/nfs/files/r02/psicc/publication/alerts/fseprd1174599.pdf", "kind": "order_pdf", "checked_at": "2026-10-09T05:02:00Z"}, {"source": "https://www.fs.usda.gov/sites/nfs/files/r02/psicc/publication/alerts/%28Exhibit%20F%29%20South%20Platte%20Ranger%20District%20Table.pdf", "kind": "exhibit_f_township_scope", "checked_at": "2026-10-09T05:02:00Z"}, {"source": "https://www.fs.usda.gov/sites/nfs/files/r02/psicc/image/alerts/%28Exhibit%20C%29%20South%20Platte%20Ranger%20District%20Map.jpg", "kind": "exhibit_c_map", "checked_at": "2026-10-09T05:02:00Z"}],
+      "site_relations": [
+        {"site_id": "site:cabin-ridge-picnic-area", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "derived", "derivation": "Archive PLSS lookup places Cabin Ridge Picnic Area in T. 9 S., R. 69 W.; Exhibit F applies prohibition #3 to that township; Exhibit C depicts the South Platte in Douglas County area.", "evidence": "Archive section C3; Exhibit F township row and Exhibit C map."},
+        {"site_id": "site:cabin-ridge-trailhead", "type": "constrained_by", "applicability": "unknown", "origin": "unknown", "evidence": "The archive's per-site YES list covers Cabin Ridge Picnic Area, not Cabin Ridge Trailhead."},
+        {"site_id": "site:dutch-fred-trailhead", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "derived", "derivation": "Archive PLSS lookup places Dutch Fred Trailhead in T. 9 S., R. 69 W.; Exhibit F applies prohibition #3 to that township; Exhibit C depicts the South Platte in Douglas County area.", "evidence": "Archive section C3; Exhibit F township row and Exhibit C map."},
+        {"site_id": "site:flat-rocks-campground", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "derived", "derivation": "Archive PLSS lookup places Flat Rocks Campground in T. 8 S., R. 69 W.; Exhibit F applies prohibition #3 to that township; Exhibit C depicts the South Platte in Douglas County area.", "evidence": "Archive section C3; Exhibit F township row and Exhibit C map."},
+        {"site_id": "site:topaz-point-picnic-area", "type": "constrained_by", "applicability": "archive_says_yes", "origin": "derived", "derivation": "Archive PLSS lookup places Topaz Point Picnic Area in T. 9 S., R. 69 W.; Exhibit F applies prohibition #3 to that township; Exhibit C depicts the South Platte in Douglas County area.", "evidence": "Archive section C3; Exhibit F township row and Exhibit C map."}
+      ]
+    },
+    {
+      "id": "notice:psicc-stage-1-2026",
+      "issuing_unit": "Pike-San Isabel National Forests; release names Pikes Peak, South Park, South Platte, Leadville, Salida and San Carlos Ranger Districts",
+      "order_number_as_printed": null,
+      "instrument_type": "fire_restriction_notice",
+      "title": "Stage 1 fire restrictions",
+      "status": "unresolved_conflict",
+      "effective": {"from": "2026-08-21T00:01:00-06:00", "through": "2026-11-14T23:59:00-07:00", "unless_rescinded": true},
+      "geographic_scope_as_stated": "The Pike-San Isabel National Forests will move from Stage 2 to Stage 1 Fire Restrictions ... This includes the Pikes Peak, South Park, South Platte, Leadville, Salida and San Carlos ranger districts.",
+      "prohibitions_as_quoted": ["Fires, including fires fueled by charcoal or briquettes, are banned except if it is in: a permanent metal or concrete fire pit or grate that the U.S. Forest Service has installed and maintained at its developed recreation sites (campgrounds and picnic areas); a device solely fueled by liquid or gas that can be turned on and off used in an area barren or cleared of all flammable materials within three feet...", "Smoking is prohibited, except in an enclosed vehicle or building, a developed recreation site, or while stopped in an area at least three feet in diameter that is barren or cleared of all flammable materials."],
+      "status_observations": [
+        {"source": "https://www.fs.usda.gov/r02/psicc/newsroom/releases/pike-san-isabel-national-forests-move-stage-1-fire-restrictions", "publisher": "USDA Forest Service", "statement": "Stage 1 from August 21 through November 14, 2026 unless rescinded.", "status_claim": "in_force_per_published_interval", "checked_at": "2026-10-09T05:02:00Z"},
+        {"source": "https://www.fs.usda.gov/r02/psicc/alerts", "publisher": "USDA Forest Service", "statement": "Checked alerts list did not list a Stage 1 order.", "status_claim": "silent", "checked_at": "2026-10-09T04:59:00Z"},
+        {"source": "https://www.dcsheriff.net/fire-restrictions/", "publisher": "Douglas County Sheriff's Office", "statement": "Stage 1 fire restrictions have been lifted for unincorporated Douglas County; page updated 2026-09-17.", "status_claim": "county_stage_1_lifted", "checked_at": "2026-10-09T05:01:00Z", "scope_warning": "Different jurisdiction from the Forest Service release; not evidence of Forest Service rescission."}
+      ],
+      "site_relations": [
+        {"site_id": "site:cabin-ridge-picnic-area", "type": "constrained_by", "applicability": "unknown", "origin": "unknown", "evidence": "The archive preserves unresolved Forest Service status and does not record a site-specific relation for this notice."},
+        {"site_id": "site:cabin-ridge-trailhead", "type": "constrained_by", "applicability": "unknown", "origin": "unknown", "evidence": "No site-specific relation is established; the forest-wide notice status is unresolved."},
+        {"site_id": "site:dutch-fred-trailhead", "type": "constrained_by", "applicability": "unknown", "origin": "unknown", "evidence": "No site-specific relation is established; the forest-wide notice status is unresolved."},
+        {"site_id": "site:flat-rocks-campground", "type": "constrained_by", "applicability": "unknown", "origin": "unknown", "evidence": "No site-specific relation is established; the forest-wide notice status is unresolved."},
+        {"site_id": "site:topaz-point-picnic-area", "type": "constrained_by", "applicability": "unknown", "origin": "unknown", "evidence": "No site-specific relation is established; the forest-wide notice status is unresolved."}
+      ]
+    }
+  ],
+  "coverage_examples": [
+    {"subject_id": "site:cabin-ridge-picnic-area", "category": "fire_and_emergency_closures", "jurisdiction": "USDA Forest Service, South Platte Ranger District", "sources_checked": ["https://www.fs.usda.gov/r02/psicc/alerts", "https://www.fs.usda.gov/r02/psicc/newsroom/releases/pike-san-isabel-national-forests-move-stage-1-fire-restrictions"], "checked_at": "2026-10-09T05:02:00Z", "result": "checked", "records": ["notice:psicc-stage-1-2026", "order:02-12-00-24-04"], "meaning": "Records found or status unresolved; this check does not establish that no order applies."}
+  ]
+}
