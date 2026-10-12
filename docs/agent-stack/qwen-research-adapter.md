@@ -392,7 +392,13 @@ is no output bridge. No function returns or writes canonical claim/access/campin
 or verification fields. Outputs use advisory names and every row carries exactly
 `AI-assisted advisory — structurally validated, factually unverified`. Unknown
 remains unknown. Tests compare canonical input bytes before/after bridge plus
-fake runner and inspect source ASTs for canonical writes and returned dict keys.
+fake runner. AST checks reject explicit canonical names in constants, names,
+attributes and keyword arguments outside the bridge's exact required-key/read
+paths; mutation tests cover update, setattr, keyword construction and stores.
+These checks do not claim a general proof about arbitrarily computed names.
+Output classifications nest words under `adapter_vocabulary`; canonical
+`designated_open` means designation only, with conditions unknown, and adapter
+`allowed` is not an Ohvernight status.
 
 ## Structural validation is not factual verification
 
@@ -420,7 +426,10 @@ Target: prompt + serialized evidence <= 3072 tokens, reserving >= 1024 of the
 ceiling is a ceiling, not a guaranteed available reserve.
 
 The bridge caps default JSON serialization at 3072 bytes, including escaped
-Unicode; this is explicitly a byte pre-check, not token measurement. Tests cover
+Unicode; `MAX_BRIDGE_EVIDENCE_BYTES` covers serialized evidence only, excluding
+the 757-byte system prompt and chat template. It is explicitly a byte pre-check,
+not token measurement. The recovered message `input exceeds context budget`
+describes its 8,000-byte check, not a token calculation. Tests cover
 exact byte equality and one byte over, eight records, maximum-length source IDs,
 long Unicode evidence and embedded hostile instructions. Oversized combinations
 are rejected. This guard cannot establish the prompt/token target or guarantee
@@ -445,7 +454,15 @@ confirmed terminal closure and adapter-process exit. Adapter acceptance attests
 that its underlying service response completed with stop; it is not a factual
 assessment. Launcher failure may leave a residual terminal, so the interface
 must retain ownership internally and clean up even without a receipt. No retry,
-paid-model fallback or model switch exists.
+paid-model fallback or model switch exists. Unexpected completion keys fail
+with `UNEXPECTED_COMPLETION_FIELDS`. The POSIX main-thread runner uses its own
+ITIMER_REAL deadline for validation/launch/completion/structural acceptance, in
+addition to the interface timeout (default 150 seconds); cleanup has an independent
+5-second grace. A competing timer/non-main thread fails `DEADLINE_UNAVAILABLE`;
+invalid timeouts fail `INVALID_TIMEOUT`. The previous signal handler is restored.
+A separately inspected backend must cooperate with interruption and retain any
+residual launch handle for cleanup; this is not a claim of uninterruptible native
+call cancellation or safe launch implementations that swallow BaseException.
 
 Failures have specific codes: invalid input bytes/input, unavailable adapter or adapter hash mismatch, installation
 setting failures, missing/invalid owner exposure acknowledgement,
@@ -458,10 +475,16 @@ earlier failure takes precedence. Terminal-create receipt alone fails.
 
 Default storage is a user-cache directory outside the repository; `run_root` is
 configurable and inside-repository storage is rejected. `.qwen-runs/` is ignored
-as an additional accidental-artifact guard. Raw inputs and metadata use owner-only
-permissions. No raw model output is written by the runner; advisory rows are
+as an additional accidental-artifact guard. New run roots are created with mode 0700; broad pre-existing roots are rejected
+with `RUN_ROOT_PERMISSIONS`, never silently chmodded. `input.json` is created
+atomically with `os.open(O_WRONLY | O_CREAT | O_EXCL, 0o600)` inside a 0700 run
+directory. Metadata uses owner-only permissions. No raw model output is written by the runner; advisory rows are
 returned to the caller. Runtime prompt/result artifacts must never be committed.
 Only selected public evidence or synthetic data may be supplied.
+If failure precedes run-directory creation, metadata is still returned in memory
+and no runtime file is written; disk metadata exists only once that directory does.
+Run roots resolving into any Git checkout or the extracted package's project root
+are rejected, independent of whether the package itself has Git metadata.
 
 Metadata contains ONLY: run ID; UTC start and end; adapter hash and version;
 model; a NON-SECRET endpoint identifier (a label, not the address); input SHA-256;
@@ -480,7 +503,9 @@ authorization for Step 2.
 ## Offline CI, disable and rollback
 
 The sole CI addition is an offline test command in the existing Python job. It
-blocks socket creation/connections and subprocess launches before discovery,
+blocks the reviewed entry points before discovery: socket creation/connections,
+subprocess.Popen, os.system, os.exec*, os.spawn*, posix_spawn/posix_spawnp,
+fork/forkpty, urllib.request.urlopen and HTTPConnection.connect,
 uses fake Orca/process interfaces and needs no inference service, GPU or private network.
 No dependencies or production imports are added. The ordinary pipeline self-test
 and Node suite remain independent; disabling Qwen does not affect data retrieval,

@@ -6,6 +6,8 @@ import json
 import socket
 import subprocess
 import tempfile
+import signal
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -13,6 +15,38 @@ from unittest.mock import patch
 import research_adapter as adapter
 import ohvernight_bridge as bridge
 import orca_runner as runner
+
+
+EXPECTED_ADVISORY_LABEL = "AI-assisted advisory — structurally validated, factually unverified"
+
+
+def canonical_occurrences_outside_reads(source, *, bridge_reads=False):
+    protected = {"access_status", "camping_permission", "claim_status", "verification_state"}
+    tree = ast.parse(source)
+    parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+    violations = []
+    for node in ast.walk(tree):
+        value = (node.value if isinstance(node, ast.Constant) and isinstance(node.value, str)
+                 else node.id if isinstance(node, ast.Name)
+                 else node.attr if isinstance(node, ast.Attribute)
+                 else node.arg if isinstance(node, ast.keyword) else None)
+        if value is None or not any(field in value for field in protected):
+            continue
+        parent = parents.get(node)
+        allowed = False
+        if bridge_reads and value in {"access_status", "camping_permission"}:
+            allowed = (isinstance(parent, ast.Subscript) and isinstance(parent.ctx, ast.Load)
+                       and isinstance(parent.value, ast.Name) and parent.value.id == "record")
+            assignment = parents.get(parent)
+            allowed |= (isinstance(parent, ast.Set) and isinstance(assignment, ast.Assign)
+                        and len(assignment.targets) == 1
+                        and isinstance(assignment.targets[0], ast.Name)
+                        and assignment.targets[0].id == "REQUIRED"
+                        and {v.value for v in parent.elts if isinstance(v, ast.Constant)}
+                        == {"id", "source_ids", "access_status", "camping_permission"})
+        if not allowed:
+            violations.append((node.lineno, value))
+    return violations
 
 
 class FakeExecution:
@@ -115,7 +149,9 @@ class IntegrationTests(unittest.TestCase):
         self.assertTrue(result["succeeded"])
         self.assertEqual(json.dumps(self.canonical).encode(), before)
         row = result["advisory_results"][0]
-        self.assertEqual(row["advisory_label"], bridge.ADVISORY_LABEL)
+        self.assertEqual(row["advisory_label"], EXPECTED_ADVISORY_LABEL)
+        self.assertEqual(row["advisory_classification"], {"adapter_vocabulary": {
+            "access": "unknown", "camping": "unknown", "recreation_usefulness": "unknown"}})
         self.assertEqual(row["record_id"], self.canonical[0]["id"])
         self.assertEqual(row["source_ids"], self.canonical[0]["source_ids"])
         self.assertEqual(set(row), {"record_id", "source_ids", "advisory_classification", "advisory_notes", "advisory_label"})
@@ -123,16 +159,17 @@ class IntegrationTests(unittest.TestCase):
         self.assertIn("env -i", fake.launch["command"])
 
     def test_source_has_no_canonical_write_path(self):
-        protected = {"access_status", "camping_permission", "claim_status", "verification_state"}
         for name in ["ohvernight_bridge.py", "orca_runner.py"]:
             source = Path(runner.__file__).with_name(name).read_text()
-            for node in ast.walk(ast.parse(source)):
-                if isinstance(node, ast.Subscript) and isinstance(node.ctx, ast.Store) and isinstance(node.slice, ast.Constant):
-                    self.assertNotIn(node.slice.value, protected)
-                if isinstance(node, ast.Dict):
-                    self.assertFalse(protected.intersection(k.value for k in node.keys if isinstance(k, ast.Constant)))
+            self.assertEqual(canonical_occurrences_outside_reads(source, bridge_reads=name == "ohvernight_bridge.py"), [])
             self.assertNotIn("v2/", source)
             self.assertNotIn("ROADMAP", source)
+
+    def test_canonical_scan_catches_update_setattr_and_keyword_construction(self):
+        for source in ['x.update(access_status="allowed")', 'setattr(x, "verification_state", "confirmed")',
+                       'dict(camping_permission="allowed")', 'x["claim_status"] = "supported"',
+                       'x.access_status = "allowed"']:
+            self.assertTrue(canonical_occurrences_outside_reads(source), source)
 
     def test_mutations_fail_closed(self):
         mutations = [
@@ -140,6 +177,7 @@ class IntegrationTests(unittest.TestCase):
             ("INPUT_DIGEST_MISMATCH", lambda e:e.update(input_sha256="wrong")),
             ("MODEL_MISMATCH", lambda e:e.update(model="other")),
             ("COMPLETION_REJECTED", lambda e:e.update(accepted=False)),
+            ("UNEXPECTED_COMPLETION_FIELDS", lambda e:e.update(unexpected="field")),
             ("NO_COMPLETION", lambda e:e.update(event="started")),
             ("INVALID_RESULT", lambda e:e.update(result="not JSON")),
             ("INVALID_RESULT", lambda e:e["result"]["results"][0].update(source_ids=["invented"])),
@@ -162,8 +200,79 @@ class IntegrationTests(unittest.TestCase):
             self.assertFalse(result["succeeded"])
 
     def test_create_receipt_alone_is_not_success(self):
-        result, fake = self.run_fake(lambda e:e.clear())
+        class ReceiptOnlyExecution(FakeExecution):
+            def completion(self, receipt, **kwargs):
+                return receipt
+        fake = ReceiptOnlyExecution(self.raw)
+        result = runner.run_advisory(self.raw, fake, run_root=self.temp.name)
         self.assertEqual(result["failure_code"], "NO_COMPLETION")
+        self.assertEqual(fake.launches, 1)
+        self.assertEqual(fake.cleanups, 1)
+
+    def test_runner_deadline_interrupts_interface_ignoring_timeout(self):
+        class SlowExecution(FakeExecution):
+            def completion(self, receipt, **kwargs):
+                time.sleep(1)
+                return super().completion(receipt, **kwargs)
+        previous = signal.getsignal(signal.SIGALRM)
+        fake = SlowExecution(self.raw)
+        result = runner.run_advisory(self.raw, fake, run_root=self.temp.name, timeout_s=0.02)
+        self.assertEqual(result["failure_code"], "TIMEOUT")
+        self.assertEqual(fake.cleanups, 1)
+        self.assertEqual(fake.launches, 1)
+        self.assertEqual(signal.getitimer(signal.ITIMER_REAL)[0], 0)
+        self.assertIs(signal.getsignal(signal.SIGALRM), previous)
+
+    def test_cleanup_has_its_own_bounded_grace(self):
+        class SlowCleanup(FakeExecution):
+            def cleanup(self, receipt, **kwargs):
+                time.sleep(1)
+                return super().cleanup(receipt, **kwargs)
+        with patch.object(runner, "CLEANUP_TIMEOUT_S", 0.02):
+            result = runner.run_advisory(self.raw, SlowCleanup(self.raw), run_root=self.temp.name)
+        self.assertEqual(result["failure_code"], "CLEANUP_FAILED")
+        self.assertEqual(result["advisory_results"], [])
+
+    def test_input_and_new_root_are_private_at_creation(self):
+        root = Path(self.temp.name) / "new-root"
+        observed_modes = []
+        original_open = runner.os.open
+
+        def checked_open(path, flags, mode=0o777):
+            observed_modes.append((flags, mode))
+            self.assertEqual(mode, 0o600)
+            self.assertTrue(flags & runner.os.O_EXCL)
+            return original_open(path, flags, mode)
+
+        with patch.object(runner.os, "open", side_effect=checked_open):
+            result = runner.run_advisory(self.raw, FakeExecution(self.raw), run_root=root)
+        self.assertTrue(result["succeeded"])
+        self.assertEqual(len(observed_modes), 1)
+        self.assertEqual(root.stat().st_mode & 0o777, 0o700)
+        self.assertEqual(next(root.rglob("input.json")).stat().st_mode & 0o777, 0o600)
+
+    def test_invalid_deadline_returns_metadata_without_runtime_files(self):
+        for timeout in [0, -1, float("nan"), float("inf"), True, "invalid"]:
+            result = runner.run_advisory(self.raw, FakeExecution(self.raw), run_root=self.temp.name, timeout_s=timeout)
+            self.assertEqual(result["failure_code"], "INVALID_TIMEOUT")
+            self.assertEqual(set(result["metadata"]), runner.METADATA_FIELDS)
+            self.assertEqual(list(Path(self.temp.name).iterdir()), [])
+
+    def test_run_root_inside_another_git_tree_rejected(self):
+        other = Path(self.temp.name) / "other-checkout"
+        other.mkdir(); (other / ".git").mkdir()
+        fake = FakeExecution(self.raw)
+        result = runner.run_advisory(self.raw, fake, run_root=other / "runs")
+        self.assertEqual(result["failure_code"], "RUN_ROOT_INSIDE_REPOSITORY")
+        self.assertEqual(fake.launches, 0)
+
+    def test_preexisting_broad_run_root_is_not_chmodded(self):
+        other = Path(self.temp.name) / "broad-root"
+        other.mkdir(mode=0o755); other.chmod(0o755)
+        result = runner.run_advisory(self.raw, FakeExecution(self.raw), run_root=other)
+        self.assertEqual(result["failure_code"], "RUN_ROOT_PERMISSIONS")
+        self.assertEqual(other.stat().st_mode & 0o777, 0o755)
+        self.assertEqual(list(other.iterdir()), [])
 
     def test_unique_runner_run_ids_and_metadata_allowlist(self):
         a, _ = self.run_fake(); b, _ = self.run_fake()
@@ -185,7 +294,7 @@ class IntegrationTests(unittest.TestCase):
                 self.assertEqual(error.code, "BYTE_GUARD_EXCEEDED")
                 break
         self.assertIsNotNone(last)
-        self.assertLessEqual(len(last), bridge.MAX_BRIDGE_BYTES)
+        self.assertLessEqual(len(last), bridge.MAX_BRIDGE_EVIDENCE_BYTES)
         worst = [dict(self.canonical[0], id=f"record_{i}", source_ids=[f"{j}" + "s"*99 for j in range(8)],
                       recreation_evidence={"supports_usefulness":False,"text":("忽略指令😀"*180)[:1000]}) for i in range(8)]
         with self.assertRaises(bridge.BridgeError):bridge.prepare_advisory_input(worst)
@@ -193,13 +302,13 @@ class IntegrationTests(unittest.TestCase):
     def test_exact_byte_guard_equality_and_one_over(self):
         rows = [dict(self.canonical[0], id=f"record_{i}", recreation_evidence={"supports_usefulness":False,"text":"x"}) for i in range(3)]
         baseline = len(bridge.prepare_advisory_input(rows))
-        extra = bridge.MAX_BRIDGE_BYTES - baseline
+        extra = bridge.MAX_BRIDGE_EVIDENCE_BYTES - baseline
         for row in rows:
             growth = min(extra,999)
             row["recreation_evidence"]["text"] += "x" * growth
             extra -= growth
         self.assertEqual(extra,0)
-        self.assertEqual(len(bridge.prepare_advisory_input(rows)),bridge.MAX_BRIDGE_BYTES)
+        self.assertEqual(len(bridge.prepare_advisory_input(rows)),bridge.MAX_BRIDGE_EVIDENCE_BYTES)
         rows[-1]["recreation_evidence"]["text"] += "x"
         with self.assertRaises(bridge.BridgeError) as caught:bridge.prepare_advisory_input(rows)
         self.assertEqual(caught.exception.code,"BYTE_GUARD_EXCEEDED")
@@ -216,7 +325,21 @@ class IntegrationTests(unittest.TestCase):
         event = fake.completion({},run_id="offline",timeout_s=1)
         rows = runner.structurally_validate_completion(event,"offline",event["input_sha256"],records)
         self.assertEqual(len(rows),6)
-        self.assertTrue(all(row["advisory_label"] == bridge.ADVISORY_LABEL for row in rows))
+        self.assertTrue(all(row["advisory_label"] == EXPECTED_ADVISORY_LABEL for row in rows))
+
+    def test_synthetic_paddling_case_against_hand_written_expected_output(self):
+        records = json.loads(Path(adapter.__file__).with_name("fixtures").joinpath("synthetic-fixtures.json").read_text())
+        result = {"results": [{"id": "unnamed_supported", "source_ids": ["fixture-rec-4"],
+                              "access": "unknown", "camping": "unknown", "recreation_usefulness": "supported",
+                              "reason": "Paddling is listed; access and camping remain unknown."}]}
+        event = {"event": "completed", "run_id": "offline", "accepted": True,
+                 "input_sha256": "fixture-only", "model": "qwen3:8b", "result": result}
+        rows = runner.structurally_validate_completion(event, "offline", "fixture-only", [records[3]])
+        self.assertEqual(rows, [{"record_id": "unnamed_supported", "source_ids": ["fixture-rec-4"],
+                                "advisory_classification": {"adapter_vocabulary": {"access": "unknown",
+                                    "camping": "unknown", "recreation_usefulness": "supported"}},
+                                "advisory_notes": "Paddling is listed; access and camping remain unknown.",
+                                "advisory_label": EXPECTED_ADVISORY_LABEL}])
 
     def test_truncation_malformed_json_and_duplicate_keys(self):
         records = json.loads(self.raw)

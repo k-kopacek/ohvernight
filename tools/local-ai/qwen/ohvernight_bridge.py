@@ -5,8 +5,9 @@ import json
 import research_adapter as adapter
 
 ADVISORY_LABEL = "AI-assisted advisory — structurally validated, factually unverified"
-# This is a byte guard, NOT a token measurement or permission to run inference.
-MAX_BRIDGE_BYTES = 3072
+# Serialized evidence ONLY; excludes system prompt and chat template.
+# This 3,072-byte cap is NOT the 3,072-token target or permission for inference.
+MAX_BRIDGE_EVIDENCE_BYTES = 3072
 REQUIRED = {"id", "access_status", "camping_permission", "source_ids"}
 OPTIONAL = {"ownership", "name", "restriction_freshness", "recreation_evidence"}
 
@@ -46,6 +47,6 @@ def prepare_advisory_input(records):
     except (ValueError, TypeError) as error:
         raise BridgeError("INVALID_ADAPTER_INPUT") from error
     raw = json.dumps(mapped).encode("utf-8")
-    if len(raw) > MAX_BRIDGE_BYTES:
+    if len(raw) > MAX_BRIDGE_EVIDENCE_BYTES:
         raise BridgeError("BYTE_GUARD_EXCEEDED")
     return raw

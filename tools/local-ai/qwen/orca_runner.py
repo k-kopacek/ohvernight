@@ -5,19 +5,27 @@ provide independently inspected Orca/process observation implementations.
 """
 import hashlib
 import json
+import math
+import os
+import signal
 import shlex
 import time
+import threading
 import uuid
 from datetime import datetime, timezone
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Protocol
 
 import research_adapter as adapter
-from ohvernight_bridge import ADVISORY_LABEL, MAX_BRIDGE_BYTES
+from ohvernight_bridge import ADVISORY_LABEL, MAX_BRIDGE_EVIDENCE_BYTES
 
-ADAPTER_VERSION = "step1-installation-endpoint"
+ADAPTER_VERSION = "step1-owner-gated"
 EXPECTED_ADAPTER_SHA256 = "637045183d98898d3b5d11ac82d7d33cc2729f7647b0c4e5a0c9fb3a11705071"
 MINIMAL_ENVIRONMENT = {"PATH": "/usr/bin:/bin"}
+CLEANUP_TIMEOUT_S = 5
+COMPLETION_FIELDS = {"event", "run_id", "accepted", "input_sha256", "model", "result",
+                     "elapsed_s", "explanations"}
 METADATA_FIELDS = {
     "run_id", "utc_start", "utc_end", "adapter_sha256", "adapter_version", "model",
     "endpoint_identifier", "input_sha256", "record_ids", "source_ids", "input_bytes",
@@ -50,7 +58,7 @@ def launch_command(python_executable, adapter_path, input_path, run_id):
 
 
 def default_run_root():
-    return Path.home() / ".cache" / "ohvernight-qwen-runs"
+    return adapter.installation_home() / ".cache" / "ohvernight-qwen-runs"
 
 
 class RunFailure(Exception):
@@ -63,9 +71,31 @@ def require_owner_exposure_review():
     adapter.require_owner_exposure_review()
 
 
+@contextmanager
+def execution_deadline(seconds):
+    """POSIX main-thread timer; refuse a competing timer rather than overwrite it."""
+    if (threading.current_thread() is not threading.main_thread()
+            or signal.getitimer(signal.ITIMER_REAL)[0] != 0):
+        raise RunFailure("DEADLINE_UNAVAILABLE")
+    previous = signal.getsignal(signal.SIGALRM)
+
+    def expired(signum, frame):
+        raise TimeoutError()
+
+    signal.signal(signal.SIGALRM, expired)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, seconds)
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
 def structurally_validate_completion(event, run_id, digest, records):
     if not isinstance(event, dict) or event.get("event") != "completed":
         raise RunFailure("NO_COMPLETION")
+    if not set(event) <= COMPLETION_FIELDS:
+        raise RunFailure("UNEXPECTED_COMPLETION_FIELDS")
     if event.get("run_id") != run_id:
         raise RunFailure("RUN_ID_MISMATCH")
     if event.get("accepted") is not True:
@@ -83,8 +113,9 @@ def structurally_validate_completion(event, run_id, digest, records):
     except (ValueError, TypeError):
         raise RunFailure("INVALID_RESULT") from None
     return [{"record_id": row["id"], "source_ids": list(row["source_ids"]),
-             "advisory_classification": {"access": row["access"], "camping": row["camping"],
-                                          "recreation_usefulness": row["recreation_usefulness"]},
+             "advisory_classification": {"adapter_vocabulary": {
+                 "access": row["access"], "camping": row["camping"],
+                 "recreation_usefulness": row["recreation_usefulness"]}},
              "advisory_notes": row["reason"], "advisory_label": ADVISORY_LABEL}
             for row in result["results"]]
 
@@ -110,37 +141,44 @@ def run_advisory(raw, interface, *, run_root=None, python_executable="python3", 
     digest = hashlib.sha256(raw).hexdigest() if type(raw) is bytes else None
     directory = None
     try:
-        if type(raw) is not bytes or len(raw) > MAX_BRIDGE_BYTES:
-            raise RunFailure("INVALID_INPUT_BYTES")
-        try:
-            adapter_hash = hashlib.sha256(adapter_path.read_bytes()).hexdigest()
-        except OSError:
-            raise RunFailure("ADAPTER_UNAVAILABLE") from None
-        if adapter_hash != EXPECTED_ADAPTER_SHA256:
-            raise RunFailure("ADAPTER_HASH_MISMATCH")
-        # Validate the one installation setting before launching any process.
-        # The child independently reads the same fixed file; never pass the URL
-        # in its command, environment, output metadata, or caller arguments.
-        require_owner_exposure_review()
-        adapter.configured_endpoint()
-        try:
-            records = adapter.validate_records(adapter.parse_json(raw))
-        except (ValueError, TypeError):
-            raise RunFailure("INVALID_INPUT") from None
-        root = (Path(run_root) if run_root is not None else default_run_root()).expanduser().resolve()
-        repo_root = Path(__file__).resolve().parents[3]
-        if root == repo_root or repo_root in root.parents:
-            raise RunFailure("RUN_ROOT_INSIDE_REPOSITORY")
-        directory = root / run_id
-        directory.mkdir(mode=0o700, parents=True, exist_ok=False)
-        input_path = directory / "input.json"
-        input_path.write_bytes(raw)
-        input_path.chmod(0o600)
-        receipt = interface.create_terminal(command=launch_command(python_executable, adapter_path, input_path, run_id),
-                                            environment=dict(MINIMAL_ENVIRONMENT), run_id=run_id)
-        event = interface.completion(receipt, run_id=run_id, timeout_s=timeout_s)
-        rows = structurally_validate_completion(event, run_id, digest, records)
-        structurally_valid = True
+        if type(timeout_s) not in (int, float) or not math.isfinite(timeout_s) or timeout_s <= 0:
+            raise RunFailure("INVALID_TIMEOUT")
+        with execution_deadline(timeout_s):
+            if type(raw) is not bytes or len(raw) > MAX_BRIDGE_EVIDENCE_BYTES:
+                raise RunFailure("INVALID_INPUT_BYTES")
+            try:
+                adapter_hash = hashlib.sha256(adapter_path.read_bytes()).hexdigest()
+            except OSError:
+                raise RunFailure("ADAPTER_UNAVAILABLE") from None
+            if adapter_hash != EXPECTED_ADAPTER_SHA256:
+                raise RunFailure("ADAPTER_HASH_MISMATCH")
+            # Validate the one installation setting before launching any process.
+            # The child independently reads the same fixed file; never pass the URL
+            # in its command, environment, output metadata, or caller arguments.
+            require_owner_exposure_review()
+            adapter.configured_endpoint()
+            try:
+                records = adapter.validate_records(adapter.parse_json(raw))
+            except (ValueError, TypeError):
+                raise RunFailure("INVALID_INPUT") from None
+            root = (Path(run_root) if run_root is not None else default_run_root()).expanduser().resolve()
+            repo_root = Path(__file__).resolve().parents[3]
+            if root == repo_root or repo_root in root.parents or adapter.repository_root(root) is not None:
+                raise RunFailure("RUN_ROOT_INSIDE_REPOSITORY")
+            root.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if root.stat().st_mode & 0o077:
+                raise RunFailure("RUN_ROOT_PERMISSIONS")
+            directory = root / run_id
+            directory.mkdir(mode=0o700, parents=True, exist_ok=False)
+            input_path = directory / "input.json"
+            fd = os.open(input_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "wb") as input_file:
+                input_file.write(raw)
+            receipt = interface.create_terminal(command=launch_command(python_executable, adapter_path, input_path, run_id),
+                                                environment=dict(MINIMAL_ENVIRONMENT), run_id=run_id)
+            event = interface.completion(receipt, run_id=run_id, timeout_s=max(0, timeout_s - (time.monotonic() - started)))
+            rows = structurally_validate_completion(event, run_id, digest, records)
+            structurally_valid = True
     except (adapter.EndpointConfigurationError, adapter.ExposureReviewError) as error:
         code = error.code
     except RunFailure as error:
@@ -151,7 +189,8 @@ def run_advisory(raw, interface, *, run_root=None, python_executable="python3", 
         code = "EXECUTION_FAILED"
     finally:
         try:
-            observed = interface.cleanup(receipt, run_id=run_id)
+            with execution_deadline(CLEANUP_TIMEOUT_S):
+                observed = interface.cleanup(receipt, run_id=run_id)
             if (isinstance(observed, dict) and set(observed) == set(cleanup)
                     and all(type(value) is bool for value in observed.values())):
                 cleanup = observed

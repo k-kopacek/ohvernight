@@ -3,6 +3,7 @@ import contextlib
 import io
 import ipaddress
 import json
+import os
 import socket
 import tempfile
 import unittest
@@ -25,6 +26,7 @@ class EndpointTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="qwen-config-test-")
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name) / "endpoint"
+        self.original_endpoint_path = adapter.endpoint_setting_path
         p = patch.object(adapter, "endpoint_setting_path", return_value=self.path)
         p.start(); self.addCleanup(p.stop)
         p = patch.object(adapter, "require_owner_exposure_review", return_value="synthetic-owner-review")
@@ -101,6 +103,19 @@ class EndpointTests(unittest.TestCase):
         # directory; that location must not make '/' count as a repository.
         with patch.object(adapter,"__file__",str(Path(self.temp.name)/"research_adapter.py")):
             self.assertEqual(adapter.configured_endpoint(),value)
+            repository = Path(self.temp.name) / "other-checkout"
+            repository.mkdir(); (repository / ".git").mkdir()
+            with patch.object(adapter, "endpoint_setting_path", return_value=repository / "setting"):
+                with self.assertRaises(adapter.EndpointConfigurationError) as caught:
+                    adapter.configured_endpoint()
+            self.assertEqual(caught.exception.code, "ENDPOINT_SETTING_IN_REPOSITORY")
+
+    def test_parent_child_home_resolution_ignores_home_environment(self):
+        account_home = adapter.installation_home()
+        with patch.dict(os.environ, {"HOME": self.temp.name}):
+            self.assertEqual(adapter.installation_home(), account_home)
+            self.assertEqual(self.original_endpoint_path().parents[2], account_home)
+            self.assertEqual(adapter.exposure_review_setting_path().parents[2], account_home)
 
 
 if __name__ == "__main__":unittest.main()

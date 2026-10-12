@@ -73,17 +73,24 @@ independent confirmation of terminal closure and adapter-process exit. A create
 receipt alone is insufficient. No retry, fallback or model switching is allowed.
 The command builder clears the child environment and selects isolated Python
 with bytecode disabled. Parent and child both resolve the POSIX account home
-via `pwd.getpwuid(os.getuid()).pw_dir`, ignoring HOME. A missing completion, cleanup or correlation fails.
+via `pwd.getpwuid(os.getuid()).pw_dir`, ignoring HOME. The POSIX main-thread runner additionally enforces a 150-second default deadline
+and a separate five-second cleanup grace. A competing timer or non-main thread
+is rejected; the prior handler is restored. A missing completion, cleanup or
+correlation fails. Unexpected completion keys are rejected. Output words are
+nested under `adapter_vocabulary`, which is not a canonical Ohvernight status.
 
 Default run storage is the user's cache, outside the repository. An explicit
 `run_root` can select another outside-repository directory. Input and metadata
-files have owner-only permissions, and metadata uses a fixed allowlist; raw
+files have owner-only permissions (new root 0700, input created atomically 0600),
+and metadata uses a fixed allowlist; raw
 advisory output is returned to the caller without being written. Do not retain
 credentials, environment files, private configurations or unrelated user data.
 The proposed pilot default is 30-day local retention for raw prompt/result
 artifacts. No recurring deletion automation is created. Metadata starts with
 review disposition `unreviewed`; token count is null until exact offline Qwen
-tokenization is available. The caller is responsible for public-input selection.
+tokenization is available. The caller is responsible for public-input selection. Failures before directory
+creation still return metadata, but write no runtime file. Broad pre-existing
+roots fail rather than being chmodded.
 
 Disable by skipping this optional advisory step. No production path imports it.
 Rollback is removal of this directory, the single optional CI step, the contract
