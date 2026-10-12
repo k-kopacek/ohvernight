@@ -12,8 +12,7 @@ exact-SHA merge approval.
 
 ## Adapter as recovered
 
-All eight original artifact hashes matched the supplied recovery manifest. The
-adapter hash is `b767a15521d882f285978ea702a0cf0cce245340c24093442ceca081417af887`.
+All eight original artifact hashes matched the supplied recovery manifest.
 The adapter, tests and synthetic fixtures were recovered from those originals.
 The coordinator-authorized adapter/test deviations are listed below. The test
 entrypoint supplies import/discovery paths without path edits to recovered tests.
@@ -25,27 +24,20 @@ in the adapter and its original test. Fixtures have no occurrences and remain
 byte-identical. A later focused commit introduces the installation setting and
 updates the endpoint-specific assertion; no other original behavior is changed.
 The private report contains exact original-to-import unified diffs. Public PR
-provenance diffs withhold the original literal; full original file hashes identify
-the exact recovered bytes without publishing the private address.
+provenance diffs withhold the original literal. Hashes of originals containing
+that literal are private because they can reveal it by offline enumeration.
+All original hashes and the exact recovery proof stay in the uncommitted report.
 
-Original artifact SHA-256 values:
-
-| Artifact | Original SHA-256 |
-|---|---|
-| audit-report.md | `7c46dc4b18c99ea320fc9c75eeb6c8123862e79f84248d43f79bca6b624e90db` |
-| e2e-launcher-verification.json | `259d4a7b09bef32bc2313cf75da7a6e0b29e3b512277738fcd5e0131d2af199c` |
-| e2e-result.json | `e360bd9eb81fe11d3a8da27fd028002d21a06ae4a0a0be9893891ce995f2912a` |
-| preservation-proof.json | `af93c713b833f8da9a0a48add03dc932ae15d75c046febc8fdf5e1bc523a2db4` |
-| README.md | `e28162af4d6cf06b20572dc599f86d3addea9829ad254db8199e2d86071fdb53` |
-| research_adapter.py | `b767a15521d882f285978ea702a0cf0cce245340c24093442ceca081417af887` |
-| synthetic-fixtures.json | `92b030142ebff1e75bb58bd110eff7bd46f91bd94c5e96cce22840babf925cb3` |
-| test_adapter.py | `bba64c2ee6c71728d184d182d79479c9dd33b738dd18ffd194c9dae63ddc1a02` |
+Public fixture SHA-256 (contains no endpoint literal):
+`92b030142ebff1e75bb58bd110eff7bd46f91bd94c5e96cce22840babf925cb3`.
 
 Import adapter SHA-256:
 `84b79de822eca88378e0fa3450bcdf2fa404b72f4629f6cd8f9b0f8559461a14`.
 Import test SHA-256:
 `bc712a9548345265b478e0b926fb24066595151cd977f849ec3f12fcffd4f12f`.
-These import hashes differ from the originals only by that substitution class.
+These import hashes identify the placeholder forms, not files containing the
+withheld address. Previously pushed original-file hashes remain in Git history;
+removing that exposure from history requires a separate owner decision.
 
 This section describes the ORIGINAL recovered code, using its original line
 numbers. Installation behavior added after recovery is documented separately.
