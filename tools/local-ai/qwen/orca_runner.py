@@ -16,7 +16,7 @@ import research_adapter as adapter
 from ohvernight_bridge import ADVISORY_LABEL, MAX_BRIDGE_BYTES
 
 ADAPTER_VERSION = "step1-installation-endpoint"
-EXPECTED_ADAPTER_SHA256 = "3853972009830df50e0c0a94789d24f4d83ad0d34472fe3ede8e666f69c2f4e5"
+EXPECTED_ADAPTER_SHA256 = "6355f8a69cc384fb0fc25c341d0fea44540fd577e9e3ef1b0e2a7ba15cc07e4c"
 MINIMAL_ENVIRONMENT = {"PATH": "/usr/bin:/bin"}
 METADATA_FIELDS = {
     "run_id", "utc_start", "utc_end", "adapter_sha256", "adapter_version", "model",

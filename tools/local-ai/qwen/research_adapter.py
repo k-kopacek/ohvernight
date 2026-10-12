@@ -46,9 +46,13 @@ def endpoint_setting_path():
 
 
 def configured_endpoint():
-    path = endpoint_setting_path().resolve()
-    repository = Path(__file__).resolve().parents[3]
-    if path == repository or repository in path.parents:
+    try:
+        path = endpoint_setting_path().resolve()
+        repository = next((parent for parent in Path(__file__).resolve().parents
+                           if (parent / ".git").exists()), None)
+    except (OSError, RuntimeError):
+        raise EndpointConfigurationError("ENDPOINT_SETTING_UNREADABLE") from None
+    if repository is not None and (path == repository or repository in path.parents):
         raise EndpointConfigurationError("ENDPOINT_SETTING_IN_REPOSITORY")
     try:
         with path.open("rb") as setting:

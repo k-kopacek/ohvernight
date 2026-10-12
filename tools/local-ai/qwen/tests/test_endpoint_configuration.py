@@ -88,5 +88,15 @@ class EndpointTests(unittest.TestCase):
         opener=adapter.urllib.request.build_opener(adapter.urllib.request.ProxyHandler({}),adapter.NoRedirect())
         self.assertFalse(any(isinstance(handler,adapter.urllib.request.ProxyHandler) and handler.proxies for handler in opener.handlers))
 
+    def test_resolution_errors_and_staged_adapter_copy(self):
+        with patch.object(Path,"resolve",side_effect=RuntimeError("symlink loop")):
+            with self.assertRaises(adapter.EndpointConfigurationError) as caught:adapter.configured_endpoint()
+        self.assertEqual(caught.exception.code,"ENDPOINT_SETTING_UNREADABLE")
+        value=url(address(2130706433)); self.path.write_text(value)
+        # The validated launch recipe can stage the adapter in a private temp
+        # directory; that location must not make '/' count as a repository.
+        with patch.object(adapter,"__file__",str(Path(self.temp.name)/"research_adapter.py")):
+            self.assertEqual(adapter.configured_endpoint(),value)
+
 
 if __name__ == "__main__":unittest.main()
