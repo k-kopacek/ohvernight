@@ -3,8 +3,7 @@
 Status: optional, read-only advisory tool; Step 1 offline packaging awaiting
 independent review. It is not an Orca agent, worker, researcher, permission
 authority, code writer, repository writer, production-data writer or architecture
-decision-maker. No live inference was run in Step 1. M4-B remains paused by the
-owner and is untouched.
+decision-maker. No live inference is authorized by this offline package.
 
 The control model is unchanged: Claude coordinator -> owner approval -> Codex
 implementation -> Claude independent review -> Codex fixes -> GitHub CI -> owner
@@ -41,8 +40,12 @@ These import hashes identify the placeholder forms, not files containing the
 withheld address. Previously pushed original-file hashes remain in Git history;
 removing that exposure from history requires a separate owner decision.
 
-This section describes the ORIGINAL recovered code, using its original line
-numbers. Installation behavior added after recovery is documented separately.
+This section uses the ORIGINAL recovered research_adapter.py and test_adapter.py,
+before endpoint substitution or packaging changes. Source spans were regenerated
+mechanically from the original AST and exact-line anchors; they never refer to
+the longer current adapter. Audit/README references refer to their original
+128-line audit-report.md and 126-line README.md. Original hashes remain private.
+Installation behavior added after recovery is documented separately.
 
 The fixed endpoint uses HTTP, TCP port 11434, path `/api/chat`; the identifying
 address is withheld here. No environment or argument override exists. No TLS,
@@ -197,8 +200,8 @@ wrong model, incomplete/length termination, mismatched classifications/IDs and
 unlisted result fields fail. Invalid reason lengths/types fail; misleading prose
 within the allowed string type can still pass.
 
-Redirects fail through `NoRedirect.redirect_request` (139–141), which raises
-`ValueError("endpoint redirect refused")`. `ProxyHandler({})` (160) disables
+Redirects fail through `NoRedirect.redirect_request` (original research_adapter.py 139–141), which raises
+`ValueError("endpoint redirect refused")`. `ProxyHandler({})` (original research_adapter.py 159) disables
 proxy discovery. No environment variables are explicitly read, no subprocesses
 are launched and no ambient filesystem is browsed. The Python interpreter may
 still inherit environment/configuration unless the external launcher applies
@@ -218,6 +221,28 @@ result and an advisory explanation marker. The program exits afterward; terminal
 closure, process-exit observation and temporary-directory deletion are absent
 from its code and belong to the external launcher.
 
+### Mechanically regenerated original-code line index
+
+| Original symbol / exact anchor | Lines in original research_adapter.py |
+|---|---|
+| `constants` | 16–19 |
+| `SYSTEM_PROMPT` | 24–33 |
+| `unique_keys` | 36–42 |
+| `parse_json` | 45–49 |
+| `validate_records` | 52–85 |
+| `build_request` | 88–105 |
+| `validate_response` | 108–136 |
+| `NoRedirect` | 139–141 |
+| `main` | 144–178 |
+| `if not isinstance(record, dict)` | 57 |
+| `set(result) != {"results"}` | 118 |
+| `set(row) != RESULT_FIELDS` | 124 |
+| `permission or restriction changed` | 129 |
+| `input exceeds context budget` | 84 |
+| `"num_ctx": 4096` | 103 |
+| `ProxyHandler({})` | 159 |
+| `timeout=120` | 162 |
+
 ### Claim-by-claim comparison to the 12 October audit and usage guide
 
 Line references below use the recovered originals. Classification concerns code,
@@ -230,61 +255,61 @@ structural validation; that makes no new claim about live model behavior.
 | Original claim location | Claim | Code classification | Evidence / qualification |
 |---|---|---|---|
 | Audit 3–7 | Prior end-to-end success, six cases, connected service | NOT FOUND IN CODE | Historical execution artifacts, not source; no inference repeated. |
-| Audit 3–7; README 5–6 | Not a native worker or independent source verification | CONFIRMED IN CODE | adapter 145–182: standalone CLI; only selected evidence is sent. |
+| Audit 3–7; README 5–6 | Not a native worker or independent source verification | CONFIRMED IN CODE | original research_adapter.py 144–178 (`main`): standalone CLI; only selected evidence is sent. |
 | Audit 11–15 | Application versions, architecture, readiness, executable, guides, unchanged network | NOT FOUND IN CODE | Environment/history claims require external observations. |
-| Audit 17–20 | Service version, quantization, capabilities, digest, remote execution | NOT FOUND IN CODE | adapter 16–17 contains requested endpoint/model only; no digest/version verification. |
+| Audit 17–20 | Service version, quantization, capabilities, digest, remote execution | NOT FOUND IN CODE | original research_adapter.py 16–19 (`constants`) contains requested endpoint/model only; no digest/version verification. |
 | Audit 24 | Installed/absent agent executables and no installations | NOT FOUND IN CODE | No agent inventory in adapter. |
 | Audit 25 | Enabled agent requirement and model override behavior | NOT FOUND IN CODE | Orca interface claim, not adapter behavior. |
 | Audit 26 | Command overrides, defaults and settings preservation | NOT FOUND IN CODE | No settings inspection in adapter. |
 | Audit 27–28 | Supported terminal mechanism and unsupervised topology | NOT FOUND IN CODE | External launcher documentation; adapter has no Orca calls. |
 | Audit 30–34 | Qwen Code provider route and required future installation | NOT FOUND IN CODE | External documentation/proposal; no native integration in adapter. |
-| Audit 36–38; README 111–113 | Native structured chat, stream false, think false | CONFIRMED IN CODE | adapter 89–106 and 158–162. |
+| Audit 36–38; README 111–113 | Native structured chat, stream false, think false | CONFIRMED IN CODE | original research_adapter.py 88–105 (`build_request`); original research_adapter.py 144–178 (`main`). |
 | Audit 37–38 | Endpoint accepted settings in earlier live tests | NOT FOUND IN CODE | Historical evidence only. |
 | Audit 42–46 | Prior approval, order of operations, authorized scope | NOT FOUND IN CODE | Owner/session provenance cannot be established by source code. |
 | Audit 48–53 | Deliverables and matching temporary copy hashes | NOT FOUND IN CODE | Recovered artifact inventory and supplied hashes support recovery, not code. |
 | Audit 51–53; README 58–60 | Cleared environment, isolated mode, no bytecode | NOT FOUND IN CODE | Launcher responsibility; adapter itself does not clear environment. |
-| Audit 52–53; README 59–60 | No authentication header or supplied credentials | CONFIRMED IN CODE | adapter 158–159: only Content-Type header, no auth API. |
+| Audit 52–53; README 59–60 | No authentication header or supplied credentials | CONFIRMED IN CODE | original research_adapter.py 144–178 (`main`): only Content-Type header, no auth API. |
 | Audit 52–53; README 58–60 | No credentials in arbitrary evidence or artifacts | NOT FOUND IN CODE | Input field allowlist is not a secret scanner; free text could contain private data. |
-| Audit 55; README 111 | One bounded request, fixed endpoint/model | CONFIRMED IN CODE | adapter 16–19,106,158–165; no endpoint overrides. |
-| Audit 56; README 111–113 | No model tools and no redirects | CONFIRMED IN CODE | adapter 106–109,118–120,139–141,160. |
-| Audit 56; README 26 | No repository reads as an absolute statement | CONTRADICTED BY CODE | adapter 147,153–154 reads any caller-selected input path, including a repository path; no ambient browsing is implemented. |
-| Audit 56; README 26–27,113 | No explicit writes or generated command execution | CONFIRMED IN CODE | adapter 145–182 reads input and prints events; never executes model text. |
-| Audit 57–59; README 24–27,111–113 | Reject changed classification, IDs, sources, tools, incomplete results and wrong model | CONFIRMED IN CODE | adapter 111–135. |
-| Audit 58; README 111–113 | Reject unknown fields | CONFIRMED IN CODE | adapter 56,122,128 rejects input/result fields; outer service/message extra metadata is permitted. |
-| Audit 59; README 93,113 | No silent normalization or automatic retry | CONFIRMED IN CODE | adapter 49–86,145–178; single request and failure return. |
-| Audit 60–61; README 24–29,40–41 | Operator supplies assessment; prose requires review; no factual authority | CONFIRMED IN CODE | adapter 24–33,80–83,133–136,171 only checks structure and selected boolean. |
+| Audit 55; README 111 | One bounded request, fixed endpoint/model | CONFIRMED IN CODE | original research_adapter.py 16–19 (`constants`); original research_adapter.py 88–105 (`build_request`); original research_adapter.py 108–136 (`validate_response`); original research_adapter.py 144–178 (`main`); no endpoint overrides. |
+| Audit 56; README 111–113 | No model tools and no redirects | CONFIRMED IN CODE | original research_adapter.py 88–105 (`build_request`); original research_adapter.py 108–136 (`validate_response`); original research_adapter.py 139–141 (`NoRedirect`); original research_adapter.py 144–178 (`main`). |
+| Audit 56; README 26 | No repository reads as an absolute statement | CONTRADICTED BY CODE | original research_adapter.py 144–178 (`main`) reads any caller-selected input path, including a repository path; no ambient browsing is implemented. |
+| Audit 56; README 26–27,113 | No explicit writes or generated command execution | CONFIRMED IN CODE | original research_adapter.py 144–178 (`main`) reads input and prints events; never executes model text. |
+| Audit 57–59; README 24–27,111–113 | Reject changed classification, IDs, sources, tools, incomplete results and wrong model | CONFIRMED IN CODE | original research_adapter.py 108–136 (`validate_response`). |
+| Audit 58; README 111–113 | Reject unknown fields | CONFIRMED IN CODE | original research_adapter.py 52–85 (`validate_records`); original research_adapter.py 108–136 (`validate_response`) rejects input/result fields; outer service/message extra metadata is permitted. |
+| Audit 59; README 93,113 | No silent normalization or automatic retry | CONFIRMED IN CODE | original research_adapter.py 45–49 (`parse_json`); original research_adapter.py 52–85 (`validate_records`); original research_adapter.py 144–178 (`main`); single request and failure return. |
+| Audit 60–61; README 24–29,40–41 | Operator supplies assessment; prose requires review; no factual authority | CONFIRMED IN CODE | original research_adapter.py 24–33 (`SYSTEM_PROMPT`); original research_adapter.py 52–85 (`validate_records`); original research_adapter.py 108–136 (`validate_response`); original research_adapter.py 144–178 (`main`) only checks structure and selected boolean. |
 | Audit 65–68 | Initial prompt failure and 5.18-second recovery | NOT FOUND IN CODE | Historical prompt trials not reproduced. |
-| Audit 68–69 | Independent permission/usefulness checks | CONFIRMED IN CODE | adapter 132–136. |
-| Audit 71–74; README 10 | Ten original offline tests and listed coverage | CONFIRMED IN CODE | test_adapter 11–94; rerun passed 10 tests. |
-| Audit 78 | Public ownership preserves unknown permissions | CONFIRMED IN CODE | adapter 132–133 copies access/camping; fixture public_unknown. |
-| Audit 79 | Stale prohibition remains prohibited | CONFIRMED IN CODE | adapter 132–133; fixture stale_restriction. Not a canonical restricted mapping. |
-| Audit 80 | Name-only usefulness remains unknown | CONFIRMED IN CODE | adapter 134–136; fixture named_clutter. |
-| Audit 81 | Explicit positive paddling evidence supports usefulness independently | CONFIRMED IN CODE | adapter 134–136; fixture unnamed_supported. |
-| Audit 82 | Negative evidence stays unknown | CONFIRMED IN CODE | adapter 134–136; fixture negative_evidence. |
-| Audit 83 | Hostile evidence cannot change structural fields or add tools | CONFIRMED IN CODE | adapter 118–136; fixture injected_text. This is not complete injection resistance. |
+| Audit 68–69 | Independent permission/usefulness checks | CONFIRMED IN CODE | original research_adapter.py 108–136 (`validate_response`). |
+| Audit 71–74; README 10 | Ten original offline tests and listed coverage | CONFIRMED IN CODE | original test_adapter.py 9–90 (`EvidenceBoundaryTests`); rerun passed 10 tests. |
+| Audit 78 | Public ownership preserves unknown permissions | CONFIRMED IN CODE | original research_adapter.py 108–136 (`validate_response`) copies access/camping; fixture public_unknown. |
+| Audit 79 | Stale prohibition remains prohibited | CONFIRMED IN CODE | original research_adapter.py 108–136 (`validate_response`); fixture stale_restriction. Not a canonical restricted mapping. |
+| Audit 80 | Name-only usefulness remains unknown | CONFIRMED IN CODE | original research_adapter.py 108–136 (`validate_response`); fixture named_clutter. |
+| Audit 81 | Explicit positive paddling evidence supports usefulness independently | CONFIRMED IN CODE | original research_adapter.py 108–136 (`validate_response`); fixture unnamed_supported. |
+| Audit 82 | Negative evidence stays unknown | CONFIRMED IN CODE | original research_adapter.py 108–136 (`validate_response`); fixture negative_evidence. |
+| Audit 83 | Hostile evidence cannot change structural fields or add tools | CONFIRMED IN CODE | original research_adapter.py 108–136 (`validate_response`); fixture injected_text. This is not complete injection resistance. |
 | Audit 78–83; README 9–10 | Those cases actually passed in historical live execution | NOT FOUND IN CODE | Saved completion evidence, not current inference or source guarantee. |
 | Audit 85–90; README 64–68 | Documents-folder block, no socket, cause, terminal/process cleanup, temporary-copy recovery, no extra permissions | NOT FOUND IN CODE | Historical runtime/OS claims, with cause explicitly uncertain. |
 | Audit 92–96 | Focused launcher disagreement, duration, recovery without resend, version change | NOT FOUND IN CODE | Historical runtime claims only. |
 | Audit 98–102; README 8–15 | Ordinary launcher receipt, duration, fixture digest and version-specific route | NOT FOUND IN CODE | Saved launcher event supports historical result; no new live run. |
 | Audit 106–111 | Preserved head, 102 tracked files, status/diff, untouched untracked data, no Git or milestone operations | NOT FOUND IN CODE | Preservation artifact, not a guarantee the adapter enforces on selected paths. |
 | Audit 113–119; README 11–14 | Version/settings drift, unchanged agent configuration, no restore/restart | NOT FOUND IN CODE | External settings/history evidence only; identifying hashes withheld. |
-| Audit 121–124; README 21–22 | Three terminals closed, no remaining process, zero inventory, temporary cleanup and durable files | NOT FOUND IN CODE | adapter 172,178,182 exits; does not close terminals, delete directories, or inspect processes. |
-| Audit 126–128 | Synthetic results do not establish real access, rights, freshness or general reliability | CONFIRMED IN CODE | adapter 111–136 has no authoritative source or factual checks. |
+| Audit 121–124; README 21–22 | Three terminals closed, no remaining process, zero inventory, temporary cleanup and durable files | NOT FOUND IN CODE | original research_adapter.py 144–178 (`main`) exits; does not close terminals, delete directories, or inspect processes. |
+| Audit 126–128 | Synthetic results do not establish real access, rights, freshness or general reliability | CONFIRMED IN CODE | original research_adapter.py 108–136 (`validate_response`) has no authoritative source or factual checks. |
 | Audit 128; README 103–107 | General worker unconfigured; native worker needs separate lifecycle handling | NOT FOUND IN CODE | Adapter has no worker integration; installed configuration itself is external. |
-| README 3–5 | Specific host/device/network and supported terminal connection | NOT FOUND IN CODE | adapter 16 requests a fixed address but does not establish deployment, route, or Orca support. |
+| README 3–5 | Specific host/device/network and supported terminal connection | NOT FOUND IN CODE | original research_adapter.py 16–19 (`constants`) requests a fixed address but does not establish deployment, route, or Orca support. |
 | README 19–22 | Repeat live invocation and persistent/disposable artifact policy | NOT FOUND IN CODE | Operator instructions, not code; Step 1 expressly does not authorize inference. |
 | README 28–29 | Permanent human/spec/review/CI/merge workflow | NOT FOUND IN CODE | Project governance, preserved by this mission, not enforced by adapter. |
-| README 33–35 | Array, 1–8 records, 8,000 bytes, unique IDs, explicit permissions, 1–8 exact source IDs | CONFIRMED IN CODE | adapter 49–86,153–157; serialized default JSON and raw-file limits both apply. |
-| README 37–39 | Optional fields and exact recreation-evidence keys/types | CONFIRMED IN CODE | adapter 72–83; omitted or null recreation evidence accepted. |
-| README 43–56 | Illustrated input shape is accepted structurally | CONFIRMED IN CODE | adapter 49–86; does not establish truth of example text. |
+| README 33–35 | Array, 1–8 records, 8,000 bytes, unique IDs, explicit permissions, 1–8 exact source IDs | CONFIRMED IN CODE | original research_adapter.py 45–49 (`parse_json`); original research_adapter.py 52–85 (`validate_records`); original research_adapter.py 144–178 (`main`); serialized default JSON and raw-file limits both apply. |
+| README 37–39 | Optional fields and exact recreation-evidence keys/types | CONFIRMED IN CODE | original research_adapter.py 52–85 (`validate_records`); omitted or null recreation evidence accepted. |
+| README 43–56 | Illustrated input shape is accepted structurally | CONFIRMED IN CODE | original research_adapter.py 45–49 (`parse_json`); original research_adapter.py 52–85 (`validate_records`); does not establish truth of example text. |
 | README 58–60 | Only public/synthetic data; private configuration outside contract | NOT FOUND IN CODE | Operator requirement; secret/private prose is not detected by schema validation. |
 | README 70–81 | Temporary-copy hash check, unique ID, env -i and -I -B launch recipe | NOT FOUND IN CODE | Manual launch recipe; adapter validates run-ID syntax but does not generate IDs or copy/hash its own file. |
-| README 84–94 | Exact terminal read, completion correlation and digest, failed-event semantics, receipt insufficiency and residual inventory | NOT FOUND IN CODE | adapter 161,169–177 emits events/digest; consumer correlation and inventory checks absent. |
+| README 84–94 | Exact terminal read, completion correlation and digest, failed-event semantics, receipt insufficiency and residual inventory | NOT FOUND IN CODE | original research_adapter.py 144–178 (`main`) emits events/digest; consumer correlation and inventory checks absent. |
 | README 96–101 | Close owned terminal, verify process exit, delete temporary copies | NOT FOUND IN CODE | Entirely operator cleanup; adapter has no cleanup API. |
-| README 112 | Bounded context as a safe token-window guarantee | CONTRADICTED BY CODE | adapter 84–85 enforces bytes; 107 specifies num_ctx=4096, num_predict=1600; no tokenizer/combined prompt budget. |
-| README 112 | Bounded input/response bytes and generation parameter | CONFIRMED IN CODE | adapter 18–19,84–85,107,153–166; byte cap differs from token limit. |
+| README 112 | Bounded context as a safe token-window guarantee | CONTRADICTED BY CODE | original research_adapter.py 52–85 (`validate_records`) enforces bytes; original research_adapter.py 103 specifies num_ctx=4096, num_predict=1600; no tokenizer/combined prompt budget. |
+| README 112 | Bounded input/response bytes and generation parameter | CONFIRMED IN CODE | original research_adapter.py 16–19 (`constants`); original research_adapter.py 52–85 (`validate_records`); original research_adapter.py 88–105 (`build_request`); original research_adapter.py 108–136 (`validate_response`); original research_adapter.py 144–178 (`main`); byte cap differs from token limit. |
 | README 114–117 | Six invented fixtures, IDs are labels not authoritative citations | CONFIRMED IN CODE | synthetic-fixtures.json all six records; adapter only checks lexical IDs. |
-| README 118 | Original command runs test suite in original layout | CONFIRMED IN CODE | test_adapter 94; original scratch copy passed unchanged. |
+| README 118 | Original command runs test suite in original layout | CONFIRMED IN CODE | original test_adapter.py 93–94 (test entrypoint); original scratch copy passed unchanged. |
 | README 119–123 | Execution/preservation/audit files exist and describe prior run | NOT FOUND IN CODE | Artifact inventory and verified file hashes establish recovery; not adapter behavior. |
 | README 125–126 | No registration, provider changes, service installation or global config writes | CONFIRMED IN CODE | adapter has no Orca, install, settings or subprocess code. |
 | README 125–126 | Removal suffices to undo all historical runtime effects | NOT FOUND IN CODE | Cleanup and installed-state preservation remain operator responsibilities. |
@@ -507,10 +532,13 @@ blocks the reviewed entry points before discovery: socket creation/connections,
 subprocess.Popen, os.system, os.exec*, os.spawn*, posix_spawn/posix_spawnp,
 fork/forkpty, urllib.request.urlopen and HTTPConnection.connect,
 uses fake Orca/process interfaces and needs no inference service, GPU or private network.
+Failure of this optional package's offline tests fails the shared Python CI job
+for every pull request. Disable that CI dependency by removing its single step.
 No dependencies or production imports are added. The ordinary pipeline self-test
 and Node suite remain independent; disabling Qwen does not affect data retrieval,
 builds, production, merge or evidence publication. Repository searches show only
-this documentation, this optional package, its ignore entry and the one CI step
+this documentation, the AGENTS.md verification command, this optional package,
+its ignore entry and the one CI step
 refer to it.
 
 Disable by skipping the optional advisory step. Rollback removes the directory,

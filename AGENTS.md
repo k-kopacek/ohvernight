@@ -78,6 +78,7 @@ From the repository root, with Python 3.12+ and Node 22:
 python3 -m venv v2/pipeline/.venv
 v2/pipeline/.venv/bin/pip install -r v2/pipeline/requirements.txt
 v2/pipeline/.venv/bin/python v2/pipeline/scripts/00_selftest.py
+python3 -B tools/local-ai/qwen/offline_tests.py
 node --test v2/pipeline/tests/*.test.cjs
 node v2/pipeline/tests/browser/run.mjs
 ```

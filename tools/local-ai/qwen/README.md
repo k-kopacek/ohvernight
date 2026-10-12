@@ -21,7 +21,9 @@ python3 -B tools/local-ai/qwen/offline_tests.py
 This launcher blocks sockets and process launches before test discovery. The
 synthetic fixtures are byte-identical; the adapter/test changes are documented.
 No dependencies are added. The CI change adds only this offline check to the
-existing Python job.
+existing Python job. A failure of the optional tool's offline tests fails that
+shared job for every pull request; remove the single step to disable that CI
+dependency.
 
 `prepare_advisory_input` accepts a list of selected records with exactly the
 required keys `id`, `source_ids`, `access_status`, `camping_permission`, plus
