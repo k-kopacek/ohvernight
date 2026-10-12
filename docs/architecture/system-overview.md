@@ -1,13 +1,14 @@
 # System overview
 
-Repository architecture after M3 PR B implementation (2026-10-05). R-2 was
+Repository architecture after M3 PR B merged (2026-10-06). R-2 was
 triggered, reviewed and resolved by the owner on 2026-10-05: Leaflet is kept
 (A10). The original threshold misses remain recorded. A8 is approved and
 kept. The first iPhone Safari pass on 2026-10-05 failed several mobile-UX
-items. A11 remediation is implemented, but one of its three performance
-sessions missed the Douglas all-layers limit; that miss awaits the owner's
-disposition. PR B is not merged; a second real-device pass, review, CI and
-human merge approval remain delivery gates.
+items. A11 remediation is implemented. One of its three performance sessions
+missed the Douglas all-layers limit; the owner accepted that result as
+run-to-run variation under A13, and it remains recorded as a miss. The final
+iPhone Safari validation passed on 2026-10-06; iPad and Android device checks
+remain unverified and deferred. PR B is merged and M3 is complete.
 Plans are in the [roadmap](../../ROADMAP.md).
 
 ## Shape of the system
@@ -78,7 +79,8 @@ collapses the sheet, and opening the sheet closes the drawer on phones.
 Labels use only source names, appear from zoom 14 and share a 32-label cap.
 Double-tap zooms the map; local zoom-control handling prevents page zoom
 without restricting accessibility zoom globally. These interactions have
-automated Chrome coverage; the second real-device pass is still owed.
+automated Chrome coverage; final iPhone Safari validation passed. iPad and
+Android device checks remain unverified and deferred.
 
 The map stays north-up. Rotation and compass were not implemented: Leaflet
 1.9.4 has no bearing API, and the evaluated GPL-3.0 `leaflet-rotate` dependency
@@ -128,11 +130,11 @@ Each region has `region.json`, validated by the normative
 contains presentation only; limitations, source scope, freshness and
 fact-coverage statements belong to the manifest.
 
-Stable rules R01–R50 validate canonical semantics; R60–R65 validate derived
-delivery, including byte hashes, exact selection, properties/evidence,
-approved rounding and canonical transport copies. Display geometry is never
-used for a canonical contract check. The pinned non-conformance sets do not
-grow.
+Stable rules R01–R50 and R66–R68/R75 validate canonical semantics; R60–R65
+validate derived delivery, including byte hashes, exact selection,
+properties/evidence, approved rounding and canonical transport copies.
+Display geometry is never used for a canonical contract check. The pinned
+non-conformance sets do not grow.
 
 | Concept | Implementation |
 |---|---|
@@ -168,11 +170,11 @@ Separate five-run local timing/heap comparisons use
 `v2/pipeline/tests/browser/measure.mjs`; the historical baseline script is
 unchanged. The performance record preserves all three required A11 sessions
 and four diagnostic sessions. Required session 2 missed Douglas
-`allDefaultLayersMs` at 136.4954% of base against the 135% limit; it is not a
-pass. No specific A11-code inefficiency was identified in the diagnosis;
-diagnostic runs do not replace acceptance sessions. The miss's disposition
-belongs to the owner. A second real iOS Safari and Android Chrome pass
-remains a human gate.
+`allDefaultLayersMs` at 136.4954% of base against the 135% limit; it remains
+recorded as a miss. The owner accepted it as run-to-run variation under A13.
+No specific A11-code inefficiency was identified in the diagnosis; diagnostic
+runs do not replace acceptance sessions. Final iPhone Safari validation
+passed; iPad and Android device checks remain deferred.
 Manual `refresh-map.yml` and `ridb-check.yml` upload artifacts without
 committing or deploying; no refresh is scheduled.
 
