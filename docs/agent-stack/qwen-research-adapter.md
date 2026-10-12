@@ -13,7 +13,8 @@ exact-SHA merge approval.
 
 All eight original artifact hashes matched the supplied recovery manifest.
 The adapter, tests and synthetic fixtures were recovered from those originals.
-The coordinator-authorized adapter/test deviations are listed below. The test
+The packaged adapter differs from the recovered artifact through the approved
+packaging/security deviations below. The test
 entrypoint supplies import/discovery paths without path edits to recovered tests.
 
 The publication conflict was resolved by an explicit coordinator decision: the
@@ -37,8 +38,34 @@ Import adapter SHA-256:
 Import test SHA-256:
 `bc712a9548345265b478e0b926fb24066595151cd977f849ec3f12fcffd4f12f`.
 These import hashes identify the placeholder forms, not files containing the
-withheld address. Previously pushed original-file hashes remain in Git history;
-removing that exposure from history requires a separate owner decision.
+withheld address. Previously pushed original-file hashes remain in Git/PR
+history. The owner accepted this historical residual; no history rewrite or
+PR recreation is authorized. Original address-containing hashes stay private.
+
+### Preserved original components and approved deviations
+
+The recovered `parse_json`, `validate_records`, `validate_response` and
+`build_request` functions, `NoRedirect` class and `SYSTEM_PROMPT` remain
+byte-identical to their original source. The synthetic fixtures also retain
+original bytes. This preservation statement applies to those named components,
+not the packaged adapter file. Original recovery hashes stay private.
+
+The owner approved these packaging/security deviations:
+
+| Deviation | Commit |
+|---|---|
+| One-line endpoint substitution in the adapter and recovered test; private literal replaced by neutral placeholder | `af83499` |
+| Installation-fixed local endpoint setting instead of a committed address; constrained URL and no per-run override | `e07f1c5` |
+| Setting target Git-ancestry check supports temporary staging without accepting another checkout | `34f06a4` |
+| Dated owner exposure-review gate in runner | `77b4671` |
+| The same owner gate enforced independently in standalone adapter CLI | `8916bce` |
+| HTTP protocol failures emit a terminal failed event | `e42bbb7` |
+| Missing account-home error conversion; owner/mode/non-symlink setting checks; JSON recursion and unexpected ordinary errors emit terminal events | `1cf570e` |
+| Shared exposure review expires after 30 UTC calendar days; exactly 30 accepted, 31 rejected | `5ee6b2d` |
+
+These narrowly scoped fixes preserve the named original validation/request/
+prompt components. Runner/bridge hardening and tests are separate integrations,
+not recovered behavior. Each change remains attributable in forward history.
 
 This section uses the ORIGINAL recovered research_adapter.py and test_adapter.py,
 before endpoint substitution or packaging changes. Source spans were regenerated
@@ -344,6 +371,17 @@ checked again via fstat before its bounded read. Unsafe endpoint files fail
 `ENDPOINT_SETTING_UNSAFE`; unsafe acknowledgement files fail
 `EXPOSURE_REVIEW_UNSAFE_SETTING`. Tooling does not change setting permissions.
 
+The setting remains local and untracked. Owner creation steps, without its value:
+
+1. Create `~/.config/ohvernight` outside every Git checkout as a private directory
+   (mode 0700), under the POSIX account home described above.
+2. Create `qwen-endpoint` as a regular file owned by that account, with mode 0600
+   from creation; use the owner's local editor to enter the approved complete
+   URL, optionally followed by one newline. Never put its value in repository
+   text, command arguments, environment variables or shared artifacts.
+3. Keep the file untracked and non-symlink, with no group/other write permission.
+   Tooling only reads it and never creates, chmods or substitutes it automatically.
+
 The URL must use the original `http` scheme; a literal loopback address or IPv4
 within Tailscale's CGNAT block (`100.64.0.0/10`); port 11434; exact `/api/chat` path; and no
 credentials, query, fragment, scope ID or extra whitespace. Hostnames, public
@@ -359,7 +397,7 @@ metadata, even if the adapter is outside Git, rather than inferring a root from
 its installation depth or skipping checks outside a checkout. This supports the
 manual staging recipe without accepting settings in a different Git checkout.
 Resolution errors fail closed. The packaged adapter SHA-256 is
-`8ae3a5de1d0d06310192eadf456c15b817a58184cfea06707287862ea2d26e58`;
+`87bccf01f13298ffcc1d68d0c6b393c8d5e135d13807b0bc11307b4c8e6862fd`;
 its source contains no private endpoint literal, and the runner pins that hash.
 
 Missing, unreadable, invalid or repository-resolving setting paths return
@@ -370,7 +408,31 @@ The service has no API authentication. Its listener was last observed on a
 wildcard interface; unauthorized LAN/public exposure has not been ruled out.
 Live use is blocked pending the owner's network exposure review
 (`BLOCKED_NETWORK_EXPOSURE`), independently of offline packaging and URL checks.
-No listener, firewall or network changes are authorized by this package.
+Before Step 2, the owner must inspect:
+
+- The effective listener for TCP 11434 and Windows Firewall inbound rules.
+- Reachability from the service host itself, required WSL/Docker clients, the
+  owner's Mac over Tailscale, other Tailscale peers, ordinary LAN devices and
+  public interfaces. Private device/host identifiers remain withheld.
+- Required local/Docker and authorized Tailscale traffic must work. Ordinary
+  LAN access must be blocked unless specifically required; public access must
+  be blocked.
+
+No firewall, listener, Tailscale ACL or Docker networking change is made without
+a separate owner decision. This package does not perform those changes or
+claim that inspection passed.
+
+Four conditions must ALL hold before any live inference, through either the
+standalone adapter CLI or a future runner backend:
+
+1. Context measurement passes.
+2. Owner network exposure review passes the inspection above.
+3. The owner creates the valid, unexpired acknowledgement below.
+4. The exact pilot input packet is returned for final owner approval; execution
+   waits for that approval of the exact packet.
+
+These are live-operation gates, not a license to run inference from a green
+offline test. BLOCKED_NETWORK_EXPOSURE remains closed in this PR.
 
 Both the runner and standalone adapter CLI require a dated owner-set acknowledgement at the fixed outside-Git
 path `~/.config/ohvernight/qwen-exposure-review.json`:
@@ -379,23 +441,32 @@ path `~/.config/ohvernight/qwen-exposure-review.json`:
 {"owner_exposure_review_acknowledged": true, "reviewed_at": "YYYY-MM-DD"}
 ```
 
-The owner supplies the actual calendar date after inspecting exposure. Exact keys,
-boolean true and a valid ISO calendar date no later than today are required; oversized, unreadable,
-missing, malformed or repository-resolving settings fail closed with
-`EXPOSURE_REVIEW_REQUIRED` before process launch or runtime input creation. Agents must never create this acknowledgement file: only the owner does. Neither
-entry path writes it, and its contents do not enter run metadata.
-The setting records an explicit owner acknowledgement, not independently verified
-firewall state, freshness or live-pilot approval. Offline tests mock this gate or
-use synthetic acknowledgement files; they require no real owner acknowledgement.
-Future dates are rejected. A maximum acknowledgement age of 30 days is proposed
-for owner approval; no expiration policy is implemented. The owner must decide
-whether 30 days is appropriate and when listener/firewall/ACL changes invalidate
-review. Old valid dates remain accepted until that policy is explicitly approved.
+The owner supplies the actual calendar date after inspecting exposure. Exact
+keys, boolean true and a valid ISO calendar date are required. Dates are compared
+with the current UTC calendar date: future dates fail; a date exactly 30 days old
+is accepted; 31 days old or older fails with `EXPOSURE_REVIEW_EXPIRED`. Both the
+runner and CLI use this shared check, before endpoint reading, process launch or
+runtime input creation. Missing, unreadable, oversized, malformed or
+repository-resolving files fail `EXPOSURE_REVIEW_REQUIRED`; unsafe file ownership,
+mode, type or symlink fails `EXPOSURE_REVIEW_UNSAFE_SETTING`.
+
+The acknowledgement means exactly:
+
+> Owner reviewed the endpoint exposure within the allowed period.
+
+It does not mean the model, its output or any source evidence is verified. It
+records the owner's statement, not an independently observed firewall/network
+state or live-pilot approval. File ownership cannot prove authorship. Agents
+must never create this file; only the owner does. Neither entry path writes it,
+and its contents do not enter run metadata. Offline tests inject dates/clocks
+and use synthetic files or mocked gates; no real owner file is required.
+
 The runner checks exposure review before endpoint configuration or terminal
 creation. The adapter CLI independently checks the same acknowledgement before
 reading its endpoint, input, constructing a request or opening the network. A
 missing/invalid acknowledgement emits a rejected event with the specific
-`EXPOSURE_REVIEW_REQUIRED` code and exit 1. No URL is copied into the
+`EXPOSURE_REVIEW_REQUIRED` code and exit 1; an expired acknowledgement emits
+`EXPOSURE_REVIEW_EXPIRED` and exit 1. No URL is copied into the
 command, minimal environment or run metadata. A later pilot must keep the
 installation setting fixed throughout each run. The file is local/private and
 must never be committed. Offline tests cover missing/invalid settings, dated exposure review, pre-request
@@ -580,3 +651,26 @@ latency and paid-model work avoided. The private mission report proposes a
 sample. Unchanged classification pass-through does not count as value. Recommend
 stopping further integration if reviewer overhead cancels paid-model savings.
 This draft neither runs Step 2 nor registers Qwen as a worker.
+
+
+The owner conceptually approved a future pilot-input projection, subject to all
+live gates above and a separately reviewed implementation PR. It is NOT
+implemented here:
+
+- Records lacking adapter-required fields may receive `access = unknown` and
+  `camping = unknown` for PILOT INPUT ONLY. Original canonical records stay
+  unchanged.
+- Inserted fields must be explicitly labelled in an envelope or metadata such
+  as `pilot_projection`, never indistinguishable from source/canonical fields.
+  Provenance must identify which values came from canonical data and which were
+  inserted solely to satisfy the adapter input schema.
+- `unknown` must never be represented as reviewed evidence. No projection may
+  convert a known restriction or supported claim; the bridge must reject a
+  conflicting canonical value.
+- A stale-restriction case may be a clearly synthetic variant. Seven real
+  Douglas records plus one hostile synthetic variant are acceptable as a
+  CANDIDATE set only, not approved execution input.
+
+This PR adds no projection implementation, envelope, packet generation, canonical
+mutation or byte-guard change. The exact candidate packet must return for final
+owner approval before any live inference.

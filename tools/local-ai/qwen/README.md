@@ -5,7 +5,12 @@ authorized here. The recovered adapter and test were imported with only their
 private endpoint literal replaced by a neutral placeholder, under the explicit
 coordinator decision. A separate change replaces that placeholder with a strictly
 validated installation setting. Originals remain private; import and fixture
-hashes and deviations are documented in the contract.
+hashes and deviations are documented in the contract. The packaged adapter
+differs from the original through the approved endpoint substitution, local
+configuration, owner gate and narrow packaging/security fixes. The contract
+lists each deviation with its commit and names the original components that
+remain unchanged. The owner accepted the historical endpoint/hash residual;
+no history rewrite or PR recreation is authorized.
 
 This tool is optional and reads explicitly selected public evidence. It never
 publishes canonical evidence or supplies permission, factual verification,
@@ -42,6 +47,11 @@ Git, containing the complete endpoint URL and optionally one trailing newline.
 Tooling never creates this setting automatically. Configure it only under explicit
 owner authorization, with owner-only permissions. The setting is fixed
 per installation: no environment, CLI or runner endpoint override is exposed.
+To create it, the owner makes `~/.config/ohvernight` outside Git with mode 0700,
+creates the regular `qwen-endpoint` file owned by the current account with mode
+0600 from creation, and enters the approved complete URL in a local editor.
+Its value stays in that untracked local file. Never use a symlink or publish its
+value in commands, environment variables or artifacts. Tooling never writes it.
 It requires the original HTTP scheme, a literal loopback or Tailscale CGNAT
 address, TCP port 11434 and path `/api/chat`, without credentials, query or
 fragment. Hostnames, public addresses and ordinary private LAN ranges fail.
@@ -72,10 +82,22 @@ Replace the date placeholder with the actual review date. Missing, unreadable,
 malformed, undated or inside-repository acknowledgements fail with
 `EXPOSURE_REVIEW_REQUIRED` before launch; the CLI emits a rejected event before
 reading the endpoint or constructing a request. Future dates fail. Agents must
-never create the acknowledgement: only the owner does. No maximum age policy
-is implemented; a 30-day maximum is proposed for owner approval, including an
-invalidation rule for network configuration changes. Offline tests use synthetic files or mocked acknowledgements and need
-no real owner setting. Acknowledgement does not authorize inference or Step 2.
+never create the acknowledgement: only the owner does; file ownership cannot
+prove authorship. The approved maximum age is 30 UTC calendar days: exactly 30
+days old is accepted, 31 or older fails `EXPOSURE_REVIEW_EXPIRED`, before the
+endpoint is read. Tests inject the clock and cover both boundary dates.
+
+The acknowledgement means exactly:
+
+> Owner reviewed the endpoint exposure within the allowed period.
+
+It does not mean the model, its output or any source evidence is verified.
+Offline tests use synthetic files or mocked acknowledgements and need no real
+owner setting. Acknowledgement does not authorize inference or Step 2. Every
+live path also requires passing context measurement, passing owner network
+exposure review, owner creation of the acknowledgement, and return of the exact
+pilot packet for final owner approval before execution. The contract lists the
+network inspection requirements; no network configuration changes are authorized.
 
 `run_advisory` takes the resulting bytes and an injected execution interface.
 There is no enabled concrete Orca execution backend in this draft. The standalone
