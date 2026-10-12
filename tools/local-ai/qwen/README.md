@@ -62,7 +62,8 @@ malformed, undated or inside-repository acknowledgements fail with
 `EXPOSURE_REVIEW_REQUIRED` before launch; the CLI emits a rejected event before
 reading the endpoint or constructing a request. Future dates fail. Agents must
 never create the acknowledgement: only the owner does. No maximum age policy
-is implemented; the owner must decide a proposed age limit. Offline tests use synthetic files or mocked acknowledgements and need
+is implemented; a 30-day maximum is proposed for owner approval, including an
+invalidation rule for network configuration changes. Offline tests use synthetic files or mocked acknowledgements and need
 no real owner setting. Acknowledgement does not authorize inference or Step 2.
 
 `run_advisory` takes the resulting bytes and an injected execution interface.

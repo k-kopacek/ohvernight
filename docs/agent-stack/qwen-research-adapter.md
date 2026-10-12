@@ -376,8 +376,10 @@ entry path writes it, and its contents do not enter run metadata.
 The setting records an explicit owner acknowledgement, not independently verified
 firewall state, freshness or live-pilot approval. Offline tests mock this gate or
 use synthetic acknowledgement files; they require no real owner acknowledgement.
-Future dates are rejected. Maximum acknowledgement age remains an owner decision;
-a bounded age is proposed, but no expiration policy is silently implemented.
+Future dates are rejected. A maximum acknowledgement age of 30 days is proposed
+for owner approval; no expiration policy is implemented. The owner must decide
+whether 30 days is appropriate and when listener/firewall/ACL changes invalidate
+review. Old valid dates remain accepted until that policy is explicitly approved.
 The runner checks exposure review before endpoint configuration or terminal
 creation. The adapter CLI independently checks the same acknowledgement before
 reading its endpoint, input, constructing a request or opening the network. A
