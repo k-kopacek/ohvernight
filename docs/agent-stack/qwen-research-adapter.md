@@ -300,10 +300,11 @@ configuration change is explicit below.
 
 ## Installation-fixed endpoint change
 
-The only explicit setting is a file outside the repository:
+The single endpoint setting is a file outside the repository:
 `~/.config/ohvernight/qwen-endpoint`. It contains one complete URL, optionally
 followed by one newline. No endpoint environment variable, caller argument or
-per-run endpoint choice exists; Step 1 creates no actual setting. Standard
+per-run endpoint choice exists; tooling never creates the setting automatically.
+Installation requires explicit owner authorization. Standard
 Python home-directory resolution can consult HOME; isolated child execution
 uses a cleared environment and resolves the account home normally. Apart from
 home resolution, the adapter does not read environment values.
@@ -328,6 +329,28 @@ the runner pins that hash before execution.
 Missing, unreadable, invalid or repository-resolving setting paths return
 `ENDPOINT_SETTING_MISSING`, `ENDPOINT_SETTING_UNREADABLE`,
 `ENDPOINT_SETTING_INVALID`, or `ENDPOINT_SETTING_IN_REPOSITORY` before any request.
+
+The service has no API authentication. Its listener was last observed on a
+wildcard interface; unauthorized LAN/public exposure has not been ruled out.
+Live use is blocked pending the owner's network exposure review
+(`BLOCKED_NETWORK_EXPOSURE`), independently of offline packaging and URL checks.
+No listener, firewall or network changes are authorized by this package.
+
+The runner requires a dated owner-set acknowledgement at the fixed outside-Git
+path `~/.config/ohvernight/qwen-exposure-review.json`:
+
+```json
+{"owner_exposure_review_acknowledged": true, "reviewed_at": "YYYY-MM-DD"}
+```
+
+The owner supplies the actual calendar date after inspecting exposure. Exact keys,
+boolean true and a valid ISO calendar date are required; oversized, unreadable,
+missing, malformed or repository-resolving settings fail closed with
+`EXPOSURE_REVIEW_REQUIRED` before process launch or runtime input creation. The
+runner never writes this setting, and its contents do not enter run metadata.
+The setting records an explicit owner acknowledgement, not independently verified
+firewall state, freshness or live-pilot approval. Offline tests mock this gate or
+use synthetic acknowledgement files; they require no real owner acknowledgement.
 The runner validates the setting before terminal creation and the adapter
 validates it before reading input/sending a request. No URL is copied into the
 command, minimal environment or run metadata. A later pilot must keep the
@@ -414,7 +437,7 @@ must retain ownership internally and clean up even without a receipt. No retry,
 paid-model fallback or model switch exists.
 
 Failures have specific codes: invalid input bytes/input, unavailable adapter or adapter hash mismatch, installation
-setting failures,
+setting failures, missing/invalid owner exposure acknowledgement,
 inside-repository run root, no completion, run-ID/digest/model mismatch,
 completion rejection, invalid result, timeout, execution failure, cleanup failure
 and metadata-write failure. Cleanup state is always returned, including when an

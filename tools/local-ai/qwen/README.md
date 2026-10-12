@@ -34,8 +34,8 @@ or private evidence. The 3,072-byte guard is not a tokenizer measurement.
 
 The single installation setting is `~/.config/ohvernight/qwen-endpoint`, outside
 Git, containing the complete endpoint URL and optionally one trailing newline.
-No setting file is created by Step 1. Configure it only as part of an explicitly
-approved installation/pilot, with owner-only permissions. The setting is fixed
+Tooling never creates this setting automatically. Configure it only under explicit
+owner authorization, with owner-only permissions. The setting is fixed
 per installation: no environment, CLI or runner endpoint override is exposed.
 It requires the original HTTP scheme, a literal loopback or Tailscale CGNAT
 address, TCP port 11434 and path `/api/chat`, without credentials, query or
@@ -44,6 +44,22 @@ Missing/unreadable/invalid/in-repository settings fail before any terminal or
 network request. The runner records only a non-secret endpoint label and does
 not pass the URL in its command or environment. Redirects/proxies remain refused;
 model `qwen3:8b` and its original parameters remain fixed.
+
+The service has no API authentication, and its listener was last observed on a
+wildcard interface. Live use remains gated on the owner's network exposure
+review; permitted URL syntax does not establish isolation. The runner requires
+the owner to set a separate outside-Git file,
+`~/.config/ohvernight/qwen-exposure-review.json`, after that review:
+
+```json
+{"owner_exposure_review_acknowledged": true, "reviewed_at": "YYYY-MM-DD"}
+```
+
+Replace the date placeholder with the actual review date. Missing, unreadable,
+malformed, undated or inside-repository acknowledgements fail with
+`EXPOSURE_REVIEW_REQUIRED` before launch. The runner never creates or updates
+this file. Offline tests use synthetic files or mocked acknowledgements and need
+no real owner setting. Acknowledgement does not authorize inference or Step 2.
 
 `run_advisory` takes the resulting bytes and an injected execution interface.
 There is no enabled concrete execution backend or executable live-run command

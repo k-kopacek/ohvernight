@@ -58,6 +58,8 @@ class IntegrationTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         p = patch.object(adapter,"configured_endpoint",return_value="installation-setting-fake")
         p.start(); self.addCleanup(p.stop)
+        self.exposure_patch = patch.object(runner, "require_owner_exposure_review", return_value="2026-10-12")
+        self.exposure_patch.start(); self.addCleanup(self.exposure_patch.stop)
         self.canonical = [{"id": "record_1", "source_ids": ["source:exact-1"],
                            "access_status": "unknown", "camping_permission": "unknown"}]
         self.raw = bridge.prepare_advisory_input(self.canonical)
@@ -68,6 +70,18 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(fake.launches, 1)
         self.assertEqual(fake.cleanups, 1)
         return result, fake
+
+    def test_missing_owner_exposure_acknowledgement_refuses_launch(self):
+        self.exposure_patch.stop()
+        with patch.object(runner, "exposure_review_setting_path", return_value=Path(self.temp.name) / "missing.json"):
+            fake = FakeExecution(self.raw)
+            result = runner.run_advisory(self.raw, fake, run_root=self.temp.name)
+        self.assertEqual(result["failure_code"], "EXPOSURE_REVIEW_REQUIRED")
+        self.assertFalse(result["succeeded"])
+        self.assertEqual(result["advisory_results"], [])
+        self.assertEqual(fake.launches, 0)
+        self.assertEqual(fake.cleanups, 1)
+        self.assertEqual(list(Path(self.temp.name).iterdir()), [])
 
     def test_all_allowed_mappings_and_ids(self):
         for access, expected_access in [("unknown", "unknown"), ("designated_open", "allowed")]:

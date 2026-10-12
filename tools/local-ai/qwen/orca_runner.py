@@ -5,10 +5,11 @@ provide independently inspected Orca/process observation implementations.
 """
 import hashlib
 import json
+import re
 import shlex
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Protocol
 
@@ -57,6 +58,39 @@ class RunFailure(Exception):
     def __init__(self, code):
         self.code = code
         super().__init__(code)
+
+
+def exposure_review_setting_path():
+    return Path.home() / ".config" / "ohvernight" / "qwen-exposure-review.json"
+
+
+def require_owner_exposure_review():
+    """Require the owner's dated local acknowledgement; never create it.
+
+    URL validation cannot prove that an unauthenticated wildcard listener is
+    isolated. This acknowledgement follows the owner's exposure inspection,
+    and is distinct from endpoint installation and from live-pilot approval.
+    """
+    try:
+        path = exposure_review_setting_path().expanduser().resolve()
+        repo_root = Path(__file__).resolve().parents[3]
+        if path == repo_root or repo_root in path.parents:
+            raise ValueError("Acknowledgement must remain outside Git")
+        with path.open("rb") as setting:
+            raw = setting.read(1025)
+        if len(raw) > 1024:
+            raise ValueError("Oversized acknowledgement")
+        value = adapter.parse_json(raw)
+        if (type(value) is not dict
+                or set(value) != {"owner_exposure_review_acknowledged", "reviewed_at"}
+                or value["owner_exposure_review_acknowledged"] is not True
+                or type(value["reviewed_at"]) is not str
+                or re.fullmatch(r"\d{4}-\d{2}-\d{2}", value["reviewed_at"]) is None):
+            raise ValueError("Invalid acknowledgement")
+        date.fromisoformat(value["reviewed_at"])
+    except (OSError, ValueError, RuntimeError):
+        raise RunFailure("EXPOSURE_REVIEW_REQUIRED") from None
+    return value["reviewed_at"]
 
 
 def structurally_validate_completion(event, run_id, digest, records):
@@ -118,6 +152,7 @@ def run_advisory(raw, interface, *, run_root=None, python_executable="python3", 
         # The child independently reads the same fixed file; never pass the URL
         # in its command, environment, output metadata, or caller arguments.
         adapter.configured_endpoint()
+        require_owner_exposure_review()
         try:
             records = adapter.validate_records(adapter.parse_json(raw))
         except (ValueError, TypeError):
