@@ -97,6 +97,6 @@ roots fail rather than being chmodded.
 
 Disable by skipping this optional advisory step. No production path imports it.
 Rollback is removal of this directory, the single optional CI step, the contract
-document and its ignore entry. Normal builds, source retrieval and publication
+document, AGENTS.md verification command and its ignore entry. Normal builds, source retrieval and publication
 continue to use the existing workflow. See
 [the contract](../../../docs/agent-stack/qwen-research-adapter.md).

@@ -544,7 +544,8 @@ its ignore entry and the one CI step
 refer to it.
 
 Disable by skipping the optional advisory step. Rollback removes the directory,
-single CI step, this document and the ignore entry. No data or production code
+single CI step, the AGENTS.md verification command, this document and the ignore
+entry. No data or production code
 requires migration. Local runtime artifacts remain outside Git and follow the
 owner's retention decision.
 
