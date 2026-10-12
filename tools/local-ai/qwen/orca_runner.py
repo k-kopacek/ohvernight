@@ -67,6 +67,10 @@ class RunFailure(Exception):
         super().__init__(code)
 
 
+class DeadlineExpired(BaseException):
+    """An execution backend's ordinary Exception handler must not swallow this."""
+
+
 def require_owner_exposure_review():
     adapter.require_owner_exposure_review()
 
@@ -80,7 +84,7 @@ def execution_deadline(seconds):
     previous = signal.getsignal(signal.SIGALRM)
 
     def expired(signum, frame):
-        raise TimeoutError()
+        raise DeadlineExpired()
 
     signal.signal(signal.SIGALRM, expired)
     try:
@@ -183,7 +187,7 @@ def run_advisory(raw, interface, *, run_root=None, python_executable="python3", 
         code = error.code
     except RunFailure as error:
         code = error.code
-    except TimeoutError:
+    except (TimeoutError, DeadlineExpired):
         code = "TIMEOUT"
     except Exception:
         code = "EXECUTION_FAILED"
@@ -194,7 +198,7 @@ def run_advisory(raw, interface, *, run_root=None, python_executable="python3", 
             if (isinstance(observed, dict) and set(observed) == set(cleanup)
                     and all(type(value) is bool for value in observed.values())):
                 cleanup = observed
-        except Exception:
+        except (Exception, DeadlineExpired):
             pass
         if not all(cleanup.values()) and code is None:
             code = "CLEANUP_FAILED"

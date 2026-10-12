@@ -212,7 +212,10 @@ class IntegrationTests(unittest.TestCase):
     def test_runner_deadline_interrupts_interface_ignoring_timeout(self):
         class SlowExecution(FakeExecution):
             def completion(self, receipt, **kwargs):
-                time.sleep(1)
+                try:
+                    time.sleep(1)
+                except Exception:
+                    time.sleep(1)
                 return super().completion(receipt, **kwargs)
         previous = signal.getsignal(signal.SIGALRM)
         fake = SlowExecution(self.raw)
