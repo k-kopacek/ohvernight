@@ -5,6 +5,7 @@ from shapely.geometry import shape
 from lib.arcgis_client import new_session, get_json, query_layer_geojson
 from lib.common import clip_geometry, properties
 from lib.evidence import make_evidence, now
+from lib.trail_drift import report_trail_drift
 from fetch_trails import URL as TRAIL_URL, normalize as trail
 
 COUNTY_URL = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1'
@@ -66,6 +67,8 @@ def main():
         print(f'{key}: {len(features)} county-clipped features',flush=True)
     target = Path(__file__).resolve().parents[2]/'regions/douglas-co/research.json'
     previous = json.loads(target.read_text()) if target.exists() else {}
+    if 'trails' in layers:
+        report_trail_drift(target, layers['trails']['features'], label='Douglas trails', douglas=True)
     payload = merge_snapshot(previous, layers)
     target.parent.mkdir(parents=True,exist_ok=True)
     temp = target.with_suffix('.tmp')
