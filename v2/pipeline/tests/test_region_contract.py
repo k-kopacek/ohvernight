@@ -585,6 +585,14 @@ class RegionContractTests(unittest.TestCase):
         self.assert_rule("R30", lambda m, d: d["data.json"]["status"].update(status="unavailable", reason=None))
         self.assert_rule("R30", lambda m, d: d["data.json"].update(status=[]))
 
+    def test_R31_reports_non_curated_layer_without_status_reference(self):
+        manifest, docs = self.base()
+        manifest["layers"][0]["status_ref"] = None
+
+        report = self.valid(manifest, docs)
+
+        self.assertEqual(report["unrecorded_status_layers"], ["water"])
+
     def test_R32_transport_count(self):
         self.assert_rule("R32", lambda m, d: d["data.json"]["status"].update(count=2))
 
