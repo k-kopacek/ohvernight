@@ -4,8 +4,8 @@ Step 1 packages the optional adapter for offline review. No inference is
 authorized here. The recovered adapter and test were imported with only their
 private endpoint literal replaced by a neutral placeholder, under the explicit
 coordinator decision. A separate change replaces that placeholder with a strictly
-validated installation setting. Originals remain private; hashes and deviations
-are documented in the contract.
+validated installation setting. Originals remain private; import and fixture
+hashes and deviations are documented in the contract.
 
 This tool is optional and reads explicitly selected public evidence. It never
 publishes canonical evidence or supplies permission, factual verification,
@@ -18,8 +18,11 @@ Run the local integration check from the repository root:
 python3 -B tools/local-ai/qwen/offline_tests.py
 ```
 
-This launcher blocks sockets and process launches before test discovery. The
-synthetic fixtures are byte-identical; the adapter/test changes are documented.
+This launcher blocks the reviewed network/process entry points before test discovery,
+including native socket/fork entry points, multiprocessing start and new ctypes
+library loads or `system` symbol resolution. It is not a security sandbox: cached
+native function pointers, other native extensions and unreviewed entry points
+are not blocked. The synthetic fixtures are byte-identical; the adapter/test changes are documented.
 No dependencies are added. The CI change adds only this offline check to the
 existing Python job. A failure of the optional tool's offline tests fails that
 shared job for every pull request; remove the single step to disable that CI
@@ -42,10 +45,18 @@ per installation: no environment, CLI or runner endpoint override is exposed.
 It requires the original HTTP scheme, a literal loopback or Tailscale CGNAT
 address, TCP port 11434 and path `/api/chat`, without credentials, query or
 fragment. Hostnames, public addresses and ordinary private LAN ranges fail.
-Missing/unreadable/invalid/in-repository settings fail before any terminal or
+Both setting files must be regular, non-symlink files owned by the current uid
+with no group or other write permission. The opened file descriptor is checked
+again; symlink following is refused. Unsafe endpoint files fail with
+`ENDPOINT_SETTING_UNSAFE`; unsafe acknowledgements fail with
+`EXPOSURE_REVIEW_UNSAFE_SETTING`. Missing/unreadable/invalid/in-repository settings fail before any terminal or
 network request. The runner records only a non-secret endpoint label and does
 not pass the URL in its command or environment. Redirects/proxies remain refused;
-model `qwen3:8b` and its original parameters remain fixed.
+model `qwen3:8b` and its original parameters remain fixed. Deep JSON nesting
+emits `rejected` with `JSON_RECURSION_LIMIT`; unexpected ordinary exceptions
+emit `failed` with `UNEXPECTED_ADAPTER_ERROR`. Control-flow exceptions remain
+unhandled for caller interruption. Missing account-database entries become
+OSError and follow the CLI failure-event path.
 
 The service has no API authentication, and its listener was last observed on a
 wildcard interface. Live use remains gated on the owner's network exposure
@@ -78,13 +89,16 @@ The command builder clears the child environment and selects isolated Python
 with bytecode disabled. Parent and child both resolve the POSIX account home
 via `pwd.getpwuid(os.getuid()).pw_dir`, ignoring HOME. The POSIX main-thread runner additionally enforces a 150-second default deadline
 and a separate five-second cleanup grace. A competing timer or non-main thread
-is rejected; the prior handler is restored. A missing completion, cleanup or
+is rejected; cleanup still runs without a timer in that case. This fallback
+has no runner-enforced cleanup deadline, so the interface must bound its own
+cleanup. Timer teardown blocks expirations while restoring the previous handler
+and drains a pending expiration before restoring the signal mask. A missing completion, cleanup or
 correlation fails. Unexpected completion keys are rejected. Output words are
 nested under `adapter_vocabulary`, which is not a canonical Ohvernight status.
 
 Default run storage is the user's cache, outside the repository. An explicit
 `run_root` can select another outside-repository directory. Input and metadata
-files have owner-only permissions (new root 0700, input created atomically 0600),
+files have owner-only permissions (new root 0700, input and metadata created atomically with O_EXCL, 0600),
 and metadata uses a fixed allowlist; raw
 advisory output is returned to the caller without being written. Do not retain
 credentials, environment files, private configurations or unrelated user data.

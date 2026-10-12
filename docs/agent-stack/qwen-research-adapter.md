@@ -318,7 +318,13 @@ The material discrepancies are the unrestricted selected input path, context
 bytes being described as a bounded token context, private/secret input selection
 being a policy rather than an enforced property, and external environment and
 cleanup behavior being attributed to integration rather than adapter code, and
-uncaught HTTP protocol exceptions leaving no terminal event.
+uncaught HTTP protocol exceptions, deep JSON recursion and unexpected opener
+exceptions leaving no terminal event. The packaged CLI now handles these recovered
+behaviors explicitly: HTTP failures emit `HTTP_PROTOCOL_ERROR`; deep JSON recursion
+emits a terminal rejected event with `JSON_RECURSION_LIMIT`; unexpected ordinary
+exceptions emit a terminal failed event with `UNEXPECTED_ADAPTER_ERROR`. It does
+not catch KeyboardInterrupt, SystemExit or the runner's DeadlineExpired. A missing
+uid in the POSIX account database becomes OSError, following the CLI event path.
 None was silently corrected in the import. The later authorized endpoint
 configuration change is explicit below.
 
@@ -331,7 +337,12 @@ per-run endpoint choice exists; tooling never creates the setting automatically.
 Installation requires explicit owner authorization. On the POSIX execution host,
 both parent and child resolve the same home from `pwd.getpwuid(os.getuid()).pw_dir`,
 ignoring HOME. No endpoint, acknowledgement or cache path is chosen through
-ambient environment values.
+ambient environment values. Both setting files must be regular, non-symlink
+files owned by the current uid, with no group/other write permission. The named
+file is inspected without following symlinks, then opened with O_NOFOLLOW and
+checked again via fstat before its bounded read. Unsafe endpoint files fail
+`ENDPOINT_SETTING_UNSAFE`; unsafe acknowledgement files fail
+`EXPOSURE_REVIEW_UNSAFE_SETTING`. Tooling does not change setting permissions.
 
 The URL must use the original `http` scheme; a literal loopback address or IPv4
 within Tailscale's CGNAT block (`100.64.0.0/10`); port 11434; exact `/api/chat` path; and no
@@ -348,7 +359,7 @@ metadata, even if the adapter is outside Git, rather than inferring a root from
 its installation depth or skipping checks outside a checkout. This supports the
 manual staging recipe without accepting settings in a different Git checkout.
 Resolution errors fail closed. The packaged adapter SHA-256 is
-`637045183d98898d3b5d11ac82d7d33cc2729f7647b0c4e5a0c9fb3a11705071`;
+`8ae3a5de1d0d06310192eadf456c15b817a58184cfea06707287862ea2d26e58`;
 its source contains no private endpoint literal, and the runner pins that hash.
 
 Missing, unreadable, invalid or repository-resolving setting paths return
@@ -486,7 +497,12 @@ with `UNEXPECTED_COMPLETION_FIELDS`. The POSIX main-thread runner uses its own
 ITIMER_REAL deadline for validation/launch/completion/structural acceptance, in
 addition to the interface timeout (default 150 seconds); cleanup has an independent
 5-second grace. A competing timer/non-main thread fails `DEADLINE_UNAVAILABLE`;
-invalid timeouts fail `INVALID_TIMEOUT`. The previous signal handler is restored.
+invalid timeouts fail `INVALID_TIMEOUT`. Cleanup still executes without a timer
+when a main-thread timer is unavailable; this fallback has no runner-enforced
+cleanup deadline and requires the backend to bound its own cleanup. Timer teardown
+blocks SIGALRM, clears the timer and restores the previous handler, then drains
+a pending expiration before restoring the signal mask. Handler restoration is
+protected even if expiration interrupts teardown.
 A separately inspected backend must cooperate with interruption and retain any
 residual launch handle for cleanup; this is not a claim of uninterruptible native
 call cancellation or safe launch implementations that swallow BaseException.
@@ -503,9 +519,9 @@ earlier failure takes precedence. Terminal-create receipt alone fails.
 Default storage is a user-cache directory outside the repository; `run_root` is
 configurable and inside-repository storage is rejected. `.qwen-runs/` is ignored
 as an additional accidental-artifact guard. New run roots are created with mode 0700; broad pre-existing roots are rejected
-with `RUN_ROOT_PERMISSIONS`, never silently chmodded. `input.json` is created
+with `RUN_ROOT_PERMISSIONS`, never silently chmodded. `input.json` and `metadata.json` are created
 atomically with `os.open(O_WRONLY | O_CREAT | O_EXCL, 0o600)` inside a 0700 run
-directory. Metadata uses owner-only permissions. No raw model output is written by the runner; advisory rows are
+directory. Neither file has a post-write chmod window. Metadata uses owner-only permissions. No raw model output is written by the runner; advisory rows are
 returned to the caller. Runtime prompt/result artifacts must never be committed.
 Only selected public evidence or synthetic data may be supplied.
 If failure precedes run-directory creation, metadata is still returned in memory
@@ -532,8 +548,14 @@ authorization for Step 2.
 The sole CI addition is an offline test command in the existing Python job. It
 blocks the reviewed entry points before discovery: socket creation/connections,
 subprocess.Popen, os.system, os.exec*, os.spawn*, posix_spawn/posix_spawnp,
-fork/forkpty, urllib.request.urlopen and HTTPConnection.connect,
+fork/forkpty, _socket.socket, _posixsubprocess.fork_exec (when available),
+multiprocessing.process.BaseProcess.start, ctypes.CDLL initialization (including
+PyDLL and loader helpers), new `system` symbol resolution via ctypes.CDLL,
+urllib.request.urlopen and HTTPConnection.connect,
 uses fake Orca/process interfaces and needs no inference service, GPU or private network.
+This is a guard over reviewed entry points, not a security sandbox. Already-cached
+ctypes/native function pointers, arbitrary native extensions or machine code,
+and unreviewed network/process entry points are not blocked.
 Failure of this optional package's offline tests fails the shared Python CI job
 for every pull request. Disable that CI dependency by removing its single step.
 No dependencies or production imports are added. The ordinary pipeline self-test
