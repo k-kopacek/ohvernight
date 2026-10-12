@@ -21,7 +21,7 @@ import research_adapter as adapter
 from ohvernight_bridge import ADVISORY_LABEL, MAX_BRIDGE_EVIDENCE_BYTES
 
 ADAPTER_VERSION = "step1-owner-gated"
-EXPECTED_ADAPTER_SHA256 = "637045183d98898d3b5d11ac82d7d33cc2729f7647b0c4e5a0c9fb3a11705071"
+EXPECTED_ADAPTER_SHA256 = "8ae3a5de1d0d06310192eadf456c15b817a58184cfea06707287862ea2d26e58"
 MINIMAL_ENVIRONMENT = {"PATH": "/usr/bin:/bin"}
 CLEANUP_TIMEOUT_S = 5
 COMPLETION_FIELDS = {"event", "run_id", "accepted", "input_sha256", "model", "result",
@@ -76,23 +76,43 @@ def require_owner_exposure_review():
 
 
 @contextmanager
-def execution_deadline(seconds):
+def execution_deadline(seconds, *, allow_unavailable=False):
     """POSIX main-thread timer; refuse a competing timer rather than overwrite it."""
     if (threading.current_thread() is not threading.main_thread()
             or signal.getitimer(signal.ITIMER_REAL)[0] != 0):
+        if allow_unavailable:
+            # Cleanup still runs when this thread cannot own a signal timer.
+            yield
+            return
         raise RunFailure("DEADLINE_UNAVAILABLE")
     previous = signal.getsignal(signal.SIGALRM)
 
     def expired(signum, frame):
         raise DeadlineExpired()
 
+    previous_mask = None
     signal.signal(signal.SIGALRM, expired)
     try:
         signal.setitimer(signal.ITIMER_REAL, seconds)
         yield
     finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
-        signal.signal(signal.SIGALRM, previous)
+        try:
+            try:
+                previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGALRM})
+            finally:
+                try:
+                    signal.setitimer(signal.ITIMER_REAL, 0)
+                finally:
+                    signal.signal(signal.SIGALRM, previous)
+        finally:
+            if previous_mask is not None:
+                try:
+                    # Discard a pending expiration of our timer before restoring
+                    # the mask, so it cannot be delivered to the previous handler.
+                    if signal.SIGALRM in signal.sigpending():
+                        signal.sigwait({signal.SIGALRM})
+                finally:
+                    signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
 
 
 def structurally_validate_completion(event, run_id, digest, records):
@@ -193,7 +213,7 @@ def run_advisory(raw, interface, *, run_root=None, python_executable="python3", 
         code = "EXECUTION_FAILED"
     finally:
         try:
-            with execution_deadline(CLEANUP_TIMEOUT_S):
+            with execution_deadline(CLEANUP_TIMEOUT_S, allow_unavailable=True):
                 observed = interface.cleanup(receipt, run_id=run_id)
             if (isinstance(observed, dict) and set(observed) == set(cleanup)
                     and all(type(value) is bool for value in observed.values())):
@@ -217,8 +237,9 @@ def run_advisory(raw, interface, *, run_root=None, python_executable="python3", 
     if directory is not None:
         try:
             path = directory / "metadata.json"
-            path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-            path.chmod(0o600)
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as metadata_file:
+                metadata_file.write(json.dumps(metadata, indent=2) + "\n")
         except OSError:
             code = "METADATA_WRITE_FAILED"
             rows = []

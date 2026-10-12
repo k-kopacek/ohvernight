@@ -67,7 +67,8 @@ class EndpointTests(unittest.TestCase):
     def test_missing_unreadable_and_repository_setting(self):
         with self.assertRaises(adapter.EndpointConfigurationError) as caught:adapter.configured_endpoint()
         self.assertEqual(caught.exception.code,"ENDPOINT_SETTING_MISSING")
-        with patch.object(Path,"open",side_effect=PermissionError()):
+        self.path.write_text(url(address(2130706433)))
+        with patch.object(adapter.os,"open",side_effect=PermissionError()):
             with self.assertRaises(adapter.EndpointConfigurationError) as caught:adapter.configured_endpoint()
         self.assertEqual(caught.exception.code,"ENDPOINT_SETTING_UNREADABLE")
         repository = Path(self.temp.name) / "synthetic-repository"
@@ -116,6 +117,45 @@ class EndpointTests(unittest.TestCase):
             self.assertEqual(adapter.installation_home(), account_home)
             self.assertEqual(self.original_endpoint_path().parents[2], account_home)
             self.assertEqual(adapter.exposure_review_setting_path().parents[2], account_home)
+
+    def test_endpoint_symlink_outside_git_writable_and_wrong_owner_rejected(self):
+        target = self.path.with_name("outside-git-endpoint")
+        target.write_text(url(address(2130706433)))
+        self.path.symlink_to(target)
+        with self.assertRaises(adapter.EndpointConfigurationError) as caught:
+            adapter.configured_endpoint()
+        self.assertEqual(caught.exception.code, "ENDPOINT_SETTING_UNSAFE")
+        self.path.unlink()
+        self.path.write_text(target.read_text())
+        for mode in [0o666, 0o620, 0o602]:
+            self.path.chmod(mode)
+            with self.subTest(mode=mode), self.assertRaises(adapter.EndpointConfigurationError) as caught:
+                adapter.configured_endpoint()
+            self.assertEqual(caught.exception.code, "ENDPOINT_SETTING_UNSAFE")
+        self.path.chmod(0o600)
+        uid = adapter.os.getuid()
+        with patch.object(adapter.os, "getuid", return_value=uid + 1):
+            with self.assertRaises(adapter.EndpointConfigurationError) as caught:
+                adapter.configured_endpoint()
+        self.assertEqual(caught.exception.code, "ENDPOINT_SETTING_UNSAFE")
+        with patch.object(adapter, "endpoint_setting_path", return_value=self.path.parent):
+            with self.assertRaises(adapter.EndpointConfigurationError) as caught:
+                adapter.configured_endpoint()
+        self.assertEqual(caught.exception.code, "ENDPOINT_SETTING_UNSAFE")
+
+    def test_missing_account_home_becomes_oserror_and_cli_event(self):
+        with patch.object(adapter.pwd, "getpwuid", side_effect=KeyError("synthetic missing uid")):
+            with self.assertRaisesRegex(OSError, "Account home unavailable"):
+                adapter.installation_home()
+            # Restore the genuine path resolver, bypassing this class's setting mock.
+            output = io.StringIO()
+            with patch.object(adapter, "endpoint_setting_path", self.original_endpoint_path), \
+                    patch("sys.argv", ["adapter", "--input", "unused", "--run-id", "offline"]), \
+                    contextlib.redirect_stdout(output):
+                self.assertEqual(adapter.main(), 1)
+            self.assertEqual(json.loads(output.getvalue()),
+                             {"event": "failed", "run_id": "offline",
+                              "failure_code": "ENDPOINT_SETTING_UNREADABLE"})
 
 
 if __name__ == "__main__":unittest.main()

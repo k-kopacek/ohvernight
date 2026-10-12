@@ -11,6 +11,7 @@ import json
 import os
 import pwd
 import re
+import stat
 import sys
 import time
 import urllib.error
@@ -45,18 +46,41 @@ class EndpointConfigurationError(ValueError):
 
 
 class ExposureReviewError(ValueError):
-    code = "EXPOSURE_REVIEW_REQUIRED"
+    def __init__(self, message, code="EXPOSURE_REVIEW_REQUIRED"):
+        self.code = code
+        super().__init__(message)
+
+
+class UnsafeSettingError(OSError):
+    """Installation settings must be regular, owner-controlled files."""
 
 
 def installation_home():
     """POSIX account database, independent of the parent's HOME environment."""
-    return Path(pwd.getpwuid(os.getuid()).pw_dir)
+    try:
+        return Path(pwd.getpwuid(os.getuid()).pw_dir)
+    except KeyError:
+        raise OSError("Account home unavailable") from None
 
 
 def repository_root(path):
     """Inspect target ancestry even when the adapter itself is staged elsewhere."""
     return next((parent for parent in (path, *path.parents)
                  if (parent / ".git").exists()), None)
+
+
+def read_installation_setting(path):
+    """Check the named file and opened descriptor; refuse symlink replacement."""
+    def check(info):
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                or info.st_mode & 0o022):
+            raise UnsafeSettingError("Unsafe installation setting")
+
+    check(os.stat(path, follow_symlinks=False))
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, "rb") as setting:
+        check(os.fstat(setting.fileno()))
+        return setting.read(1025)
 
 
 def exposure_review_setting_path():
@@ -66,11 +90,10 @@ def exposure_review_setting_path():
 def require_owner_exposure_review(*, today=None):
     """Only the owner sets this acknowledgement; agents must never write it."""
     try:
-        path = exposure_review_setting_path().resolve()
-        if repository_root(path) is not None:
+        path = exposure_review_setting_path()
+        if repository_root(path.resolve()) is not None:
             raise ValueError("Acknowledgement must remain outside Git")
-        with path.open("rb") as setting:
-            raw = setting.read(1025)
+        raw = read_installation_setting(path)
         if len(raw) > 1024:
             raise ValueError("Oversized acknowledgement")
         value = parse_json(raw)
@@ -82,6 +105,8 @@ def require_owner_exposure_review(*, today=None):
             raise ValueError("Invalid acknowledgement")
         if date.fromisoformat(value["reviewed_at"]) > (today if today is not None else date.today()):
             raise ValueError("Future review date")
+    except UnsafeSettingError:
+        raise ExposureReviewError("Unsafe owner setting", "EXPOSURE_REVIEW_UNSAFE_SETTING") from None
     except (OSError, ValueError, RuntimeError):
         raise ExposureReviewError("Owner exposure review required") from None
     return value["reviewed_at"]
@@ -94,15 +119,16 @@ def endpoint_setting_path():
 
 def configured_endpoint():
     try:
-        path = endpoint_setting_path().resolve()
-        repository = repository_root(path)
+        path = endpoint_setting_path()
+        repository = repository_root(path.resolve())
     except (OSError, RuntimeError):
         raise EndpointConfigurationError("ENDPOINT_SETTING_UNREADABLE") from None
     if repository is not None:
         raise EndpointConfigurationError("ENDPOINT_SETTING_IN_REPOSITORY")
     try:
-        with path.open("rb") as setting:
-            raw = setting.read(1025)
+        raw = read_installation_setting(path)
+    except UnsafeSettingError:
+        raise EndpointConfigurationError("ENDPOINT_SETTING_UNSAFE") from None
     except FileNotFoundError:
         raise EndpointConfigurationError("ENDPOINT_SETTING_MISSING") from None
     except OSError:
@@ -269,6 +295,9 @@ def main():
     except EndpointConfigurationError as error:
         print(json.dumps({"event": "failed", "run_id": args.run_id,
                           "failure_code": error.code}), flush=True)
+    except RecursionError:
+        print(json.dumps({"event": "rejected", "run_id": args.run_id,
+                          "failure_code": "JSON_RECURSION_LIMIT"}), flush=True)
     except ValueError as error:
         print(json.dumps({"event": "rejected", "run_id": args.run_id, "reason": str(error)}), flush=True)
     except http.client.HTTPException:
@@ -277,6 +306,9 @@ def main():
     except (OSError, urllib.error.URLError):
         print(json.dumps({"event": "failed", "run_id": args.run_id,
                           "reason": "input or endpoint unavailable; no automatic retry"}), flush=True)
+    except Exception:
+        print(json.dumps({"event": "failed", "run_id": args.run_id,
+                          "failure_code": "UNEXPECTED_ADAPTER_ERROR"}), flush=True)
     return 1
 
 

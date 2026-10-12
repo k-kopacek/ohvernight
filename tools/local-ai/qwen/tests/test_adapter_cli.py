@@ -133,3 +133,24 @@ class AdapterCliTests(unittest.TestCase):
                 if isinstance(error, http.client.HTTPException):
                     self.assertEqual(events[1]["failure_code"], "HTTP_PROTOCOL_ERROR")
                 self.assertEqual(len(opener.calls), 1)
+
+    def test_deep_json_emits_terminal_rejection(self):
+        code, events, opener, _ = self.invoke(b"[" * 100000)
+        self.assertEqual(code, 1)
+        self.assertEqual([event["event"] for event in events], ["started", "rejected"])
+        self.assertEqual(events[-1]["failure_code"], "JSON_RECURSION_LIMIT")
+        self.assertEqual(len(opener.calls), 1)
+
+    def test_unexpected_opener_error_emits_terminal_failure(self):
+        code, events, opener, _ = self.invoke(error=RuntimeError("private exception detail"))
+        self.assertEqual(code, 1)
+        self.assertEqual(events, [{"event": "started", "run_id": "offline-cli"},
+                                 {"event": "failed", "run_id": "offline-cli",
+                                  "failure_code": "UNEXPECTED_ADAPTER_ERROR"}])
+        self.assertEqual(len(opener.calls), 1)
+
+    def test_control_flow_exceptions_are_not_swallowed(self):
+        from orca_runner import DeadlineExpired
+        for error in [KeyboardInterrupt(), SystemExit(), DeadlineExpired()]:
+            with self.subTest(error=type(error).__name__), self.assertRaises(type(error)):
+                self.invoke(error=error)

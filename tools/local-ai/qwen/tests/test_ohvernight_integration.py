@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import signal
 import time
+import threading
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -236,13 +237,13 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(result["failure_code"], "CLEANUP_FAILED")
         self.assertEqual(result["advisory_results"], [])
 
-    def test_input_and_new_root_are_private_at_creation(self):
+    def test_input_metadata_and_new_root_are_private_at_creation(self):
         root = Path(self.temp.name) / "new-root"
         observed_modes = []
         original_open = runner.os.open
 
         def checked_open(path, flags, mode=0o777):
-            observed_modes.append((flags, mode))
+            observed_modes.append((Path(path).name, flags, mode))
             self.assertEqual(mode, 0o600)
             self.assertTrue(flags & runner.os.O_EXCL)
             return original_open(path, flags, mode)
@@ -250,9 +251,10 @@ class IntegrationTests(unittest.TestCase):
         with patch.object(runner.os, "open", side_effect=checked_open):
             result = runner.run_advisory(self.raw, FakeExecution(self.raw), run_root=root)
         self.assertTrue(result["succeeded"])
-        self.assertEqual(len(observed_modes), 1)
+        self.assertEqual([item[0] for item in observed_modes], ["input.json", "metadata.json"])
         self.assertEqual(root.stat().st_mode & 0o777, 0o700)
         self.assertEqual(next(root.rglob("input.json")).stat().st_mode & 0o777, 0o600)
+        self.assertEqual(next(root.rglob("metadata.json")).stat().st_mode & 0o777, 0o600)
 
     def test_invalid_deadline_returns_metadata_without_runtime_files(self):
         for timeout in [0, -1, float("nan"), float("inf"), True, "invalid"]:
@@ -376,6 +378,75 @@ class IntegrationTests(unittest.TestCase):
             self.assertEqual(result["failure_code"],code)
             self.assertEqual(fake.launches,0)
             self.assertEqual(list(Path(self.temp.name).iterdir()),[])
+
+    def test_runner_byte_guard_at_3072_and_one_over(self):
+        raw = self.raw + b" " * (3072 - len(self.raw))
+        self.assertEqual(len(raw), 3072)
+        fake = FakeExecution(raw)
+        result = runner.run_advisory(raw, fake, run_root=self.temp.name)
+        self.assertTrue(result["succeeded"])
+        self.assertEqual(fake.launches, 1)
+        before = set(Path(self.temp.name).iterdir())
+        fake = FakeExecution(raw + b" ")
+        result = runner.run_advisory(raw + b" ", fake, run_root=self.temp.name)
+        self.assertEqual(result["failure_code"], "INVALID_INPUT_BYTES")
+        self.assertEqual(fake.launches, 0)
+        self.assertEqual(fake.cleanups, 1)
+        self.assertEqual(set(Path(self.temp.name).iterdir()), before)
+
+    def test_cleanup_runs_without_timer_in_nonmain_thread(self):
+        fake = FakeExecution(self.raw)
+        results = []
+        worker = threading.Thread(target=lambda: results.append(
+            runner.run_advisory(self.raw, fake, run_root=self.temp.name)))
+        worker.start()
+        worker.join(timeout=2)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(results[0]["failure_code"], "DEADLINE_UNAVAILABLE")
+        self.assertEqual(fake.launches, 0)
+        self.assertEqual(fake.cleanups, 1)
+        self.assertTrue(all(results[0]["metadata"]["cleanup_result"].values()))
+
+    def test_cleanup_runs_without_overwriting_competing_timer(self):
+        fake = FakeExecution(self.raw)
+        with patch.object(runner.signal, "getitimer", return_value=(10, 0)), \
+                patch.object(runner.signal, "setitimer") as timer:
+            result = runner.run_advisory(self.raw, fake, run_root=self.temp.name)
+        self.assertEqual(result["failure_code"], "DEADLINE_UNAVAILABLE")
+        self.assertEqual(fake.launches, 0)
+        self.assertEqual(fake.cleanups, 1)
+        timer.assert_not_called()
+
+    def test_handler_and_mask_restored_if_expiration_interrupts_finally(self):
+        previous = signal.getsignal(signal.SIGALRM)
+        mask = signal.pthread_sigmask(signal.SIG_BLOCK, set())
+        original_timer = signal.setitimer
+        def interrupted_clear(which, seconds):
+            value = original_timer(which, seconds)
+            if seconds == 0:
+                raise runner.DeadlineExpired()
+            return value
+        with patch.object(runner.signal, "setitimer", side_effect=interrupted_clear):
+            with self.assertRaises(runner.DeadlineExpired):
+                with runner.execution_deadline(1):
+                    pass
+        self.assertIs(signal.getsignal(signal.SIGALRM), previous)
+        self.assertEqual(signal.getitimer(signal.ITIMER_REAL)[0], 0)
+        self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, set()), mask)
+
+    def test_pending_expiration_is_drained_before_restoring_handler(self):
+        previous = signal.getsignal(signal.SIGALRM)
+        original_timer = signal.setitimer
+        def pending_during_clear(which, seconds):
+            if seconds == 0:
+                signal.raise_signal(signal.SIGALRM)
+            return original_timer(which, seconds)
+        with patch.object(runner.signal, "setitimer", side_effect=pending_during_clear):
+            with runner.execution_deadline(1):
+                pass
+        self.assertIs(signal.getsignal(signal.SIGALRM), previous)
+        self.assertNotIn(signal.SIGALRM, signal.sigpending())
+        self.assertEqual(signal.getitimer(signal.ITIMER_REAL)[0], 0)
 
 
 if __name__ == "__main__":

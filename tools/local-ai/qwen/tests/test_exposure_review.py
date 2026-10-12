@@ -32,6 +32,9 @@ class ExposureReviewTests(unittest.TestCase):
                    b'{"owner_exposure_review_acknowledged":true,"reviewed_at":"2026-10-12","reviewed_at":"2026-10-12"}']
         for change in [{"owner_exposure_review_acknowledged": False},
                        {"owner_exposure_review_acknowledged": "true"},
+                       {"owner_exposure_review_acknowledged": 1},
+                       {"owner_exposure_review_acknowledged": 1.0},
+                       {"owner_exposure_review_acknowledged": "True"},
                        {"reviewed_at": None}, {"reviewed_at": "2026-02-30"},
                        {"reviewed_at": "2026-1-2"}, {"reviewed_at": "2026-10-12T00:00:00Z"},
                        {"extra": "not allowed"}]:
@@ -46,7 +49,7 @@ class ExposureReviewTests(unittest.TestCase):
                 with self.assertRaises(adapter.ExposureReviewError) as caught:
                     adapter.require_owner_exposure_review()
                 self.assertEqual(caught.exception.code, "EXPOSURE_REVIEW_REQUIRED")
-        with patch.object(Path, "open", side_effect=PermissionError()):
+        with patch.object(adapter.os, "open", side_effect=PermissionError()):
             with self.assertRaises(adapter.ExposureReviewError) as caught:
                 adapter.require_owner_exposure_review()
         self.assertEqual(caught.exception.code, "EXPOSURE_REVIEW_REQUIRED")
@@ -84,7 +87,7 @@ class ExposureReviewTests(unittest.TestCase):
         opener.assert_not_called()
         self.assertEqual(json.loads(output.getvalue())["failure_code"], "EXPOSURE_REVIEW_REQUIRED")
 
-    def test_in_repository_setting_and_symlink_rejected(self):
+    def test_acknowledgement_in_git_and_symlink_into_git_rejected(self):
         target = Path(self.temp.name) / "repo" / "ack.json"
         target.parent.mkdir()
         (target.parent / ".git").mkdir()
@@ -96,3 +99,40 @@ class ExposureReviewTests(unittest.TestCase):
         with self.assertRaises(adapter.ExposureReviewError) as caught:
             adapter.require_owner_exposure_review()
         self.assertEqual(caught.exception.code, "EXPOSURE_REVIEW_REQUIRED")
+
+    def test_symlink_outside_git_writable_and_wrong_owner_rejected(self):
+        target = self.path.with_name("outside-git.json")
+        target.write_text(json.dumps(self.valid))
+        self.path.symlink_to(target)
+        with self.assertRaises(adapter.ExposureReviewError) as caught:
+            adapter.require_owner_exposure_review()
+        self.assertEqual(caught.exception.code, "EXPOSURE_REVIEW_UNSAFE_SETTING")
+        self.path.unlink()
+        self.path.write_text(json.dumps(self.valid))
+        for mode in [0o666, 0o620, 0o602]:
+            self.path.chmod(mode)
+            with self.subTest(mode=mode), self.assertRaises(adapter.ExposureReviewError) as caught:
+                adapter.require_owner_exposure_review()
+            self.assertEqual(caught.exception.code, "EXPOSURE_REVIEW_UNSAFE_SETTING")
+        self.path.chmod(0o600)
+        uid = adapter.os.getuid()
+        with patch.object(adapter.os, "getuid", return_value=uid + 1):
+            with self.assertRaises(adapter.ExposureReviewError) as caught:
+                adapter.require_owner_exposure_review()
+        self.assertEqual(caught.exception.code, "EXPOSURE_REVIEW_UNSAFE_SETTING")
+        with patch.object(adapter, "exposure_review_setting_path", return_value=self.path.parent):
+            with self.assertRaises(adapter.ExposureReviewError) as caught:
+                adapter.require_owner_exposure_review()
+        self.assertEqual(caught.exception.code, "EXPOSURE_REVIEW_UNSAFE_SETTING")
+
+    def test_opened_descriptor_rechecks_permissions_after_named_file_check(self):
+        self.path.write_text(json.dumps(self.valid))
+        self.path.chmod(0o600)
+        original_open = adapter.os.open
+        def changed_before_open(path, flags):
+            self.path.chmod(0o666)
+            return original_open(path, flags)
+        with patch.object(adapter.os, "open", side_effect=changed_before_open):
+            with self.assertRaises(adapter.ExposureReviewError) as caught:
+                adapter.require_owner_exposure_review()
+        self.assertEqual(caught.exception.code, "EXPOSURE_REVIEW_UNSAFE_SETTING")
