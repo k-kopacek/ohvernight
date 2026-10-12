@@ -21,7 +21,7 @@ import research_adapter as adapter
 from ohvernight_bridge import ADVISORY_LABEL, MAX_BRIDGE_EVIDENCE_BYTES
 
 ADAPTER_VERSION = "step1-owner-gated"
-EXPECTED_ADAPTER_SHA256 = "8ae3a5de1d0d06310192eadf456c15b817a58184cfea06707287862ea2d26e58"
+EXPECTED_ADAPTER_SHA256 = "87bccf01f13298ffcc1d68d0c6b393c8d5e135d13807b0bc11307b4c8e6862fd"
 MINIMAL_ENVIRONMENT = {"PATH": "/usr/bin:/bin"}
 CLEANUP_TIMEOUT_S = 5
 COMPLETION_FIELDS = {"event", "run_id", "accepted", "input_sha256", "model", "result",

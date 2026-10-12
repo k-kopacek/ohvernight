@@ -448,6 +448,24 @@ class IntegrationTests(unittest.TestCase):
         self.assertNotIn(signal.SIGALRM, signal.sigpending())
         self.assertEqual(signal.getitimer(signal.ITIMER_REAL)[0], 0)
 
+    def test_expired_owner_review_prevents_endpoint_and_launch(self):
+        from datetime import date
+        self.exposure_patch.stop()
+        path = Path(self.temp.name) / "synthetic-review.json"
+        path.write_text(json.dumps({"owner_exposure_review_acknowledged": True,
+                                    "reviewed_at": "2026-09-11"}))
+        check = adapter.require_owner_exposure_review
+        fake = FakeExecution(self.raw)
+        with patch.object(adapter, "exposure_review_setting_path", return_value=path), \
+                patch.object(adapter, "require_owner_exposure_review", side_effect=lambda: check(today=date(2026, 10, 12))), \
+                patch.object(adapter, "configured_endpoint") as endpoint:
+            result = runner.run_advisory(self.raw, fake, run_root=self.temp.name)
+        self.assertEqual(result["failure_code"], "EXPOSURE_REVIEW_EXPIRED")
+        self.assertEqual(fake.launches, 0)
+        self.assertEqual(fake.cleanups, 1)
+        self.assertEqual(list(Path(self.temp.name).iterdir()), [path])
+        endpoint.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

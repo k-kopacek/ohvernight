@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import research_adapter as adapter
-from datetime import date
+from datetime import date, datetime, timezone
 
 
 class ExposureReviewTests(unittest.TestCase):
@@ -54,14 +54,44 @@ class ExposureReviewTests(unittest.TestCase):
                 adapter.require_owner_exposure_review()
         self.assertEqual(caught.exception.code, "EXPOSURE_REVIEW_REQUIRED")
 
-    def test_future_dates_rejected_old_dates_not_silently_expired(self):
-        for value, accepted in [("2026-10-13", False), ("2026-10-12", True), ("2000-01-01", True)]:
+    def test_future_and_expired_dates_fail_at_utc_calendar_boundaries(self):
+        for value, expected in [("2026-10-13", "EXPOSURE_REVIEW_REQUIRED"),
+                                ("2026-10-12", None), ("2026-09-12", None),
+                                ("2026-09-11", "EXPOSURE_REVIEW_EXPIRED"),
+                                ("2000-01-01", "EXPOSURE_REVIEW_EXPIRED")]:
             self.path.write_text(json.dumps(dict(self.valid, reviewed_at=value)))
-            if accepted:
-                self.assertEqual(adapter.require_owner_exposure_review(today=date(2026, 10, 12)), value)
-            else:
-                with self.assertRaises(adapter.ExposureReviewError):
-                    adapter.require_owner_exposure_review(today=date(2026, 10, 12))
+            with self.subTest(reviewed_at=value):
+                if expected is None:
+                    self.assertEqual(adapter.require_owner_exposure_review(today=date(2026, 10, 12)), value)
+                else:
+                    with self.assertRaises(adapter.ExposureReviewError) as caught:
+                        adapter.require_owner_exposure_review(today=date(2026, 10, 12))
+                    self.assertEqual(caught.exception.code, expected)
+
+    def test_default_clock_uses_utc_calendar_date(self):
+        self.path.write_text(json.dumps(dict(self.valid, reviewed_at="2026-09-12")))
+        with patch.object(adapter, "datetime", create=True) as clock:
+            clock.now.return_value = datetime(2026, 10, 12, 0, 1, tzinfo=timezone.utc)
+            self.assertEqual(adapter.require_owner_exposure_review(), "2026-09-12")
+        clock.now.assert_called_once_with(timezone.utc)
+
+    def test_expired_cli_review_precedes_endpoint_input_and_request(self):
+        self.path.write_text(json.dumps(dict(self.valid, reviewed_at="2026-09-11")))
+        check = adapter.require_owner_exposure_review
+        output = io.StringIO()
+        with patch.object(adapter, "require_owner_exposure_review", side_effect=lambda: check(today=date(2026, 10, 12))), \
+                patch("sys.argv", ["adapter", "--input", "unused", "--run-id", "expired-offline"]), \
+                patch.object(adapter, "configured_endpoint") as endpoint, \
+                patch.object(adapter.urllib.request, "Request") as request, \
+                patch.object(adapter.urllib.request, "build_opener") as opener, \
+                contextlib.redirect_stdout(output):
+            self.assertEqual(adapter.main(), 1)
+        self.assertEqual(json.loads(output.getvalue()),
+                         {"event": "rejected", "run_id": "expired-offline",
+                          "failure_code": "EXPOSURE_REVIEW_EXPIRED"})
+        endpoint.assert_not_called()
+        request.assert_not_called()
+        opener.assert_not_called()
 
     def test_adapter_cli_missing_or_invalid_review_precedes_endpoint_and_request(self):
         for value in [None, "invalid"]:

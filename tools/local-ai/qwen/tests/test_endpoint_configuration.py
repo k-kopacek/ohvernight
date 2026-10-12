@@ -157,5 +157,27 @@ class EndpointTests(unittest.TestCase):
                              {"event": "failed", "run_id": "offline",
                               "failure_code": "ENDPOINT_SETTING_UNREADABLE"})
 
+    def test_environment_cannot_override_endpoint_or_model(self):
+        value = url(address(2130706433))
+        self.path.write_text(value)
+        with patch.dict(os.environ, {name: "ignored-untrusted-override" for name in
+                                    ["QWEN_ENDPOINT", "OLLAMA_HOST", "OLLAMA_MODEL",
+                                     "HTTP_PROXY", "HTTPS_PROXY"]}):
+            self.assertEqual(adapter.configured_endpoint(), value)
+            payload = adapter.build_request([{"id": "fixture", "access": "unknown",
+                                               "camping": "unknown", "source_ids": ["fixture"]}])
+            self.assertEqual(payload["model"], "qwen3:8b")
+
+    def test_cli_exposes_no_url_component_or_model_override(self):
+        for option in ["--endpoint", "--host", "--port", "--path", "--scheme", "--model"]:
+            with self.subTest(option=option), \
+                    patch("sys.argv", ["adapter", "--input", "unused", "--run-id", "offline",
+                                       option, "untrusted"]), \
+                    patch.object(adapter, "configured_endpoint") as endpoint, \
+                    contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as caught:
+                adapter.main()
+            self.assertEqual(caught.exception.code, 2)
+            endpoint.assert_not_called()
+
 
 if __name__ == "__main__":unittest.main()

@@ -17,7 +17,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from datetime import date
+from datetime import date, datetime, timezone
 from urllib.parse import urlsplit
 
 MODEL = "qwen3:8b"
@@ -103,12 +103,16 @@ def require_owner_exposure_review(*, today=None):
                 or type(value["reviewed_at"]) is not str
                 or re.fullmatch(r"\d{4}-\d{2}-\d{2}", value["reviewed_at"]) is None):
             raise ValueError("Invalid acknowledgement")
-        if date.fromisoformat(value["reviewed_at"]) > (today if today is not None else date.today()):
+        reviewed = date.fromisoformat(value["reviewed_at"])
+        current = today if today is not None else datetime.now(timezone.utc).date()
+        if reviewed > current:
             raise ValueError("Future review date")
     except UnsafeSettingError:
         raise ExposureReviewError("Unsafe owner setting", "EXPOSURE_REVIEW_UNSAFE_SETTING") from None
     except (OSError, ValueError, RuntimeError):
         raise ExposureReviewError("Owner exposure review required") from None
+    if (current - reviewed).days > 30:
+        raise ExposureReviewError("Owner review expired", "EXPOSURE_REVIEW_EXPIRED")
     return value["reviewed_at"]
 
 
