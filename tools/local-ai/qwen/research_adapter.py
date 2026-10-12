@@ -5,6 +5,7 @@ fields preserve the supplied structured evidence; explanations are advisory.
 """
 import argparse
 import hashlib
+import ipaddress
 import json
 import re
 import sys
@@ -12,8 +13,8 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlsplit
 
-ENDPOINT = "http://ENDPOINT_NOT_CONFIGURED:11434/api/chat"
 MODEL = "qwen3:8b"
 MAX_INPUT_BYTES = 8000
 MAX_RESPONSE_BYTES = 131072
@@ -31,6 +32,46 @@ supported only when recreation_evidence.supports_usefulness is true; otherwise
 unknown. An explicit paddling listing supports usefulness while access and
 camping may remain unknown. Provide a short factual reason that preserves these
 distinctions. Do not add external facts, sources, or commands. /no_think"""
+
+
+class EndpointConfigurationError(ValueError):
+    def __init__(self, code):
+        self.code = code
+        super().__init__(code)
+
+
+def endpoint_setting_path():
+    """The single installation setting; no per-request or CLI override."""
+    return Path.home() / ".config" / "ohvernight" / "qwen-endpoint"
+
+
+def configured_endpoint():
+    path = endpoint_setting_path().resolve()
+    repository = Path(__file__).resolve().parents[3]
+    if path == repository or repository in path.parents:
+        raise EndpointConfigurationError("ENDPOINT_SETTING_IN_REPOSITORY")
+    try:
+        with path.open("rb") as setting:
+            raw = setting.read(1025)
+    except FileNotFoundError:
+        raise EndpointConfigurationError("ENDPOINT_SETTING_MISSING") from None
+    except OSError:
+        raise EndpointConfigurationError("ENDPOINT_SETTING_UNREADABLE") from None
+    try:
+        value = raw.decode("utf-8").removesuffix("\n")
+        url = urlsplit(value)
+        host = ipaddress.ip_address(url.hostname)
+        cgnat = ipaddress.IPv4Network((1681915904, 10))
+        allowed = host.is_loopback or (host.version == 4 and host in cgnat)
+        authority = f"[{host}]" if host.version == 6 else str(host)
+        if (len(raw) > 1024 or not allowed or getattr(host, "scope_id", None)
+                or url.scheme != "http" or url.port != 11434 or url.path != "/api/chat"
+                or url.username is not None or url.password is not None
+                or url.query or url.fragment or value != f"http://{authority}:11434/api/chat"):
+            raise ValueError("invalid endpoint")
+    except (ValueError, TypeError, UnicodeError):
+        raise EndpointConfigurationError("ENDPOINT_SETTING_INVALID") from None
+    return value
 
 
 def unique_keys(pairs):
@@ -149,12 +190,13 @@ def main():
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", args.run_id):
         parser.error("invalid run id")
     try:
+        endpoint = configured_endpoint()
         with args.input.open("rb") as source:
             raw = source.read(MAX_INPUT_BYTES + 1)
         if len(raw) > MAX_INPUT_BYTES:
             raise ValueError("input file exceeds limit")
         records = validate_records(parse_json(raw))
-        request = urllib.request.Request(ENDPOINT, data=json.dumps(build_request(records)).encode(),
+        request = urllib.request.Request(endpoint, data=json.dumps(build_request(records)).encode(),
                                          headers={"Content-Type": "application/json"}, method="POST")
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
         print(json.dumps({"event": "started", "run_id": args.run_id}), flush=True)
@@ -170,6 +212,9 @@ def main():
                           "input_sha256": hashlib.sha256(raw).hexdigest(),
                           "result": result, "explanations": "advisory; human review required"}), flush=True)
         return 0
+    except EndpointConfigurationError as error:
+        print(json.dumps({"event": "failed", "run_id": args.run_id,
+                          "failure_code": error.code}), flush=True)
     except ValueError as error:
         print(json.dumps({"event": "rejected", "run_id": args.run_id, "reason": str(error)}), flush=True)
     except (OSError, urllib.error.URLError):

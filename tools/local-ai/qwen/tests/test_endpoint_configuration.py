@@ -1,0 +1,92 @@
+"""Installation-only endpoint checks, no actual network or subprocess calls."""
+import contextlib
+import io
+import ipaddress
+import json
+import socket
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+import research_adapter as adapter
+
+
+def address(number):
+    return str(ipaddress.IPv4Address(number))
+
+
+def url(host):
+    return f"http://{host}:11434/api/chat"
+
+
+class EndpointTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="qwen-config-test-")
+        self.addCleanup(self.temp.cleanup)
+        self.path = Path(self.temp.name) / "endpoint"
+        p = patch.object(adapter, "endpoint_setting_path", return_value=self.path)
+        p.start(); self.addCleanup(p.stop)
+        p = patch.object(socket, "socket", side_effect=AssertionError("No network"))
+        p.start(); self.addCleanup(p.stop)
+
+    def test_allowed_loopback_and_cgnat_boundaries(self):
+        for host in [address(2130706433), address(2130706434),
+                     address(1681915904), address(1686110207), "[::1]"]:
+            for suffix in ["", "\n"]:
+                value = url(host)
+                self.path.write_text(value + suffix)
+                self.assertEqual(adapter.configured_endpoint(), value)
+
+    def test_invalid_hosts_and_url_components(self):
+        good = url(address(2130706433))
+        cases = [url("localhost"), url(address(1681915903)), url(address(1686110208)),
+                 url(address(3232235777)), url(address(167772161)), url(address(2886729729)),
+                 url(address(134744072)), url("[::2]"), url("[::1%lo]"), "",
+                 good.replace("http:","https:"), good.replace("http:","HTTP:"),
+                 good.replace(":11434",":11435"), good.replace(":11434",""),
+                 good.replace(":11434",":011434"), good.replace("/api/chat","/api/generate"),
+                 good.replace("/api/chat","/api/chat/"), good + "?x=1", good + "?",
+                 good + "#fragment", good + "#", " " + good, good + "\n\n",
+                 good.replace("//","//user:password@"), good.replace("//","//@"),
+                 "http://[broken:11434/api/chat", "x"*1025]
+        for value in cases:
+            with self.subTest(value=value):
+                self.path.write_text(value)
+                with self.assertRaises(adapter.EndpointConfigurationError) as caught:
+                    adapter.configured_endpoint()
+                self.assertEqual(caught.exception.code,"ENDPOINT_SETTING_INVALID")
+        self.path.write_bytes(b"\xff")
+        with self.assertRaises(adapter.EndpointConfigurationError) as caught:adapter.configured_endpoint()
+        self.assertEqual(caught.exception.code,"ENDPOINT_SETTING_INVALID")
+
+    def test_missing_unreadable_and_repository_setting(self):
+        with self.assertRaises(adapter.EndpointConfigurationError) as caught:adapter.configured_endpoint()
+        self.assertEqual(caught.exception.code,"ENDPOINT_SETTING_MISSING")
+        with patch.object(Path,"open",side_effect=PermissionError()):
+            with self.assertRaises(adapter.EndpointConfigurationError) as caught:adapter.configured_endpoint()
+        self.assertEqual(caught.exception.code,"ENDPOINT_SETTING_UNREADABLE")
+        with patch.object(adapter,"endpoint_setting_path",return_value=Path(adapter.__file__)):
+            with self.assertRaises(adapter.EndpointConfigurationError) as caught:adapter.configured_endpoint()
+        self.assertEqual(caught.exception.code,"ENDPOINT_SETTING_IN_REPOSITORY")
+
+    def test_missing_or_invalid_configuration_precedes_any_request(self):
+        for value in [None,"invalid"]:
+            if value is not None:self.path.write_text(value)
+            output=io.StringIO()
+            with patch("sys.argv",["adapter","--input","unused","--run-id","offline"]), \
+                    patch.object(adapter.urllib.request,"Request",side_effect=AssertionError("Must not request")), \
+                    contextlib.redirect_stdout(output):
+                self.assertEqual(adapter.main(),1)
+            event=json.loads(output.getvalue())
+            self.assertEqual(event["event"],"failed")
+            self.assertEqual(event["failure_code"],"ENDPOINT_SETTING_MISSING" if value is None else "ENDPOINT_SETTING_INVALID")
+
+    def test_redirects_and_proxies_stay_refused(self):
+        with self.assertRaisesRegex(ValueError,"redirect refused"):
+            adapter.NoRedirect().redirect_request(None,None,302,"",{},url(address(134744072)))
+        opener=adapter.urllib.request.build_opener(adapter.urllib.request.ProxyHandler({}),adapter.NoRedirect())
+        self.assertFalse(any(isinstance(handler,adapter.urllib.request.ProxyHandler) and handler.proxies for handler in opener.handlers))
+
+
+if __name__ == "__main__":unittest.main()

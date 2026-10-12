@@ -87,7 +87,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertNotIn("tools", request)
         self.assertFalse(request["think"])
         self.assertFalse(request["stream"])
-        self.assertEqual(adapter.ENDPOINT, "http://ENDPOINT_NOT_CONFIGURED:11434/api/chat")
+        self.assertFalse(hasattr(adapter, "ENDPOINT"))
 
 
 if __name__ == "__main__":
