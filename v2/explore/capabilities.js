@@ -68,7 +68,6 @@
   paragraph(card,'The map helps you research. It does not replace the official source, current conditions, or local confirmation.');
   landing.hidden=new URLSearchParams(scope.location.search).get('view')==='map';
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!landing.hidden&&!document.querySelector('dialog[open]')){landing.hidden=true;$('sheet-toggle').focus();}});
-  const tools=el('div',undefined,'explore-planner-tools');shell.$('sheet-header')?.append(tools);
   const toolbar=el('div');toolbar.append(button('Plan a trip',()=>{for(const k of Object.keys(settingsFields))settingsFields[k].value=trip[k];settings.show();}),button('Change my adventure',()=>{landing.hidden=false;for(const k of ['resort','arrive','depart','vehicle'])landingFields[k].value=trip[k];}));
   function entryFor(place){return inventory(region).find(x=>x.place.id===place.id)?.entry;}
   function showPlace(place){shell.showDetail(entryFor(place),place);}

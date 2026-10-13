@@ -73,6 +73,7 @@
     const key=event=>{if(event.key==='Escape'&&state!=='collapsed'&&!document.querySelector('dialog[open],.explore-drawer:not([hidden])')){setState('collapsed');toggle.focus();}};
     const gestures=createPanelGesture(element,header,body,{state:()=>state,setState,
       levels:()=>states.map((state,i)=>({state,height:[collapsedHeight(),panelViewport(element)*.4,panelViewport(element)*.75][i]})),
+      ignore:target=>header.contains(target)&&!toggle.contains(target)&&!!target.closest?.('button,a,input,select,textarea,summary,[role="button"],[contenteditable]'),
       enabled:event=>!shortLandscape()&&(phone()||event.type.startsWith('touch'))});
     toggle.addEventListener('click',click);document.addEventListener('keydown',key);
     setState(scope.matchMedia?.('(min-width:1200px)').matches===true?'expanded':'collapsed');

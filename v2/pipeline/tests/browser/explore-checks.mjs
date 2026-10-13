@@ -226,6 +226,47 @@ export async function runExploreChecks(client,origin,signal,root){
     const collapsed=await evaluate(`(()=>{const h=explore.$('sheet-header').getBoundingClientRect(),s=explore.$('sheet').getBoundingClientRect(),row=explore.$('detail-heading');return {height:h.height,sheet:s.height,rowHidden:getComputedStyle(row).display==='none',title:explore.$('detail-title').textContent,summary:explore.$('summary').textContent}})()`);
     assert.equal(collapsed.rowHidden,true,'round2 collapsed detail hides Back/title');assert.ok(Math.abs(collapsed.height-collapsed.sheet)<=.5,'round2 collapsed sheet equals summary-only header');assert.equal(collapsed.title,title,'round2 collapse preserves selected title');result.uniformCollapsed={...collapsed};
    }
+   if(width===390){
+    assert.equal(await evaluate('!!explore.$("sheet-header").querySelector(".explore-planner-tools")'),false,'round3 no unused planner tools in header');
+    const pointFor=name=>evaluate(`(()=>{const e=explore.$(${JSON.stringify(name)}),r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+    const gestureState=()=>evaluate(`(()=>{const s=explore.$('sheet');return {state:explore.sheet.state,dragging:s.classList.contains('is-dragging'),height:s.style.height}})()`);
+    result.headerInput=[];
+    for(const kind of ['trail','site'])for(const state of ['half','expanded']){
+     await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:3,mobile:false});
+     await client.command('Emulation.setTouchEmulationEnabled',{enabled:false});
+     await openHeaderDetail(kind);await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');
+     const before=await gestureState(),back=await pointFor('detail-back');
+     await client.command('Input.dispatchMouseEvent',{type:'mousePressed',...back,button:'left',clickCount:1});
+     assert.equal(await evaluate('explore.$("sheet-header").hasPointerCapture(1)'),false,'round3 mouse Back does not capture pointer');
+     await client.command('Input.dispatchMouseEvent',{type:'mouseReleased',...back,button:'left',clickCount:1});
+     assert.equal(await evaluate('explore.$("detail-view").hidden'),true,'round3 real mouse Back closes detail');
+     assert.deepEqual(await gestureState(),before,'round3 mouse Back leaves sheet state unchanged');
+     await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:3,mobile:true});
+     await client.command('Emulation.setTouchEmulationEnabled',{enabled:true});
+     await openHeaderDetail(kind);await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');
+     const touchBack=await pointFor('detail-back');
+     await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[touchBack]});
+     await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:touchBack.x,y:touchBack.y+6}]});
+     assert.deepEqual(await gestureState(),before,'round3 Back 6px jitter never starts sheet drag');
+     await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+     assert.equal(await evaluate('explore.$("detail-view").hidden'),true,'round3 real touch Back with 6px jitter closes detail');
+     assert.deepEqual(await gestureState(),before,'round3 touch Back leaves sheet state unchanged');
+     result.headerInput.push({kind,state,mouseBack:true,touchBackJitterPx:6});
+    }
+    await openHeaderDetail('trail');
+    const title=await evaluate(`(()=>{const range=document.createRange();range.selectNodeContents(explore.$('detail-title'));const r=range.getClientRects()[0];return {x:r.x+r.width/2,y:r.y+r.height/2}})()`),initial=await evaluate('explore.$("sheet").getBoundingClientRect().height');
+    assert.equal(await evaluate(`document.elementFromPoint(${title.x},${title.y})===explore.$('detail-title')`),true,'round3 drag starts on title text');
+    await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[title]});
+    for(let i=1;i<=3;i++){
+     await delay(110,undefined,{signal});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:title.x,y:title.y-180*i/3}]});
+     assert.equal((await gestureState()).dragging,true,'round3 title drag remains active');
+     assert.ok(await evaluate('explore.$("sheet").getBoundingClientRect().height')>initial,'round3 title drag moves sheet before release');
+    }
+    await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    assert.equal(await evaluate('explore.sheet.state'),'expanded','round3 title drag snaps sheet expanded');
+    assert.equal(await evaluate('explore.$("detail-view").hidden'),false,'round3 title drag keeps detail open');
+    result.headerInput.push({titleDragSnap:'expanded'});
+   }
    // Exercise cycles and native swipe snaps in both contexts; a slow drag detects a taller-detail snap bug.
    for(const view of ['list','detail']){
     if(view==='list')await evaluate('explore.$("detail-back").click();explore.showList(explore.$("list-body"))');else await openHeaderDetail('trail');
