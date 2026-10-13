@@ -25,13 +25,13 @@ test('real map data is represented independently of the trip, including wilderne
   }
   assert.equal(region.coverage.features.length,1);
 });
-test('water display removes unnamed clutter without changing screening geometry',()=>{
+test('grouped water display preserves canonical hydrology for setback screening',()=>{
   const before=JSON.stringify(bundle.layers.hydrology);
-  const water=bundle.layers.hydrology.features.filter(displayWater);
-  assert.ok(water.length>0&&water.length<bundle.layers.hydrology.features.length);
-  assert.equal(water.length,read('regions/aspen/display/index.json').artifacts.find(x=>x.layer_id==='hydrology').feature_count);
   assert.equal(bundle.layers.hydrology.features.length,6926);
   assert.equal(JSON.stringify(bundle.layers.hydrology),before);
+  const waterArtifacts=read('regions/aspen/display/index.json').artifacts;
+  assert.equal(waterArtifacts.find(x=>x.layer_id==='water_streams').feature_count,69);
+  assert.equal(waterArtifacts.find(x=>x.layer_id==='water_bodies').feature_count,46);
   const feature=(name,kind='flowline',type='LineString')=>({properties:{name,kind},geometry:{type,coordinates:[]}});
   assert.equal(displayWater(feature('River')),true);
   assert.equal(displayWater(feature('Lake','waterbody','Polygon')),true);

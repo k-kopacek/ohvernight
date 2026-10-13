@@ -32,6 +32,29 @@ test('layer registry refuses a presentation layer that is not in the manifest',(
   assert.throws(()=>buildLayerRegistry(manifest,{layers:[{layer_id:'unknown',title:'x'}]}),LayerRegistryError);
 });
 
+test('water stream fit policy defaults are registry metadata and other line layers have none',()=>{
+  const manifest=readJson('regions/aspen/region.json'),config=readJson('regions/aspen/explore.json');
+  const registry=buildLayerRegistry(manifest,config);
+  assert.deepEqual(registry.find(layer=>layer.id==='water_streams').fitPolicy,
+    {tap:{max_zoom_out:2},list:{min_zoom:11}});
+  assert.equal(registry.find(layer=>layer.id==='water_bodies').fitPolicy,null);
+  assert.equal(registry.find(layer=>layer.id==='trails').fitPolicy,null);
+  const douglas=buildLayerRegistry(readJson('regions/douglas-co/region.json'),readJson('regions/douglas-co/explore.json'));
+  assert.deepEqual(douglas.find(layer=>layer.id==='waterways').fitPolicy,
+    {tap:{max_zoom_out:2},list:{min_zoom:11}});
+});
+
+test('layer registry rejects malformed per-layer fit policy values',()=>{
+  const manifest=readJson('regions/aspen/region.json'),config=readJson('regions/aspen/explore.json');
+  config.layers.find(layer=>layer.layer_id==='water_streams').fit_policy={tap:{max_zoom_out:'2'}};
+  assert.throws(()=>buildLayerRegistry(manifest,config),LayerRegistryError);
+  config.layers.find(layer=>layer.layer_id==='water_streams').fit_policy={list:{min_zoom:4}};
+  assert.throws(()=>buildLayerRegistry(manifest,config),LayerRegistryError);
+  config.layers.find(layer=>layer.layer_id==='water_streams').fit_policy={tap:{max_zoom_out:2},list:{min_zoom:11}};
+  config.layers.find(layer=>layer.layer_id==='trails').fit_policy={tap:{max_zoom_out:2},list:{min_zoom:11}};
+  assert.throws(()=>buildLayerRegistry(manifest,config),LayerRegistryError);
+});
+
 test('shared transport vectors match the Python normalizer contract',()=>{
   const vectors=readJson('pipeline/tests/fixtures/transport-vectors.json');
   for(const vector of vectors) assert.deepEqual(normalizeTransport(vector.input),{record:vector.record,used:vector.used});

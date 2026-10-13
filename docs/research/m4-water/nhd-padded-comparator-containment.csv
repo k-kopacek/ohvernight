@@ -1,0 +1,104 @@
+layer,id,source_id,name,new_within_padded_exact,old_equal_to_new_county_clip_exact,new_max_distance_outside_county_m,classification_unchanged
+waterways,nhd-117795343,117795343,South Platte River,True,True,36.281824,NOT EXPLAINED
+waterways,nhd-117795775,117795775,South Platte River,True,True,1.119852,NOT EXPLAINED
+waterways,nhd-117795889,117795889,South Platte River,True,True,1.22118,NOT EXPLAINED
+waterways,nhd-117796115,117796115,South Platte River,True,True,162.616253,NOT EXPLAINED
+waterways,nhd-117796301,117796301,South Platte River,True,True,14.979362,NOT EXPLAINED
+waterways,nhd-117796539,117796539,South Platte River,True,True,1.147747,NOT EXPLAINED
+waterways,nhd-117799915,117799915,East Plum Creek,True,True,145.113468,NOT EXPLAINED
+waterways,nhd-117799993,117799993,Trout Creek,True,True,467.039347,NOT EXPLAINED
+waterways,nhd-117804895,117804895,South Platte River,True,True,23.826838,NOT EXPLAINED
+waterways,nhd-117804939,117804939,Pine Creek,True,True,1.144409,NOT EXPLAINED
+waterways,nhd-117804977,117804977,South Platte River,True,True,22.977829,NOT EXPLAINED
+waterways,nhd-117805045,117805045,South Platte River,True,True,17.621994,NOT EXPLAINED
+waterways,nhd-117805057,117805057,Sugar Creek,True,True,0.942945,NOT EXPLAINED
+waterways,nhd-117805101,117805101,South Platte River,True,True,1.140594,NOT EXPLAINED
+waterways,nhd-117805109,117805109,South Platte River,True,True,1.074553,NOT EXPLAINED
+waterways,nhd-117805119,117805119,South Platte River,True,True,0.833511,NOT EXPLAINED
+waterways,nhd-117805125,117805125,South Platte River,True,True,0.748396,NOT EXPLAINED
+waterways,nhd-117809941,117809941,South Platte River,True,True,39.507866,NOT EXPLAINED
+waterways,nhd-117816671,117816671,Willow Creek,True,True,266.527176,NOT EXPLAINED
+waterways,nhd-117816789,117816789,Big Dry Creek,True,True,459.090948,NOT EXPLAINED
+waterways,nhd-117816831,117816831,Highline Canal,False,True,554.90756,NOT EXPLAINED
+waterways,nhd-117819565,117819565,Willow Creek,True,True,12.362242,NOT EXPLAINED
+waterways,nhd-117819751,117819751,Denver Municipal Aqueduct,True,True,55.972576,NOT EXPLAINED
+waterways,nhd-117820985,117820985,South Platte River,True,True,6.071091,NOT EXPLAINED
+waterways,nhd-117822433,117822433,Cook Creek,True,True,260.856867,NOT EXPLAINED
+waterways,nhd-117823701,117823701,South Platte River,True,True,474.014759,NOT EXPLAINED
+waterways,nhd-117823703,117823703,South Platte River,True,True,94.465971,NOT EXPLAINED
+waterways,nhd-117823713,117823713,South Platte River,True,True,44.25931,NOT EXPLAINED
+waterways,nhd-117823715,117823715,South Platte River,True,True,44.497728,NOT EXPLAINED
+waterways,nhd-117823721,117823721,South Platte River,True,True,28.222799,NOT EXPLAINED
+waterways,nhd-117823723,117823723,South Platte River,True,True,128.852606,NOT EXPLAINED
+waterways,nhd-117823725,117823725,South Platte River,True,True,73.070526,NOT EXPLAINED
+waterways,nhd-117823733,117823733,South Platte River,True,True,39.507866,NOT EXPLAINED
+waterways,nhd-117836321,117836321,Bear Creek,True,True,36.894321,NOT EXPLAINED
+waterways,nhd-117836327,117836327,South Platte River,True,True,0.820398,NOT EXPLAINED
+waterways,nhd-117836353,117836353,South Platte River,True,True,0.3438,NOT EXPLAINED
+waterways,nhd-117836361,117836361,South Platte River,True,True,0.850439,NOT EXPLAINED
+waterways,nhd-117836407,117836407,South Platte River,True,True,0.820637,NOT EXPLAINED
+waterways,nhd-117836427,117836427,South Platte River,True,True,9.068012,NOT EXPLAINED
+waterways,nhd-117836577,117836577,South Platte River,True,True,1.108408,NOT EXPLAINED
+waterways,nhd-117836589,117836589,South Platte River,True,True,8.402348,NOT EXPLAINED
+waterways,nhd-117836591,117836591,South Platte River,True,True,6.596565,NOT EXPLAINED
+waterways,nhd-117836661,117836661,South Platte River,True,True,0.972509,NOT EXPLAINED
+waterways,nhd-117845903,117845903,Turkey Creek,True,True,37.659407,NOT EXPLAINED
+waterways,nhd-117845971,117845971,Fourmile Creek,True,True,8.681774,NOT EXPLAINED
+waterways,nhd-120647444,120647444,Cherry Creek,True,True,412.567139,NOT EXPLAINED
+waterways,nhd-120647466,120647466,Cottonwood Creek,True,True,240.362644,NOT EXPLAINED
+waterways,nhd-120647478,120647478,Happy Canyon Creek,True,True,554.911375,NOT EXPLAINED
+waterways,nhd-120647496,120647496,Piney Creek,True,True,20.596743,NOT EXPLAINED
+waterways,nhd-120648341,120648341,Coal Creek,True,True,11.936188,NOT EXPLAINED
+waterways,nhd-120648830,120648830,Coal Creek,True,True,297.796011,NOT EXPLAINED
+waterways,nhd-120649182,120649182,Coal Creek,True,True,99.868298,NOT EXPLAINED
+waterways,nhd-120651306,120651306,East Cherry Creek,True,True,64.252138,NOT EXPLAINED
+waterways,nhd-120651516,120651516,West Cherry Creek,True,True,15.442371,NOT EXPLAINED
+waterways,nhd-120651533,120651533,Elk Creek,True,True,191.982031,NOT EXPLAINED
+waterways,nhd-120651557,120651557,East Cherry Creek,False,True,554.875612,NOT EXPLAINED
+waterways,nhd-160696304,160696304,South Platte River,True,True,1.07646,NOT EXPLAINED
+waterways,nhd-160709835,160709835,South Platte River,True,True,1.161814,NOT EXPLAINED
+waterways,nhd-160712256,160712256,South Platte River,True,True,35.145521,NOT EXPLAINED
+waterways,nhd-160712319,160712319,South Platte River,True,True,59.132814,NOT EXPLAINED
+waterways,nhd-160712400,160712400,South Platte River,True,True,1.135826,NOT EXPLAINED
+waterways,nhd-160712441,160712441,Little Turkey Creek,True,True,92.567444,NOT EXPLAINED
+waterways,nhd-160713203,160713203,West Creek,True,True,197.827816,NOT EXPLAINED
+waterways,nhd-160715449,160715449,Trail Creek,True,True,37.424088,NOT EXPLAINED
+waterways,nhd-160717074,160717074,South Platte River,True,True,0.31209,NOT EXPLAINED
+waterways,nhd-160717852,160717852,Carpenter Creek,True,True,123.902082,NOT EXPLAINED
+waterways,nhd-160723985,160723985,South Platte River,True,True,1.419067,NOT EXPLAINED
+waterways,nhd-160726606,160726606,South Platte River,True,True,0.910759,NOT EXPLAINED
+waterways,nhd-160730162,160730162,South Platte River,True,True,23.663759,NOT EXPLAINED
+waterways,nhd-160730865,160730865,South Platte River,True,True,0.365973,NOT EXPLAINED
+waterways,nhd-160731242,160731242,South Platte River,True,True,111.404419,NOT EXPLAINED
+waterways,nhd-160733149,160733149,South Platte River,True,True,13.523102,NOT EXPLAINED
+waterways,nhd-160733596,160733596,South Platte River,True,True,0.281096,NOT EXPLAINED
+waterways,nhd-160733822,160733822,South Platte River,True,True,0.875473,NOT EXPLAINED
+waterways,nhd-160733853,160733853,South Platte River,True,True,1.266003,NOT EXPLAINED
+waterways,nhd-160735615,160735615,South Platte River,True,True,1.225948,NOT EXPLAINED
+waterways,nhd-160740445,160740445,South Platte River,True,True,0.021696,NOT EXPLAINED
+waterways,nhd-160740446,160740446,South Platte River,True,True,17.86232,NOT EXPLAINED
+waterways,nhd-160742292,160742292,South Platte River,True,True,0.849247,NOT EXPLAINED
+waterways,nhd-160745940,160745940,South Platte River,True,True,12.601614,NOT EXPLAINED
+waterways,nhd-160749310,160749310,South Platte River,True,True,0.740767,NOT EXPLAINED
+waterways,nhd-160749926,160749926,South Platte River,True,True,8.041382,NOT EXPLAINED
+waterways,nhd-160749944,160749944,South Platte River,True,True,38.100719,NOT EXPLAINED
+waterways,nhd-160749998,160749998,South Platte River,True,True,36.894321,NOT EXPLAINED
+waterways,nhd-160750041,160750041,South Platte River,True,True,1.153946,NOT EXPLAINED
+waterways,nhd-160750098,160750098,South Platte River,True,True,0.8533,NOT EXPLAINED
+waterways,nhd-160750099,160750099,South Platte River,True,True,0.650406,NOT EXPLAINED
+waterways,nhd-160751125,160751125,South Platte River,True,True,0.146627,NOT EXPLAINED
+waterways,nhd-160751126,160751126,South Platte River,True,True,0.287056,NOT EXPLAINED
+waterways,nhd-160751728,160751728,South Platte River,True,True,0.341892,NOT EXPLAINED
+waterways,nhd-160751848,160751848,South Platte River,True,True,0.296593,NOT EXPLAINED
+waterways,nhd-160755865,160755865,City Ditch,True,True,554.909945,NOT EXPLAINED
+waterways,nhd-a7643fef-be8b-411f-b198-baedc135a05e,a7643fef-be8b-411f-b198-baedc135a05e,East Cherry Creek,True,True,59.184313,NOT EXPLAINED
+waterways,nhd-f2599b28-7348-4f0f-8107-a0bca80e96c0,f2599b28-7348-4f0f-8107-a0bca80e96c0,Heiser Ditch,True,True,53.308964,NOT EXPLAINED
+waterbodies,nhd-117822697,117822697,McLellan Reservoir,False,True,554.909945,NOT EXPLAINED
+waterbodies,nhd-117822701,117822701,,True,True,81.030607,NOT EXPLAINED
+waterbodies,nhd-117822709,117822709,,True,True,57.713985,NOT EXPLAINED
+waterbodies,nhd-117822715,117822715,,True,False,64.99815,NOT EXPLAINED
+waterbodies,nhd-117822739,117822739,Chatfield Lake,False,True,517.107487,NOT EXPLAINED
+waterbodies,nhd-117822893,117822893,Wolhurst Lake,True,True,208.026171,NOT EXPLAINED
+waterbodies,nhd-117822899,117822899,,True,False,68.53652,NOT EXPLAINED
+waterbodies,nhd-117834809,117834809,Strontia Springs Reservoir,True,False,375.253439,NOT EXPLAINED
+waterbodies,nhd-120655700,120655700,,True,True,42.330503,NOT EXPLAINED

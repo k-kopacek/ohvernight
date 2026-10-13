@@ -1,0 +1,53 @@
+{
+  "aspen_files": {
+    "map-data-v2.json": "f26580e538a6f9edbb5aeaec1749609d8ac78adc0bc3a62e59a5ef6aa3391337",
+    "regions/aspen/README.md": "a09e782b823fb03e7f3d9b57e435a11582298eaae6f6f3dfc51bee661595fac4",
+    "regions/aspen/display/coverage.geojson": "fa9141a3717b474240422cbd58c887824466dfdcc4896a9092ac806e0f8243fb",
+    "regions/aspen/display/dispersed_corridor_points.geojson": "9a319222f6085c41ffce40eac3cec550804b0fab3a37313d969bf73f010e423f",
+    "regions/aspen/display/dispersed_corridors.geojson": "3989ee53df229c366244776960a6fdbc02907e8ef4cc12bf4ab26f946aeee9e3",
+    "regions/aspen/display/fire_restriction_stage.geojson": "6b9e375f26290b7d23ac91b5d68fc567ee70164096cd48c0904f239e10ac21fd",
+    "regions/aspen/display/index.json": "08a6a42c35b5d7535f4670db98d63d12fc54c354d9018c4790374e870ce7a576",
+    "regions/aspen/display/land_ownership.geojson": "cebb71a136e82482f75a2021ebef63ba436fe78a12f29aa3186d2727fb92dd3b",
+    "regions/aspen/display/leads.geojson": "2893da8eba7f4e20bb24a9da21e30212ad5fa6eaeddf92a1ce6964ae54b6d2e7",
+    "regions/aspen/display/lodging_developed.geojson": "85210fb2873102cc991f5ebee5e542cf802c433e313f4265df8228a5b9f796ed",
+    "regions/aspen/display/mvum_roads.geojson": "f5184721516f5d62cf6f72a729d2fe7fc5be4469b14c9ba9633c6c365d24e3b6",
+    "regions/aspen/display/reviewed_sites.geojson": "832f4b146d2b4e258b239dfa189376b81d99ea192d181fe1b34b7623629b7ddb",
+    "regions/aspen/display/trails.geojson": "50d6b9ead9620fd743911ffb58dc28dc42531337b412055a77f3364343ee5e66",
+    "regions/aspen/display/water-aliases.json": "e0f2999ae84e1720ce96c72e83bf2eb18d3973a70cc01153125a20028e070351",
+    "regions/aspen/display/water_bodies.geojson": "6c101aa28d224b3f417258e185ffc6d9b853f35ddff7838380401266b45d8847",
+    "regions/aspen/display/water_streams.geojson": "aad369b7c7ed2cd9acd958554b9d5dda9d5e00ffeeb15afd5dafc43a88a0dd49",
+    "regions/aspen/display/wilderness.geojson": "98226e232489b0d6cbf43ea693e285deb51982453ef75f00acb4279d2e95ca77",
+    "regions/aspen/display/wildlife_sensitivity.geojson": "9997b9372e8cd292d8940d0731df91d636ae74a12f39f81288fd557704b696cd",
+    "regions/aspen/explore.json": "35e058868cd53f8b5123225cdc59fb0437d7c84791a0baaac8567acdee3024e7",
+    "regions/aspen/region.json": "2a3b0a83aad806bacfe7748a626999f11d06338e9260a02f9c7e7e3c7cc67a16",
+    "regions/aspen/water-review.json": "d3a29398125b20a89413bc27ec39b002766c3f263fdf87ef5ecf2af4129227fc"
+  },
+  "aspen_non_water_layers": {
+    "dispersed_corridor_points": "ad37fe6278e0c7caf3b77c1c5068a56e18a6c87b78ed5a840ee22a0f961ea7a8",
+    "dispersed_corridors": "d1b96d623b7ffb6fa96c5c7649be2f11abe4b73e7303e63b6ea33185d80c61df",
+    "fire_restriction_stage": "ed5ab22c038e8fdbe891e8bfbcb41fd08212ba98c2a2a9c1b221b461ac812073",
+    "land_ownership": "fa74b27629607bac3688040f6649fa10fa29b016dc263859bd3243aaf8b60751",
+    "leads": "ad37fe6278e0c7caf3b77c1c5068a56e18a6c87b78ed5a840ee22a0f961ea7a8",
+    "lodging_developed": "ad37fe6278e0c7caf3b77c1c5068a56e18a6c87b78ed5a840ee22a0f961ea7a8",
+    "mvum_roads": "8b26b771fa0fe8627e51a9aed35f26fbe21319389388f0eb7e04777f58f94c5d",
+    "reviewed_sites": "ad37fe6278e0c7caf3b77c1c5068a56e18a6c87b78ed5a840ee22a0f961ea7a8",
+    "wilderness": "15baf47cd18405e6978a2467cd48499682d176c8a17f70ba593aa7277a571553",
+    "wildlife_sensitivity": "ad37fe6278e0c7caf3b77c1c5068a56e18a6c87b78ed5a840ee22a0f961ea7a8"
+  },
+  "douglas_non_water_layers": {
+    "coverage": "f3844b6e015bd033295d0b8edb15b3454d4edd6962f24162efb2c67f0740d953",
+    "land": "dfae9956323e2801933864de0b5b0e284f6bd605f064452e8c976ebd0869dbd7",
+    "recreation": "5dfcaaa29f623e8b8addbe925929c4d0ca43ccba909f6793213db3aeb914323b",
+    "roads": "3c640a888c4b4f969b95326eacde97f05df065d2e5093e31e07e76dcc6dde859",
+    "trails": "d6f59680e5f2c2f221a9952e50931c5f2d80d3554c19eb5925bb3800c513fc04",
+    "wilderness": "ad37fe6278e0c7caf3b77c1c5068a56e18a6c87b78ed5a840ee22a0f961ea7a8"
+  },
+  "douglas_non_water_raw_layer_bytes": {
+    "coverage": "e3327da30aacfbbc4ff169d61f0a66bbbf51c0b823b575c389d625247e5c0c6a",
+    "land": "d47ec6584b4032f00ed4c3f85ebd05b095cc8678331cf1276e99aac0b7f58b0b",
+    "recreation": "7f0f1df352118363a196a84e1f517d35be7474386fe79dd4923c09286d5bda75",
+    "roads": "020c1acf9cd9e6cbdbaa96b177fcc70cfe468aceeb257d2cfdc13e8eeeabf269",
+    "trails": "9af7f5a5109ce024a059d80ba6f2a59524f34758ddf2bce9795e6593d449e3ff",
+    "wilderness": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c"
+  }
+}

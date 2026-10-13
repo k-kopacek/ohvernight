@@ -151,10 +151,78 @@ def apply_refresh(report_path: Path, v2_root: Path = V2):
     return changed
 
 
+def apply_douglas_padded_refresh(report_path: Path, v2_root: Path = V2):
+    """Apply only the coordinator-reviewed M4-B Douglas padded-water stage."""
+    report_path = Path(report_path)
+    report = read_json(report_path)
+    if (not report.get("acceptable_differences_only") or
+            set(report.get("differences", {})) != {"waterways", "waterbodies"} or
+            any(not row.get("explained") for row in report["differences"].values()) or
+            report.get("legacy_ids_missing") or report.get("legacy_ids_duplicate")):
+        raise ValueError("refusing to apply a Douglas refresh with unexplained differences")
+
+    staging = report_path.parent
+    path = v2_root / "regions/douglas-co/research.json"
+    from refresh_m4b_douglas_water import preservation_hashes
+    preservation_before = preservation_hashes(v2_root)
+    if preservation_before != report.get("preservation_hashes_before"):
+        raise ValueError("refusing to apply: non-water or Aspen inputs changed since staging")
+    if hashlib.sha256(path.read_bytes()).hexdigest() != report.get("before_sha256"):
+        raise ValueError("refusing to apply: Douglas canonical input changed since staging")
+    bundle = read_json(path)
+    waterways = read_json(staging / "douglas-co-flowline.geojson")["features"]
+    waterbodies = read_json(staging / "douglas-co-waterbody.geojson")["features"]
+    retrieved_at = report["retrieved_at_utc"]
+    for feature in waterways + waterbodies:
+        evidence = feature.get("properties", {}).get("evidence")
+        if isinstance(evidence, dict):
+            evidence["retrieved_at"] = retrieved_at
+    bundle["layers"] = dict(bundle["layers"])
+    bundle["layers"]["waterways"] = {"type": "FeatureCollection", "features": waterways}
+    bundle["layers"]["waterbodies"] = {"type": "FeatureCollection", "features": waterbodies}
+    bundle.setdefault("source_status", {})["waterways"] = {
+        "status": "available", "retrieved_at": retrieved_at, "count": len(waterways)}
+    bundle["source_status"]["waterbodies"] = {
+        "status": "available", "retrieved_at": retrieved_at, "count": len(waterbodies)}
+    write_json(path, bundle)
+
+    manifest_path = v2_root / "regions/douglas-co/region.json"
+    lines = manifest_path.read_text(encoding="utf-8").splitlines()
+    found = set()
+    for index, line in enumerate(lines):
+        if not line.lstrip().startswith('{"id": "waterways"') and not line.lstrip().startswith('{"id": "waterbodies"'):
+            continue
+        layer_id = "waterways" if '"id": "waterways"' in line else "waterbodies"
+        updated, count = re.subn(r'("extent_padding_deg":\s*)[0-9.]+', r'\g<1>0.005', line, count=1)
+        if count != 1:
+            raise ValueError(f"could not set Douglas {layer_id} extent padding")
+        lines[index] = updated
+        found.add(layer_id)
+    if found != {"waterways", "waterbodies"}:
+        raise ValueError("Douglas water layer declarations were not both found")
+    manifest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    built = build_region("douglas-co", v2_root, write=True)
+    report["canonical_sha256_after"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    preservation_after = preservation_hashes(v2_root)
+    if preservation_after != preservation_before:
+        raise ValueError("non-water or Aspen preservation hash changed during Douglas apply")
+    report["preservation_hashes_after"] = preservation_after
+    report["display_build_artifacts"] = sorted(built["artifacts"])
+    write_json(report_path, report, indent=2)
+    print(json.dumps({"retrieved_at_utc": retrieved_at,
+                      "changed_paths": [str(path), str(manifest_path),
+                                        *[str(v2_root / item) for item in built["artifacts"]]],
+                      "canonical_sha256_after": report["canonical_sha256_after"]}, indent=2))
+    return [path, manifest_path, *[v2_root / item for item in built["artifacts"]]]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path, help="refresh-report.json produced by refresh_m4a_water.py")
     parser.add_argument("--apply", action="store_true", help="write canonical files and rebuild displays")
+    parser.add_argument("--douglas-padded", action="store_true",
+                        help="apply a reviewed M4-B Douglas-only padded-water stage")
     args = parser.parse_args()
     report = read_json(args.report)
     if not report.get("acceptable_differences_only"):
@@ -162,7 +230,10 @@ def main():
     if not args.apply:
         print("Refresh report is eligible to apply. Re-run with --apply after reviewing its complete differences.")
         return
-    apply_refresh(args.report)
+    if args.douglas_padded:
+        apply_douglas_padded_refresh(args.report)
+    else:
+        apply_refresh(args.report)
 
 
 if __name__ == "__main__":

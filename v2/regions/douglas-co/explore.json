@@ -46,14 +46,14 @@
     },
     {
       "layer_id": "waterbodies",
-      "title": "Named lakes & reservoirs",
+      "title": "Lakes and reservoirs",
       "order": 50,
       "default_on": true,
       "min_zoom": null
     },
     {
       "layer_id": "waterways",
-      "title": "Named streams",
+      "title": "Rivers and streams",
       "order": 60,
       "default_on": true,
       "min_zoom": null

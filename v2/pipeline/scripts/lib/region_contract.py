@@ -19,7 +19,8 @@ from shapely.geometry import shape
 
 from lib.common import ROOT
 from fetch_trails import ACTIVITIES
-from lib.water import classify as classify_water
+from lib.water import (classify as classify_water, group_flowlines,
+                       select_water_features, waterbody_inclusion_allowed)
 
 REGION_MANIFEST_SCHEMA = json.loads((ROOT / "schema/region-manifest.schema.json").read_text())
 WATER_DISPLAY_CONFIG = json.loads((ROOT / "config/water_display.json").read_text())
@@ -222,7 +223,14 @@ def _display_error(manifest, layer, detail):
     _error("R60", manifest, layer, detail)
 
 
-def validate_water_contract_data(manifest, canonical, config, aliases, display_features):
+def _validate_water_group_index(manifest, layer_id, declared, computed):
+    if not isinstance(declared, dict) or _display_json_bytes(declared) != _display_json_bytes(computed):
+        _error("R70", manifest, layer_id,
+               "index water_groups differs from computed ordered membership")
+
+
+def validate_water_contract_data(manifest, canonical, config, aliases, display_features,
+                                 water_groups=None):
     """Validate M4-A water identity, fixed classifications, aliases and R75."""
     region = manifest.get("region", {}).get("id", "?")
     by_legacy = {}
@@ -269,40 +277,236 @@ def validate_water_contract_data(manifest, canonical, config, aliases, display_f
                      "activities", "access", "public_access"} | (RESERVED_PROPERTIES - {"id", "name", "evidence"})
         if forbidden & set(props):
             _error("R75", manifest, layer_id, f"water feature carries reserved activity/access properties: {sorted(forbidden & set(props))}")
+    water_groups = water_groups or {}
     displayed_legacy = {}
     displayed_ids = set()
+    canonical_by_id = {(feature.get("properties") or {}).get("id"): feature
+                       for _, feature in canonical}
     for layer_id, feature in display_features:
         props = feature.get("properties") or {}
         display_id = props.get("id")
         displayed_ids.add(display_id)
-        for legacy_id, canonical_display_id in by_legacy.items():
-            if canonical_display_id != display_id:
-                continue
-            if legacy_id in displayed_legacy:
-                _error("R68", manifest, layer_id, f"display repeats legacy ID {legacy_id}")
-            displayed_legacy[legacy_id] = display_id
+        if display_id in canonical_by_id:
+            members = [canonical_by_id[display_id]]
+        else:
+            member_ids = water_groups.get(display_id)
+            if not isinstance(member_ids, list):
+                _error("R68", manifest, layer_id,
+                       f"displayed group {display_id} has no water_groups membership")
+            try:
+                members = [canonical_by_id[member_id] for member_id in member_ids]
+            except KeyError:
+                _error("R68", manifest, layer_id,
+                       f"displayed group {display_id} names a missing canonical member")
+        for member in members:
+            for legacy_id in (member.get("properties") or {}).get("legacy_ids", []):
+                if legacy_id in displayed_legacy:
+                    _error("R68", manifest, layer_id, f"display repeats legacy ID {legacy_id}")
+                displayed_legacy[legacy_id] = display_id
     if not isinstance(aliases, dict) or set(aliases) != set(displayed_legacy):
         _error("R68", manifest, None, "water_id_aliases keys do not exactly match displayed legacy IDs")
     if any(value not in displayed_ids for value in aliases.values()):
         _error("R68", manifest, None, "water_id_aliases contains a target that is not a display ID")
-    if any(aliases.get(legacy_id) != display_id or by_legacy.get(legacy_id) != display_id
+    if any(aliases.get(legacy_id) != display_id
            for legacy_id, display_id in displayed_legacy.items()):
         _error("R68", manifest, None, "water_id_aliases does not match canonical legacy mapping")
 
 
+def _validate_water_review(review, canonical, region_id, config, group_ids=()):
+    """Validate the optional, manually reviewed M4 inclusion/exclusion lists."""
+    if review is None:
+        return {"inclusions": [], "exclusions": []}
+    manifest = {"region": {"id": region_id}}
+    if not isinstance(review, dict) or set(review) != {"inclusions", "exclusions"}:
+        _error("R73", manifest, None, "water-review must contain only inclusions and exclusions")
+    canonical_by_id = {(feature.get("properties") or {}).get("id"): feature
+                       for _, feature in canonical}
+    valid_ids = set(canonical_by_id) | set(group_ids)
+    exclusions, inclusions, seen = [], [], set()
+    allowed_exclusions = {"stormwater_detention", "water_treatment", "industrial_or_tailings",
+                          "water_supply_no_public_use", "not_a_waterbody", "duplicate_of"}
+    records = (("exclusions", allowed_exclusions, exclusions),
+               ("inclusions", {"reviewed_intermittent_waterbody"}, inclusions))
+    blocked_hosts = set(config.get("non_claim_hosts", []))
+    for field, reason_codes, output in records:
+        rows = review[field]
+        if not isinstance(rows, list):
+            _error("R73", manifest, None, f"water-review {field} must be an array")
+        for row in rows:
+            expected = {"feature_id", "reason_code", "evidence", "reviewed_at"}
+            if not isinstance(row, dict) or set(row) != expected:
+                _error("R73", manifest, None, f"water-review {field} record has invalid fields")
+            ident, reason = row["feature_id"], row["reason_code"]
+            if not isinstance(ident, str) or not ident or ident not in valid_ids:
+                _error("R73", manifest, None, f"water-review ID {ident!r} does not resolve to canonical data")
+            if ident in seen:
+                _error("R73", manifest, None, f"water-review ID {ident} is duplicated or conflicts")
+            seen.add(ident)
+            if reason not in reason_codes:
+                _error("R73", manifest, None, f"water-review reason code {reason!r} is invalid")
+            evidence = row["evidence"]
+            if not isinstance(evidence, dict) or set(evidence) != {"source_url", "agency", "statement"}:
+                _error("R73", manifest, None, "water-review evidence must have source_url, agency and statement")
+            source_url = evidence["source_url"]
+            parsed = urlparse(source_url) if isinstance(source_url, str) else None
+            if (parsed is None or parsed.scheme not in {"http", "https"} or not parsed.hostname
+                    or any(parsed.hostname == host or parsed.hostname.endswith("." + host)
+                           for host in blocked_hosts)):
+                _error("R73", manifest, None, "water-review source must be HTTP(S) and non-community")
+            statement = evidence["statement"]
+            if (not isinstance(evidence["agency"], str) or not evidence["agency"].strip()
+                    or not isinstance(statement, str) or not statement.strip()):
+                _error("R73", manifest, None, "water-review evidence is incomplete")
+            feature_name = (canonical_by_id.get(ident, {}).get("properties") or {}).get("name")
+            statement_words = set(re.findall(r"[a-z0-9]+", statement.casefold()))
+            name_words = set(re.findall(r"[a-z0-9]+", str(feature_name or "").casefold()))
+            name_only_fillers = {"a", "an", "the", "is", "was", "called", "named", "known", "as", "site", "water"}
+            if (statement.strip().casefold() == str(feature_name or "").strip().casefold()
+                    or (name_words and statement_words <= name_words | name_only_fillers)):
+                _error("R73", manifest, None, "water-review statement cannot be supported only by the feature name")
+            if reason == "water_supply_no_public_use" and not re.search(
+                    r"no public use|not open to the public|public use is not allowed|public access is not allowed",
+                    statement, re.IGNORECASE):
+                _error("R73", manifest, None,
+                       "water_supply_no_public_use requires evidence that states no public use")
+            quoted = re.findall(r"(?:\"([^\"]*)\"|'([^']*)')", statement)
+            if any(len((first or second).split()) > 25 for first, second in quoted):
+                _error("R73", manifest, None, "water-review quotation exceeds 25 words")
+            reviewed_at = row["reviewed_at"]
+            try:
+                parsed_date = datetime.fromisoformat(reviewed_at.replace("Z", "+00:00"))
+            except (AttributeError, TypeError, ValueError):
+                parsed_date = None
+            if parsed_date is None or parsed_date.tzinfo is None:
+                _error("R73", manifest, None, "water-review reviewed_at must be RFC 3339")
+            target = canonical_by_id.get(ident)
+            if field == "inclusions" and (target is None or not waterbody_inclusion_allowed(target, config)):
+                _error("R73", manifest, None,
+                       "reviewed inclusion must target an intermittent lake or pond, fcode 39000 lake or pond, or intermittent reservoir fcode 43614")
+            output.append(row)
+    return {"inclusions": inclusions, "exclusions": exclusions}
+
+
+def validate_m4b_water_layer(manifest, layer, canonical_features, display_features,
+                             config=None, review=None):
+    """Run R69-R73 and grouped R61-R63 against a fixture or future grouped artifact."""
+    from lib.water import water_display_config
+    config = config or water_display_config()
+    region_id = manifest.get("region", {}).get("id", "?")
+    layer_id = layer.get("id", "water")
+    select = (layer.get("display") or {}).get("select")
+    possible_group_ids = ()
+    if select == "streams":
+        try:
+            possible_group_ids = [feature["properties"]["id"] for feature in
+                                  group_flowlines(canonical_features, config, region_id=region_id,
+                                                  enforce_major=False)["groups"]]
+        except (ValueError, KeyError, TypeError) as exc:
+            _error("R70", manifest, layer_id, str(exc))
+    selection = _validate_water_review(review, [(layer_id, feature) for feature in canonical_features],
+                                       region_id, config, possible_group_ids)
+    by_id = {(feature.get("properties") or {}).get("id"): feature for feature in display_features}
+    if len(by_id) != len(display_features):
+        _error("R61", manifest, layer_id, "display has duplicate IDs")
+    if select == "bodies":
+        decisions = select_water_features(canonical_features, config, selection)
+        eligible = {row["feature"]["properties"]["id"] for row in decisions
+                    if row["eligible"] and (row["feature"].get("properties") or {}).get("source_layer") == "waterbody"}
+        inclusion_ids = {row["feature_id"] for row in selection["inclusions"]}
+        canonical_by_id = {(feature.get("properties") or {}).get("id"): feature
+                           for feature in canonical_features}
+        for ident, feature in by_id.items():
+            props = (feature.get("properties") or {})
+            canonical_feature = canonical_by_id.get(ident)
+            canonical_props = (canonical_feature or {}).get("properties") or {}
+            water_class, category = classify_water(canonical_props.get("ftype"),
+                                                    canonical_props.get("fcode"), config)
+            if props.get("water_class") != water_class or props.get("hydro_category") != category:
+                _error("R72", manifest, layer_id, f"displayed waterbody {ident} has incorrect classification")
+            if ident in inclusion_ids and waterbody_inclusion_allowed(canonical_feature, config):
+                continue
+            if water_class == "lake_pond" and category == "perennial":
+                continue
+            if (water_class == "reservoir"
+                    and canonical_props.get("fcode") in config["reservoir_eligible_fcodes"]
+                    and category in {"perennial", "unknown"}):
+                continue
+            _error("R72", manifest, layer_id,
+                   f"displayed waterbody {ident} has an ineligible water class, category or reservoir code")
+        if set(by_id) != eligible:
+            _error("R69", manifest, layer_id, "waterbody display set differs from reviewed eligibility")
+        return {"water_groups": {}, "group_assignments": {}}
+    if select != "streams":
+        _error("R60", manifest, layer_id, "M4 water display requires select streams or bodies")
+    try:
+        grouped = group_flowlines(canonical_features, config, region_id=region_id,
+                                  review=selection, enforce_major=True)
+    except (ValueError, KeyError, TypeError) as exc:
+        _error("R70", manifest, layer_id, str(exc))
+    expected = {feature["properties"]["id"]: feature for feature in grouped["groups"]}
+    if set(by_id) != set(expected):
+        _error("R69", manifest, layer_id, "stream display group set differs from canonical selection")
+    for ident, expected_feature in expected.items():
+        actual = by_id[ident]
+        props = actual.get("properties") or {}
+        exp_props = expected_feature["properties"]
+        if actual.get("geometry") != expected_feature.get("geometry"):
+            _error("R71", manifest, layer_id, f"group {ident} geometry differs from ordered member geometry")
+        for key in ("name", "gnis_id", "member_count", "length_km"):
+            if props.get(key) != exp_props.get(key):
+                _error("R71", manifest, layer_id, f"group {ident} {key} differs from canonical members")
+        if props.get("water_class") != "stream" or props.get("hydro_category") != "perennial":
+            _error("R72", manifest, layer_id, f"group {ident} has an unsupported class")
+        expected_properties = expected_feature.get("properties") or {}
+        if _display_json_bytes(props) != _display_json_bytes(expected_properties):
+            _error("R62", manifest, layer_id, f"group {ident} properties or evidence differ from its members")
+    expected_membership = grouped["group_assignments"]
+    for feature in canonical_features:
+        props = feature.get("properties") or {}
+        ident = props.get("id")
+        if props.get("group_id") != expected_membership.get(ident):
+            _error("R70", manifest, layer_id, f"canonical group_id membership differs for {ident}")
+    return grouped
+
+
 def _validate_water_contract(manifest, resolve):
     canonical, display = [], []
+    seen_canonical_refs = set()
     for layer in manifest["layers"]:
         if layer.get("kind") != "water" or layer.get("format") != "feature_collection":
             continue
         document = resolve(layer["path"])
         features = _json_pointer(document, layer.get("pointer", ""))["features"]
-        canonical.extend((layer["id"], feature) for feature in features)
+        canonical_ref = (layer["path"], layer.get("pointer", ""))
+        if canonical_ref not in seen_canonical_refs:
+            canonical.extend((layer["id"], feature) for feature in features)
+            seen_canonical_refs.add(canonical_ref)
         if layer.get("display"):
             displayed = resolve(layer["display"]["path"]).get("features", [])
             display.extend((layer["id"], feature) for feature in displayed)
     if not canonical:
         return
+    if manifest.get("water_review") is not None:
+        region_id = manifest.get("region", {}).get("id", "?")
+        review_path = manifest["water_review"].get("path")
+        if review_path != f"regions/{region_id}/water-review.json":
+            _error("R73", manifest, None, "water-review path must be region-scoped")
+        try:
+            review_document = resolve(review_path)
+        except (KeyError, IndexError, TypeError, ValueError, FileNotFoundError):
+            _error("R73", manifest, None, "water-review file does not resolve")
+        possible_group_ids = ()
+        if any((feature.get("properties") or {}).get("source_layer") == "flowline"
+               for _, feature in canonical):
+            try:
+                possible_group_ids = [feature["properties"]["id"] for feature in
+                                      group_flowlines([feature for _, feature in canonical],
+                                                      WATER_DISPLAY_CONFIG, region_id=region_id,
+                                                      enforce_major=False)["groups"]]
+            except (ValueError, KeyError, TypeError) as exc:
+                _error("R70", manifest, None, str(exc))
+        _validate_water_review(review_document, canonical, region_id,
+                               WATER_DISPLAY_CONFIG, possible_group_ids)
     # Older contract fixtures can declare a water layer without the M4 source
     # identity fields. Only M4-enriched data has the deferred alias artifact.
     any_enriched = any(
@@ -328,7 +532,11 @@ def _validate_water_contract(manifest, resolve):
                 manifest["region"]["id"])
         else:
             validate_water_alias_file(index, None, b"", manifest["region"]["id"])
-    validate_water_contract_data(manifest, canonical, WATER_DISPLAY_CONFIG, aliases, display)
+    water_groups = index.get("water_groups", {}) if index else {}
+    if not isinstance(water_groups, dict):
+        _error("R70", manifest, None, "water_groups must be a group ID to ordered member ID map")
+    validate_water_contract_data(manifest, canonical, WATER_DISPLAY_CONFIG, aliases, display,
+                                 water_groups)
 
 
 def _validate_display(manifest, resolve, coverage):
@@ -338,6 +546,13 @@ def _validate_display(manifest, resolve, coverage):
         declared.append(("coverage", manifest["coverage"]))
     if not declared:
         return
+    water_review = None
+    if manifest.get("water_review") is not None:
+        review_path = manifest["water_review"].get("path")
+        try:
+            water_review = resolve(review_path)
+        except (KeyError, IndexError, TypeError, ValueError, FileNotFoundError):
+            _error("R73", manifest, None, "water-review file does not resolve")
     index_path = f"regions/{region_id}/display/index.json"
     try:
         index = resolve(index_path)
@@ -403,12 +618,43 @@ def _validate_display(manifest, resolve, coverage):
             _error("R61", manifest, layer_id, "display file is not the declared layer FeatureCollection")
         canonical_document = resolve(declaration["path"])
         canonical_features = _json_pointer(canonical_document, declaration.get("pointer", ""))["features"]
+        display_features = display_document.get("features")
+        display_select = (declaration.get("display") or {}).get("select")
+        if declaration.get("kind") == "water" and display_select in {"streams", "bodies"}:
+            if display_select == "streams":
+                if (entry.get("feature_count") != len(display_features)
+                        or entry.get("source_feature_count") != len(canonical_features)):
+                    _error("R61", manifest, layer_id, "grouped display counts differ from canonical selection")
+                table = display_document.get("evidence_table")
+                if not isinstance(table, list):
+                    _error("R62", manifest, layer_id, "grouped display evidence table is missing")
+                restored = []
+                for feature in display_features:
+                    clone = copy.deepcopy(feature)
+                    properties = clone.get("properties") or {}
+                    evidence_index = properties.get("evidence")
+                    if (not isinstance(evidence_index, int) or isinstance(evidence_index, bool)
+                            or not 0 <= evidence_index < len(table)):
+                        _error("R62", manifest, layer_id, "group evidence reference is invalid")
+                    properties["evidence"] = table[evidence_index]
+                    restored.append(clone)
+                grouped = validate_m4b_water_layer(manifest, declaration, canonical_features,
+                                                   restored, WATER_DISPLAY_CONFIG, water_review)
+                _validate_water_group_index(manifest, layer_id,
+                                            index.get("water_groups"), grouped["water_groups"])
+                continue
+            validate_m4b_water_layer(manifest, declaration, canonical_features,
+                                     display_features, WATER_DISPLAY_CONFIG, water_review)
         selected = canonical_features
-        if declaration["kind"] == "water" and any(
+        if declaration["kind"] == "water" and display_select == "bodies":
+            decisions = select_water_features(canonical_features, WATER_DISPLAY_CONFIG,
+                                              water_review or {"inclusions": [], "exclusions": []})
+            selected = [row["feature"] for row in decisions
+                        if row["eligible"] and (row["feature"].get("properties") or {}).get("source_layer") == "waterbody"]
+        elif declaration["kind"] == "water" and any(
                 {"kind", "source_layer"} & set(feature.get("properties") or {})
                 for feature in canonical_features):
             selected = [feature for feature in canonical_features if _display_water(feature)]
-        display_features = display_document.get("features")
         if entry.get("feature_count") != len(display_features) or len(display_features) != len(selected) or entry.get("source_feature_count") != len(canonical_features):
             _error("R61", manifest, layer_id, "display feature count differs from canonical selection")
         by_id = {feature.get("properties", {}).get("id"): feature for feature in display_features}
@@ -444,7 +690,12 @@ def _validate_display(manifest, resolve, coverage):
             restored["evidence"] = evidence_table[evidence_index]
             canonical_properties = canonical_feature.get("properties", {})
             expected_properties = canonical_properties
-            if declaration["kind"] == "water":
+            if declaration["kind"] == "water" and display_select == "bodies":
+                body_fields = {"id", "name", "gnis_id", "water_class", "hydro_category",
+                               "fcode", "area_sqkm", "evidence"}
+                expected_properties = {key: value for key, value in canonical_properties.items()
+                                       if key in body_fields}
+            elif declaration["kind"] == "water":
                 display_fields = {"id", "name", "kind", "source_layer", "evidence"}
                 expected_properties = {key: value for key, value in canonical_properties.items()
                                        if key in display_fields}
@@ -683,9 +934,10 @@ def _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report):
         for feature in value["features"]:
             props = feature.get("properties", {})
             ident = props.get("id")
-            if ident in ids:
-                _error("R21", manifest, layer_id, f"duplicate feature id {ident}")
-            ids.add(ident)
+            if ids is not None:
+                if ident in ids:
+                    _error("R21", manifest, layer_id, f"duplicate feature id {ident}")
+                ids.add(ident)
             geometry = feature.get("geometry")
             if geometry is None:
                 if not layer.get("allow_null_geometry"):
@@ -809,8 +1061,16 @@ def validate_region_data(manifest, resolve):
     report = {"region": region_id, "layers": {}, "unrecorded_status_layers": [], "legacy_transport": {}}
     _check_rules(manifest, resolve)
     ids = set()
+    seen_feature_collections = set()
     for layer in manifest["layers"]:
-        _validate_layer(manifest, layer, resolve, coverage_bounds, ids, report)
+        layer_ids = ids
+        if layer["format"] == "feature_collection":
+            canonical_ref = (layer["path"], layer.get("pointer", ""))
+            if canonical_ref in seen_feature_collections:
+                layer_ids = None
+            else:
+                seen_feature_collections.add(canonical_ref)
+        _validate_layer(manifest, layer, resolve, coverage_bounds, layer_ids, report)
     report["unrecorded_status_layers"].sort()
     return report
 

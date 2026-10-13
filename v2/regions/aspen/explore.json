@@ -31,9 +31,16 @@
       "min_zoom": null
     },
     {
-      "layer_id": "hydrology",
-      "title": "Named water",
+      "layer_id": "water_streams",
+      "title": "Rivers and streams",
       "order": 30,
+      "default_on": true,
+      "min_zoom": null
+    },
+    {
+      "layer_id": "water_bodies",
+      "title": "Lakes and reservoirs",
+      "order": 31,
       "default_on": true,
       "min_zoom": null
     },
