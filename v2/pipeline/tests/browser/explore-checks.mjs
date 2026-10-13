@@ -156,6 +156,39 @@ export async function runExploreChecks(client,origin,signal,root){
   assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,'B2 horizontal scroll');
   const small=await evaluate(`[...document.querySelectorAll('button,input,select,textarea,summary,[role=button],a')].filter(${visible}).filter(e=>!e.closest('.leaflet-control-attribution')&&!(e.tagName==='A'&&e.closest('p')&&e.parentElement.childNodes.length>1)).filter(e=>{const r=e.getBoundingClientRect();return r.width<44||r.height<44}).map(e=>e.id||e.textContent)`);assert.deepEqual(small,[],'B2 target size');result.checks.push('B2');
   assert.equal(await evaluate('[...document.querySelectorAll(".leaflet-marker-icon")].every(e=>e.tabIndex===0&&!!e.title&&e.getBoundingClientRect().width>=44&&e.getBoundingClientRect().height>=44)'),true,'B2 pins focusable, named and 44px');
+  if(width<768){
+   const summaryText=await evaluate('explore.$("summary").textContent');
+   if(id==='douglas-co')assert.equal(summaryText,'Closures unconfirmed. 102 trail segments · 5 campgrounds · 17 trailheads · 14 other listed sites','mobile summary preserves all trust text and counts');
+   async function summaryReadable(label){
+    const value=await evaluate(`(()=>{const e=explore.$('summary'),r=e.getBoundingClientRect(),style=getComputedStyle(e),header=e.parentElement.getBoundingClientRect(),sheet=explore.$('sheet').getBoundingClientRect();const overlaps=n=>{const b=n.getBoundingClientRect();return r.left<b.right&&r.right>b.left&&r.top<b.bottom&&r.bottom>b.top;};return {text:e.textContent,width:e.clientWidth,scrollWidth:e.scrollWidth,height:e.clientHeight,scrollHeight:e.scrollHeight,textOverflow:style.textOverflow,fontSize:parseFloat(style.fontSize),inHeader:r.top>=header.top&&r.bottom<=header.bottom,inSheet:r.top>=sheet.top&&r.bottom<=sheet.bottom,overlapTools:overlaps(document.querySelector('.explore-tools')),overlapToggle:overlaps(explore.$('sheet-toggle'))}})()`);
+    assert.equal(value.text,summaryText,label+' unchanged summary');assert.ok(value.scrollWidth<=value.width,label+' no horizontal clipping');assert.ok(value.scrollHeight<=value.height,label+' no vertical clipping');assert.notEqual(value.textOverflow,'ellipsis',label+' no hidden text');assert.ok(value.fontSize>=11,label+' existing minimum font');assert.ok(value.inHeader&&value.inSheet,label+' container grows with summary');assert.equal(value.overlapTools||value.overlapToggle,false,label+' no overlap with map tools or Results control');return value;
+   }
+   result.mobileSummary=await summaryReadable(id+' '+width+' collapsed');
+   if(id==='douglas-co'){
+    result.mobileHeaders=[];
+    async function headerSurface(label,detail,state){
+     const value=await evaluate(`(()=>{const sheet=explore.$('sheet').getBoundingClientRect(),header=document.querySelector('.explore-sheet-header'),headings=[header];if(${detail}&&${JSON.stringify(state)}!=='collapsed')headings.push(document.querySelector('.explore-detail-heading'));const boxes=headings.map(e=>e.getBoundingClientRect()),last=boxes.at(-1),hits=[];for(let y=sheet.top+4;y<last.bottom-1;y+=3)for(const x of [sheet.left+14,(sheet.left+sheet.right)/2,sheet.right-14]){const e=document.elementFromPoint(x,y);if(!headings.some(h=>h.contains(e)))hits.push({x,y,hit:e?.id||e?.className||e?.tagName});}const opaque=e=>{const s=getComputedStyle(e),color=s.backgroundColor,alpha=color.startsWith('rgba(')?Number(color.slice(color.lastIndexOf(',')+1,-1)):color.startsWith('rgb(')?1:0;return alpha===1&&Number(s.opacity)===1;};return {hits,opaque:headings.every(opaque),gaps:boxes.slice(1).map((r,i)=>r.top-boxes[i].bottom),scrollTop:explore.$('sheet-body').scrollTop,backVisible:!explore.$('detail-view').hidden&&!explore.$('sheet-body').inert}})()`);
+     assert.deepEqual(value.hits,[],label+' header band contains only header elements');assert.equal(value.opaque,true,label+' opaque header backgrounds');assert.ok(value.gaps.every(g=>Math.abs(g)<=1),label+' contiguous headers within one pixel');assert.equal(value.backVisible,detail&&state!=='collapsed',label+' Back visibility');return {label,...value};
+    }
+    for(const safe of [false,true]){
+     await evaluate(`(()=>{const host=explore.$('map').parentElement;host.style.setProperty('--test-safe-top',${JSON.stringify(safe?'47px':'0px')});host.style.setProperty('--test-safe-bottom',${JSON.stringify(safe?'34px':'0px')});explore.showList(explore.$('list-body'));explore.sheet.setState('collapsed')})()`);
+     for(const view of ['list','results','search-results','detail']){
+      if(view==='results')await evaluate('explore.$("search").click()');
+      if(view==='search-results')await evaluate(`(()=>{const query=document.getElementById('query');query.value=' ';query.dispatchEvent(new Event('input',{bubbles:true}))})()`);
+      if(view==='detail')await evaluate(`(()=>{const e=explore.region.registry.find(e=>e.kind==='trails');explore.showDetail(e,explore.region.layers.get(e.id).data.features.find(f=>f.properties.name))})()`);
+      for(const state of ['collapsed','half','expanded']){
+       await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+       await summaryReadable(view+' '+state+' safe='+safe);
+       if(state!=='collapsed')await evaluate('explore.$("sheet-body").scrollTop=500');
+       const value=await headerSurface(view+' '+state+' safe='+safe,view==='detail',state);
+       if(state!=='collapsed'&&view!=='list')assert.ok(value.scrollTop>=300,value.label+' content scrolled several hundred pixels');
+       result.mobileHeaders.push(value);
+      }
+     }
+    }
+    await evaluate(`(()=>{const host=explore.$('map').parentElement;host.style.removeProperty('--test-safe-top');host.style.removeProperty('--test-safe-bottom');explore.$('detail-back').click();explore.showList(explore.$('list-body'));document.getElementById('query').value='';explore.sheet.setState('collapsed')})()`);
+   }
+  }
   await evaluate('explore.$("layers").click()');const drawer=await evaluate('('+RECT+')(explore.$("drawer"))');if(width<768){assert.ok(drawer.height<=height*.6);assert.ok(await evaluate(AREA)>=35,'B3 map visible');result.drawerFreeMapPct=await evaluate(AREA);assert.ok(result.drawerFreeMapPct>=45,'A11 meaningful map above drawer');assert.equal(await evaluate('explore.sheet.state'),'collapsed','A11 drawer collapses sheet');}else assert.ok(drawer.width<=360);
   const toggle=await evaluate('explore.region.registry.find(x=>x.format==="feature_collection"&&explore.region.layers.get(x.id).count>0).id');
   await evaluate(`document.getElementById(${JSON.stringify('layer-')}+${JSON.stringify(toggle)}).click()`);assert.equal(await evaluate(`window.__visible[${JSON.stringify(toggle)}]`),false,'B3 map toggle off');assert.equal(await evaluate('explore.$("drawer").hidden'),false);await evaluate(`document.getElementById('layer-'+${JSON.stringify(toggle)}).click()`);assert.equal(await evaluate(`window.__visible[${JSON.stringify(toggle)}]`),true);await key('Escape');assert.equal(await evaluate('explore.$("drawer").hidden&&document.activeElement===explore.$("layers")'),true,'B3 closes and restores focus');result.checks.push('B3');

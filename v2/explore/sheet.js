@@ -51,6 +51,9 @@
   function createSheet(element,toggle,body){
     let state='collapsed';
     const header=element.querySelector('.explore-sheet-header'),phone=()=>!scope.matchMedia?.('(min-width:768px)').matches;
+    // The summary can wrap; collapsed height, attribution and drag snaps follow its real header.
+    const resizeHeader=scope.ResizeObserver?new scope.ResizeObserver(()=>{element.parentElement.style.setProperty('--sheet-header-height',header.getBoundingClientRect().height+'px');}):null;
+    resizeHeader?.observe(header);
     function setState(value){
       if(!states.includes(value))return;
       state=value;element.dataset.state=value;element.classList.toggle('expanded',value!=='collapsed');body.inert=value==='collapsed';
@@ -62,11 +65,11 @@
     const click=event=>gestures.activate(event,cycle);
     const key=event=>{if(event.key==='Escape'&&state!=='collapsed'&&!document.querySelector('dialog[open],.explore-drawer:not([hidden])')){setState('collapsed');toggle.focus();}};
     const gestures=createPanelGesture(element,header,body,{state:()=>state,setState,
-      levels:()=>states.map((state,i)=>({state,height:[64,panelViewport(element)*.4,panelViewport(element)*.75][i]})),
+      levels:()=>states.map((state,i)=>({state,height:[header.getBoundingClientRect().height,panelViewport(element)*.4,panelViewport(element)*.75][i]})),
       enabled:event=>!shortLandscape()&&(phone()||event.type.startsWith('touch'))});
     toggle.addEventListener('click',click);document.addEventListener('keydown',key);
     setState(scope.matchMedia?.('(min-width:1200px)').matches===true?'expanded':'collapsed');
-    return {setState,setExpanded(value){setState(value?'expanded':'collapsed');},get state(){return state;},get expanded(){return state!=='collapsed';},destroy(){toggle.removeEventListener('click',click);document.removeEventListener('keydown',key);gestures.destroy();}};
+    return {setState,setExpanded(value){setState(value?'expanded':'collapsed');},get state(){return state;},get expanded(){return state!=='collapsed';},destroy(){resizeHeader?.disconnect();element.parentElement?.style.removeProperty('--sheet-header-height');toggle.removeEventListener('click',click);document.removeEventListener('keydown',key);gestures.destroy();}};
   }
   const api={createSheet,nextState,snapState,createPanelGesture,snapPanelState,panelViewport,shortLandscape};if(typeof module!=='undefined')module.exports=api;scope.ExploreSheet=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
