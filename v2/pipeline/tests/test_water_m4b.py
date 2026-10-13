@@ -220,7 +220,8 @@ class WaterGroupingFixtures(unittest.TestCase):
         self.assertEqual(report, build_selection_report(V2))
         for section in ('## aspen', '## douglas-co', 'Members per group distribution',
                         'Extent-edge splits', '0.5 ha (0.005 km²)',
-                        'Reviewer notes'):
+                        'Reviewer notes',
+                        '[Measured padded-water integration and member traceability](south-platte-integrated-report.md). Independent coordinator review and owner device acceptance remain before merge.'):
             self.assertIn(section, report)
         self.assertNotIn("PENDING_EXTERNAL_SOURCE_REFRESH", report)
 
