@@ -40,7 +40,7 @@
    const close=button('×',()=>node.close());close.setAttribute('aria-label','Close '+title);heading.append(el('h1',title),close);node.append(heading,body);shell.$('map').parentNode.append(node);node.addEventListener('close',()=>node.opener?.focus());
    return {node,body,show(){node.opener=document.activeElement;shell.openDialog(node);}};
   }
-  const settings=dialog('Where are you headed?'),adventure=dialog('Camping near your activity');
+  const settings=dialog('Where are you headed?'),adventure=dialog('Camping and trails by straight-line distance');
   const landing=el('section',undefined,'explore-landing');landing.id='landing';shell.$('map').parentNode.append(landing);
   const card=el('div',undefined,'explore-landing-card');landing.append(card);
   card.append(el('span',config.landing.eyebrow),el('h1',config.landing.title),el('p',config.landing.lead),el('p',config.landing.note));
@@ -74,7 +74,7 @@
   function showPlace(place){shell.showDetail(entryFor(place),place);}
   const resort=()=>resorts.find(x=>x.id===trip.resort);
   function miles(place){const a=place.coordinates,b=resort()?.coordinates;if(!b)return Infinity;const rad=Math.PI/180,dlat=(a[1]-b[1])*rad,dlon=(a[0]-b[0])*rad,h=Math.sin(dlat/2)**2+Math.cos(a[1]*rad)*Math.cos(b[1]*rad)*Math.sin(dlon/2)**2;return 6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h))/1609.344;}
-  function result(place){const node=button('',()=>showPlace(place));node.className='explore-result';node.dataset.place=place.id;node.append(el('strong',place.name),el('small',place.label),el('small',miles(place).toFixed(1)+' mi direct'),el('small','Official listing · trip needs confirmation'));return node;}
+  function result(place){const node=button('',()=>showPlace(place));node.className='explore-result';node.dataset.place=place.id;node.append(el('strong',place.name),el('small',place.label),el('small',miles(place).toFixed(1)+' mi straight-line'),el('small','Official listing · trip needs confirmation'));return node;}
   function render(){
    places=evaluate(region,trip);const box=$('list-body');box.replaceChildren(toolbar);
    const failed=region.registry.filter(x=>x.format==='place_list'&&x.kind==='overnight_inventory').some(x=>!Array.isArray(region.places[x.id]));
@@ -95,17 +95,17 @@
   function showAdventure(activity){
    lastAdventure=activity;
    const box=adventure.body;box.replaceChildren();const options=T.adventureOptions(places,trails(),activity);
-   paragraph(box,T.activities[activity]+' + camping · '+trip.arrive+' to '+trip.depart+' · '+options.length+' options in this pilot');
+   paragraph(box,T.activities[activity]+' + camping · '+trip.arrive+' to '+trip.depart+' · '+options.length+' straight-line pairings in this pilot');
    paragraph(box,'Research suggestions, not verified itineraries. Camping date and vehicle conflicts are shown. Trail use dates, closures and connecting access still need review. Distances are straight-line to mapped segments, not trailheads.');
-   for(const {place,trails:nearby} of options){box.append(el('h2',place.name));paragraph(box,place.label);paragraph(box,place.tripNote);paragraph(box,'Ordered by camping conflicts, then distance to the nearest matching trail.');
-    for(const {feature,miles} of nearby){paragraph(box,(feature.properties.name||'Unnamed trail')+' · about '+miles.toFixed(1)+' mi direct');const r=feature.properties.activities[activity];paragraph(box,[r.managed?'Managed: '+r.managed:'',r.accpt?'Accepted: '+r.accpt:'',r.restricted?'Restricted: '+r.restricted:'',r.disc?'Discouraged: '+r.disc:''].filter(Boolean).join(' · '));}
+   for(const {place,trails:nearby} of options){box.append(el('h2',place.name));paragraph(box,place.label);paragraph(box,place.tripNote);paragraph(box,'Ordered by camping conflicts, then straight-line distance to the nearest matching trail segment.');
+    for(const {feature,miles} of nearby){paragraph(box,(feature.properties.name||'Unnamed trail')+' · about '+miles.toFixed(1)+' mi straight-line');const r=feature.properties.activities[activity];paragraph(box,[r.managed?'Managed: '+r.managed:'',r.accpt?'Accepted: '+r.accpt:'',r.restricted?'Restricted: '+r.restricted:'',r.disc?'Discouraged: '+r.disc:''].filter(Boolean).join(' · '));}
     box.append(button('View camping & nearby trails',()=>{adventure.node.close();showPlace(place);}));}
-   if(!options.length)paragraph(box,region.layers.get(trailEntry()?.id)?.state==='loaded'?'No camping-and-trail matches in this small pilot. Try a different activity or explore the map. This does not mean the activity is unavailable in the area.':'Trail data could not load. You can still explore the camping listings on the map.');if(!adventure.node.open)adventure.show();
+   if(!options.length)paragraph(box,region.layers.get(trailEntry()?.id)?.state==='loaded'?'No camping listing within five straight-line miles of a matching trail segment in this small pilot. Try a different activity or explore the map. This does not mean the activity is unavailable in the area.':'Trail data could not load. You can still explore the camping listings on the map.');if(!adventure.node.open)adventure.show();
   }
   function detail(entry,feature,box,actions=box){
    if(entry.kind==='trails'){
-    box.append(el('h3','Camping nearby'));paragraph(box,'Within about 5 miles of this mapped segment, in a straight line. These are not trailhead distances or connecting routes. Access and camping permission need checking.');
-    const nearby=T.nearby(feature,inventory(region).map(x=>x.place));for(const {place,miles} of nearby)box.append(button(place.name+' · About '+miles.toFixed(1)+' mi direct · View camping details',()=>showPlace(place)));
+    box.append(el('h3','Camping nearby by straight-line distance'));paragraph(box,'Within about 5 miles of this mapped segment, in a straight line. These are not trailhead distances or connecting routes. Access and camping permission need checking.');
+    const nearby=T.nearby(feature,inventory(region).map(x=>x.place));for(const {place,miles} of nearby)box.append(button(place.name+' · About '+miles.toFixed(1)+' mi straight-line · View camping details',()=>showPlace(place)));
     if(!nearby.length)paragraph(box,'No camping listings in our current inventory within this distance.');
    }
    if(entry.kind==='destinations'){trip.resort=feature.id;persist();render();return;}
@@ -118,9 +118,9 @@
     paragraph(box,'Listing reviewed '+p.checked_on+'. '+p.locationBasis+'.');box.append(link('Location source ↗',p.mapSource));
     if(p.access)box.append(link('USFS vehicle designation ↗',p.access.evidence.source_url));
     paragraph(box,'Distances are straight-line, not driving distances. Directions may not reflect closures or permission to use the approach.');
-    if(p.ruleReview)paragraph(box,p.ruleReview);box.append(el('h3','Trails nearby'));paragraph(box,'Approximate straight-line distance to mapped trail segments, not trailheads or routes. Check published uses and access.');
-    const nearby=T.nearbyTrails(p,trails());for(const {feature,miles} of nearby)box.append(button((feature.properties.name||'Unnamed trail')+' · About '+miles.toFixed(1)+' mi direct · View trail',()=>shell.showDetail(trailEntry(),feature)));
-    if(!nearby.length)paragraph(box,region.layers.get(trailEntry()?.id)?.state==='loaded'?'No mapped trails within five miles in this pilot.':'Trail data is not loaded.');
+    if(p.ruleReview)paragraph(box,p.ruleReview);box.append(el('h3','Trails nearby by straight-line distance'));paragraph(box,'Approximate straight-line distance to mapped trail segments, not trailheads or routes. Check published uses and access.');
+    const nearby=T.nearbyTrails(p,trails());for(const {feature,miles} of nearby)box.append(button((feature.properties.name||'Unnamed trail')+' · About '+miles.toFixed(1)+' mi straight-line · View trail',()=>shell.showDetail(trailEntry(),feature)));
+    if(!nearby.length)paragraph(box,region.layers.get(trailEntry()?.id)?.state==='loaded'?'No mapped trails within five straight-line miles in this pilot.':'Trail data is not loaded.');
    }
   }
   return {render,detail,pins(entry){return entry.kind==='overnight_inventory'?inventory(region).filter(x=>x.entry.id===entry.id).map(x=>x.place):region.places[entry.id];},get trip(){return trip;},get plan(){return plan;}};

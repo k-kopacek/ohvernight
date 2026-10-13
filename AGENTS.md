@@ -36,6 +36,18 @@ planning milestone work:
 - `docs/audits/architecture-audit.md` — findings behind M1, M2 and later
   milestones.
 
+## Agent operating contracts
+
+`docs/agent-stack/` holds the canonical operating contracts. They are
+authoritative unless a newer explicit owner instruction supersedes them.
+
+- A coordinator reads `docs/agent-stack/master-coordinator.md` in full, and
+  every supporting file it lists, before coordinating or dispatching.
+- A Codex worker reads `docs/agent-stack/codex-technical-worker.md`.
+- A Hermes researcher reads `docs/agent-stack/hermes-research.md`.
+- Every agent reads `docs/agent-stack/roles.md` for its write and merge
+  boundaries.
+
 ## Working rules
 
 - Never merge to `main` autonomously. An agent may merge only after explicit
@@ -66,6 +78,7 @@ From the repository root, with Python 3.12+ and Node 22:
 python3 -m venv v2/pipeline/.venv
 v2/pipeline/.venv/bin/pip install -r v2/pipeline/requirements.txt
 v2/pipeline/.venv/bin/python v2/pipeline/scripts/00_selftest.py
+python3 -B tools/local-ai/qwen/offline_tests.py
 node --test v2/pipeline/tests/*.test.cjs
 node v2/pipeline/tests/browser/run.mjs
 ```

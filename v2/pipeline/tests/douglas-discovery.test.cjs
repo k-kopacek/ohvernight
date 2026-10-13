@@ -1,8 +1,8 @@
 const {test}=require('node:test'),a=require('node:assert/strict'),D=require('../../explore/trail-seasons.js');
 const trail=r=>({properties:{activities:{motorcycling:r}}});
-test('published seasons check every trip day including year wrapping; restrictions win',()=>{
- a.match(D.season(trail({accpt:'12/01-03/14'}),'motorcycling','2026-09-27','2026-09-28'),/Outside/);
- a.match(D.season(trail({accpt:'12/01-03/14'}),'motorcycling','2026-12-31','2027-01-02'),/Within/);
+test('managed and accepted source dates give no trip verdict; restrictions win',()=>{
+ a.equal(D.season(trail({accpt:'12/01-03/14'}),'motorcycling','2026-09-27','2026-09-28'),D.NOT_INTERPRETED);
+ a.equal(D.season(trail({accpt:'12/01-03/14'}),'motorcycling','2026-12-31','2027-01-02'),D.NOT_INTERPRETED);
  a.match(D.season(trail({managed:'01/01-12/31',restricted:'09/01-10/01'}),'motorcycling','2026-09-27','2026-09-28'),/restriction/);
  a.match(D.season(trail({accpt:'01/01-12/31',restricted:'check order'}),'motorcycling','2026-09-27','2026-09-28'),/review/);
  a.equal(D.days('2026-02-30','2026-03-01'),null);a.equal(D.windows('13/01-12/31'),null);

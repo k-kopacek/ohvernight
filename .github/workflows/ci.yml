@@ -26,6 +26,8 @@ jobs:
           cache-dependency-path: v2/pipeline/requirements.txt
       - run: pip install -r v2/pipeline/requirements.txt
       - run: python v2/pipeline/scripts/00_selftest.py
+      - name: Offline optional Qwen adapter tests
+        run: python -B tools/local-ai/qwen/offline_tests.py
 
   node:
     runs-on: ubuntu-latest
