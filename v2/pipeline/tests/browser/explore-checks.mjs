@@ -156,6 +156,148 @@ export async function runExploreChecks(client,origin,signal,root){
   assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,'B2 horizontal scroll');
   const small=await evaluate(`[...document.querySelectorAll('button,input,select,textarea,summary,[role=button],a')].filter(${visible}).filter(e=>!e.closest('.leaflet-control-attribution')&&!(e.tagName==='A'&&e.closest('p')&&e.parentElement.childNodes.length>1)).filter(e=>{const r=e.getBoundingClientRect();return r.width<44||r.height<44}).map(e=>e.id||e.textContent)`);assert.deepEqual(small,[],'B2 target size');result.checks.push('B2');
   assert.equal(await evaluate('[...document.querySelectorAll(".leaflet-marker-icon")].every(e=>e.tabIndex===0&&!!e.title&&e.getBoundingClientRect().width>=44&&e.getBoundingClientRect().height>=44)'),true,'B2 pins focusable, named and 44px');
+  if(width<768){
+   const summaryText=await evaluate('explore.$("summary").textContent');
+   if(id==='douglas-co')assert.equal(summaryText,'Closures unconfirmed. 102 trail segments · 5 campgrounds · 17 trailheads · 14 other listed sites','mobile summary preserves all trust text and counts');
+   async function summaryReadable(label){
+    const value=await evaluate(`(()=>{const e=explore.$('summary'),r=e.getBoundingClientRect(),style=getComputedStyle(e),header=e.parentElement.getBoundingClientRect(),sheet=explore.$('sheet').getBoundingClientRect();const overlaps=n=>{const b=n.getBoundingClientRect();return r.left<b.right&&r.right>b.left&&r.top<b.bottom&&r.bottom>b.top;};return {text:e.textContent,width:e.clientWidth,scrollWidth:e.scrollWidth,height:e.clientHeight,scrollHeight:e.scrollHeight,textOverflow:style.textOverflow,fontSize:parseFloat(style.fontSize),inHeader:r.top>=header.top&&r.bottom<=header.bottom,inSheet:r.top>=sheet.top&&r.bottom<=sheet.bottom,overlapTools:overlaps(document.querySelector('.explore-tools')),overlapToggle:overlaps(explore.$('sheet-toggle'))}})()`);
+    assert.equal(value.text,summaryText,label+' unchanged summary');assert.ok(value.scrollWidth<=value.width,label+' no horizontal clipping');assert.ok(value.scrollHeight<=value.height,label+' no vertical clipping');assert.notEqual(value.textOverflow,'ellipsis',label+' no hidden text');assert.ok(value.fontSize>=11,label+' existing minimum font');assert.ok(value.inHeader&&value.inSheet,label+' container grows with summary');assert.equal(value.overlapTools||value.overlapToggle,false,label+' no overlap with map tools or Results control');return value;
+   }
+   result.mobileSummary=await summaryReadable(id+' '+width+' collapsed');
+   if(id==='douglas-co'){
+    result.mobileHeaders=[];
+    async function headerSurface(label,detail,state){
+     const value=await evaluate(`(()=>{const sheet=explore.$('sheet').getBoundingClientRect(),header=document.querySelector('.explore-sheet-header'),headings=[header];if(${detail}&&${JSON.stringify(state)}!=='collapsed')headings.push(document.querySelector('.explore-detail-heading'));const boxes=headings.map(e=>e.getBoundingClientRect()),last=boxes.at(-1),hits=[];for(let y=sheet.top+4;y<last.bottom-1;y+=3)for(const x of [sheet.left+14,(sheet.left+sheet.right)/2,sheet.right-14]){const e=document.elementFromPoint(x,y);if(!headings.some(h=>h.contains(e)))hits.push({x,y,hit:e?.id||e?.className||e?.tagName});}const opaque=e=>{const s=getComputedStyle(e),color=s.backgroundColor,alpha=color.startsWith('rgba(')?Number(color.slice(color.lastIndexOf(',')+1,-1)):color.startsWith('rgb(')?1:0;return alpha===1&&Number(s.opacity)===1;};return {hits,opaque:headings.every(opaque),gaps:boxes.slice(1).map((r,i)=>r.top-boxes[i].bottom),scrollTop:explore.$('sheet-body').scrollTop,backVisible:!explore.$('detail-view').hidden&&!explore.$('sheet-body').inert}})()`);
+     assert.deepEqual(value.hits,[],label+' header band contains only header elements');assert.equal(value.opaque,true,label+' opaque header backgrounds');assert.ok(value.gaps.every(g=>Math.abs(g)<=1),label+' contiguous headers within one pixel');assert.equal(value.backVisible,detail&&state!=='collapsed',label+' Back visibility');return {label,...value};
+    }
+    for(const safe of [false,true]){
+     await evaluate(`(()=>{const host=explore.$('map').parentElement;host.style.setProperty('--test-safe-top',${JSON.stringify(safe?'47px':'0px')});host.style.setProperty('--test-safe-bottom',${JSON.stringify(safe?'34px':'0px')});explore.showList(explore.$('list-body'));explore.sheet.setState('collapsed')})()`);
+     for(const view of ['list','results','search-results','detail']){
+      if(view==='results')await evaluate('explore.$("search").click()');
+      if(view==='search-results')await evaluate(`(()=>{const query=document.getElementById('query');query.value=' ';query.dispatchEvent(new Event('input',{bubbles:true}))})()`);
+      if(view==='detail')await evaluate(`(()=>{const e=explore.region.registry.find(e=>e.kind==='trails');explore.showDetail(e,explore.region.layers.get(e.id).data.features.find(f=>f.properties.name))})()`);
+      for(const state of ['collapsed','half','expanded']){
+       await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+       await summaryReadable(view+' '+state+' safe='+safe);
+       if(state!=='collapsed')await evaluate('explore.$("sheet-body").scrollTop=500');
+       const value=await headerSurface(view+' '+state+' safe='+safe,view==='detail',state);
+       if(state!=='collapsed'&&view!=='list')assert.ok(value.scrollTop>=300,value.label+' content scrolled several hundred pixels');
+       result.mobileHeaders.push(value);
+      }
+     }
+    }
+    await evaluate(`(()=>{const host=explore.$('map').parentElement;host.style.removeProperty('--test-safe-top');host.style.removeProperty('--test-safe-bottom');explore.$('detail-back').click();explore.showList(explore.$('list-body'));document.getElementById('query').value='';explore.sheet.setState('collapsed')})()`);
+   }
+   await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:3,mobile:true});
+   result.uniformHeaders=[];
+   async function uniformHeader(label){
+    const value=await evaluate(`(()=>{
+     const header=explore.$('sheet-header'),body=explore.$('sheet-body'),row=explore.$('detail-heading'),back=explore.$('detail-back'),title=explore.$('detail-title'),summary=explore.$('summary'),summaryRow=summary.parentElement;
+     const r=header.getBoundingClientRect(),b=body.getBoundingClientRect(),s=explore.$('sheet').getBoundingClientRect(),style=getComputedStyle(header),paper=style.backgroundColor;
+     const alpha=color=>color.startsWith('rgba(')?Number(color.slice(color.lastIndexOf(',')+1,-1)):color.startsWith('rgb(')?1:0;
+     const surface=e=>{for(let n=e;n&&header.contains(n);n=n.parentElement){const c=getComputedStyle(n).backgroundColor;if(alpha(c)>0&&c!==paper)return false;}return true;};
+     const radius=parseFloat(getComputedStyle(explore.$('sheet')).borderTopLeftRadius),hits=[],backgrounds=[],xs=[r.left+2,(r.left+r.right)/2,r.right-2];let sampled=0,cornerCutouts=0;
+     for(let y=r.top+.5;y<r.bottom-1;y++)for(const x of xs){
+      // Preserve the sheet's existing rounded corners: sample every painted header pixel.
+      const dx=x<r.left+radius?r.left+radius-x:x>r.right-radius?x-(r.right-radius):0,dy=Math.max(0,r.top+radius-y);
+      if(dx&&dy&&dx*dx+dy*dy>radius*radius){cornerCutouts++;continue;}
+      const e=document.elementFromPoint(x,y);sampled++;if(!header.contains(e))hits.push({x,y,id:e?.id||e?.tagName});else if(!surface(e))backgrounds.push({x,y,id:e.id||e.tagName});
+     }
+     const a=summaryRow.getBoundingClientRect(),d=row.getBoundingClientRect(),bs=getComputedStyle(back),br=back.getBoundingClientRect(),out=parseFloat(bs.outlineWidth)+parseFloat(bs.outlineOffset),ts=getComputedStyle(title),tr=title.getBoundingClientRect();
+     return {dpr:devicePixelRatio,headerContains:header.contains(back)&&header.contains(title),outsideScroll:!body.contains(back)&&!body.contains(title),position:getComputedStyle(row).position,opaque:alpha(paper)===1&&Number(style.opacity)===1,backgrounds,hits,sampled,cornerCutouts,internalBorders:[getComputedStyle(summaryRow).borderBottomWidth,getComputedStyle(row).borderTopWidth],samePaper:getComputedStyle(summaryRow).backgroundColor===paper&&getComputedStyle(row).backgroundColor===paper,rowGap:d.top-a.bottom,scrollGap:b.top-r.bottom,headerHeight:r.height,sheetHeight:s.height,scrollTop:body.scrollTop,focusVisible:back.matches(':focus-visible'),outlineInside:br.left-out>=r.left&&br.right+out<=r.right&&br.top-out>=r.top&&br.bottom+out<=r.bottom,tapSize:[br.width,br.height],title:{tag:title.tagName,text:title.textContent,width:title.clientWidth,scrollWidth:title.scrollWidth,height:title.clientHeight,scrollHeight:title.scrollHeight,overflow:ts.textOverflow},backOnFirstLine:br.top<=tr.top+1,order:[...header.querySelectorAll('button,p,h2')].map(e=>e.id),bottomBorder:style.borderBottomWidth};
+    })()`);
+    assert.equal(value.dpr,3,label+' iPhone DPR');assert.equal(value.headerContains&&value.outsideScroll,true,label+' Back/title in non-scrolling header');assert.notEqual(value.position,'sticky',label+' no sticky detail row');assert.notEqual(value.position,'fixed',label+' no separately fixed detail row');
+    assert.equal(value.opaque&&value.samePaper,true,label+' one opaque paper surface');assert.deepEqual(value.hits,[],label+' every 1px header sample, including 2px gutters, belongs to header');assert.deepEqual(value.backgrounds,[],label+' no different painted backgrounds');assert.deepEqual(value.internalBorders,['0px','0px'],label+' no internal divider');assert.equal(value.bottomBorder,'1px',label+' one bottom divider');assert.ok(Math.abs(value.rowGap)<=.5,label+' contiguous summary and Back rows');assert.ok(Math.abs(value.scrollGap)<=.5,label+' scrollport begins at header edge');
+    assert.equal(value.focusVisible&&value.outlineInside,true,label+' keyboard focus ring contained by header');assert.ok(value.tapSize.every(n=>n>=44),label+' Back 44px target');assert.equal(value.title.tag,'H2',label+' heading semantics');assert.ok(value.title.scrollWidth<=value.title.width&&value.title.scrollHeight<=value.title.height,label+' complete title without clipping');assert.notEqual(value.title.overflow,'ellipsis',label+' title not abbreviated');assert.equal(value.backOnFirstLine,true,label+' Back stays on first line');assert.deepEqual(value.order,['explore-sheet-toggle','explore-summary','explore-detail-back','explore-detail-title'],label+' reading order');return {label,...value};
+   }
+   const openHeaderDetail=kind=>evaluate(`(()=>{const kind=${JSON.stringify(kind)},entry=explore.region.registry.find(e=>e.kind===(kind==='trail'?'trails':'recreation_sites'))||explore.region.registry.find(e=>e.id==='ridb_options')||explore.region.registry.find(e=>e.kind==='overnight_inventory'&&e.format==='place_list'),features=entry.format==='place_list'?explore.region.places[entry.id]:explore.region.layers.get(entry.id).data.features,feature=features.find(f=>f.properties?.site_type==='PICNIC SITE')||features.find(f=>f.kind==='campground')||features.find(f=>f.properties?.name)||features[0];explore.showDetail(entry,feature);return feature.properties?.name||feature.name})()`);
+   for(const kind of ['trail','site']){
+    const title=await openHeaderDetail(kind);assert.equal(await evaluate('document.activeElement===explore.$("detail-back")'),true,'round2 opening detail focuses Back');
+    await key('Tab');await evaluate('explore.$("detail-back").focus({preventScroll:true})');
+    for(const state of ['half','expanded']){
+     await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');
+     for(const scrollTop of [0,300,1000]){
+      await evaluate('explore.$("sheet-body").scrollTop='+scrollTop);await evaluate('new Promise(resolve=>requestAnimationFrame(resolve))');await summaryReadable(kind+' '+state+' '+scrollTop);
+      const value=await uniformHeader(id+' '+width+' '+kind+' '+state+' scroll='+scrollTop);assert.equal(value.title.text,title,'round2 selected title stays verbatim');result.uniformHeaders.push(value);
+     }
+     await evaluate('explore.$("sheet-body").scrollTop=-150');const value=await uniformHeader(kind+' '+state+' negative overscroll attempt');assert.ok(value.scrollTop>=0,'round2 Chrome clamps negative scroll attempt');result.uniformHeaders.push(value);
+    }
+    await evaluate('explore.sheet.setState("collapsed")');await summaryReadable(kind+' collapsed');
+    const collapsed=await evaluate(`(()=>{const h=explore.$('sheet-header').getBoundingClientRect(),s=explore.$('sheet').getBoundingClientRect(),row=explore.$('detail-heading');return {height:h.height,sheet:s.height,rowHidden:getComputedStyle(row).display==='none',title:explore.$('detail-title').textContent,summary:explore.$('summary').textContent}})()`);
+    assert.equal(collapsed.rowHidden,true,'round2 collapsed detail hides Back/title');assert.ok(Math.abs(collapsed.height-collapsed.sheet)<=.5,'round2 collapsed sheet equals summary-only header');assert.equal(collapsed.title,title,'round2 collapse preserves selected title');result.uniformCollapsed={...collapsed};
+   }
+   if(width===390){
+    assert.equal(await evaluate('!!explore.$("sheet-header").querySelector(".explore-planner-tools")'),false,'round3 no unused planner tools in header');
+    const pointFor=name=>evaluate(`(()=>{const e=explore.$(${JSON.stringify(name)}),r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+    const gestureState=()=>evaluate(`(()=>{const s=explore.$('sheet');return {state:explore.sheet.state,dragging:s.classList.contains('is-dragging'),height:s.style.height}})()`);
+    result.headerInput=[];
+    for(const kind of ['trail','site'])for(const state of ['half','expanded']){
+     // Cross Chrome's tap slop so touchmove reaches the sheet; no click is expected.
+     await openHeaderDetail(kind);await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');
+     const beforeDrag=await gestureState(),dragBack=await pointFor('detail-back');
+     await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[dragBack]});
+     await delay(110,undefined,{signal});
+     await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:dragBack.x,y:dragBack.y+30}]});
+     assert.deepEqual(await gestureState(),beforeDrag,'round3 Back over-slop movement leaves sheet unchanged while finger is down');
+     await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+     assert.deepEqual(await gestureState(),beforeDrag,'round3 Back over-slop release leaves sheet unchanged');
+     await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:3,mobile:false});
+     await client.command('Emulation.setTouchEmulationEnabled',{enabled:false});
+     await openHeaderDetail(kind);await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');
+     const before=await gestureState(),back=await pointFor('detail-back');
+     await client.command('Input.dispatchMouseEvent',{type:'mousePressed',...back,button:'left',clickCount:1});
+     assert.equal(await evaluate('explore.$("sheet-header").hasPointerCapture(1)'),false,'round3 mouse Back does not capture pointer');
+     await client.command('Input.dispatchMouseEvent',{type:'mouseReleased',...back,button:'left',clickCount:1});
+     assert.equal(await evaluate('explore.$("detail-view").hidden'),true,'round3 real mouse Back closes detail');
+     assert.deepEqual(await gestureState(),before,'round3 mouse Back leaves sheet state unchanged');
+     await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:3,mobile:true});
+     await client.command('Emulation.setTouchEmulationEnabled',{enabled:true});
+     await openHeaderDetail(kind);await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');
+     const touchBack=await pointFor('detail-back');
+     await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[touchBack]});
+     await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:touchBack.x,y:touchBack.y+6}]});
+     assert.deepEqual(await gestureState(),before,'round3 Back 6px jitter never starts sheet drag');
+     await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+     assert.equal(await evaluate('explore.$("detail-view").hidden'),true,'round3 real touch Back with 6px jitter closes detail');
+     assert.deepEqual(await gestureState(),before,'round3 touch Back leaves sheet state unchanged');
+     result.headerInput.push({kind,state,mouseBack:true,touchBackJitterPx:6,touchBackDragPx:30});
+    }
+    await openHeaderDetail('trail');
+    const title=await evaluate(`(()=>{const range=document.createRange();range.selectNodeContents(explore.$('detail-title'));const r=range.getClientRects()[0];return {x:r.x+r.width/2,y:r.y+r.height/2}})()`),initial=await evaluate('explore.$("sheet").getBoundingClientRect().height');
+    assert.equal(await evaluate(`document.elementFromPoint(${title.x},${title.y})===explore.$('detail-title')`),true,'round3 drag starts on title text');
+    await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[title]});
+    for(let i=1;i<=3;i++){
+     await delay(110,undefined,{signal});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:title.x,y:title.y-180*i/3}]});
+     assert.equal((await gestureState()).dragging,true,'round3 title drag remains active');
+     assert.ok(await evaluate('explore.$("sheet").getBoundingClientRect().height')>initial,'round3 title drag moves sheet before release');
+    }
+    await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    assert.equal(await evaluate('explore.sheet.state'),'expanded','round3 title drag snaps sheet expanded');
+    assert.equal(await evaluate('explore.$("detail-view").hidden'),false,'round3 title drag keeps detail open');
+    result.headerInput.push({titleDragSnap:'expanded'});
+   }
+   // Exercise cycles and native swipe snaps in both contexts; a slow drag detects a taller-detail snap bug.
+   for(const view of ['list','detail']){
+    if(view==='list')await evaluate('explore.$("detail-back").click();explore.showList(explore.$("list-body"))');else await openHeaderDetail('trail');
+    await evaluate('explore.sheet.setState("collapsed");explore.$("sheet-toggle").focus()');
+    for(const state of ['half','expanded','collapsed']){await key('Enter');assert.equal(await evaluate('explore.sheet.state'),state,'round2 '+view+' keyboard cycle');}
+    const point=()=>evaluate('(()=>{const r=explore.$("sheet-toggle").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+24}})()');
+    const center=await evaluate('explore.state.view.center');for(const [dy,state] of [[-60,'half'],[-60,'expanded'],[60,'half'],[60,'collapsed']]){await flick(await point(),dy);assert.equal(await evaluate('explore.sheet.state'),state,'round2 '+view+' native swipe snap');}
+    const start=await point(),heights=await evaluate(`(()=>{const s=explore.$('sheet');return {collapsed:s.getBoundingClientRect().height,half:ExploreSheet.panelViewport(s)*.4}})()`),dy=-(heights.half-heights.collapsed)/2-6;
+    await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[start]});for(let i=1;i<=3;i++){await delay(110,undefined,{signal});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:start.x,y:start.y+dy*i/3}]});}await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal(await evaluate('explore.sheet.state'),'half','round2 '+view+' slow snap uses summary-only collapsed height');assert.deepEqual(await evaluate('explore.state.view.center'),center,'round2 gestures leave camera unchanged');
+   }
+   if(width===320){
+    const name=await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='water'),features=explore.region.layers.get(entry.id).data.features,feature=[...features].sort((a,b)=>(b.properties.name||'').length-(a.properties.name||'').length)[0];explore.showDetail(entry,feature);explore.sheet.setState('half');return feature.properties.name})()`);
+    await key('Tab');await evaluate('explore.$("detail-back").focus({preventScroll:true})');const value=await uniformHeader(id+' long title 320');assert.equal(value.title.text,name,'round2 actual long name preserved');assert.ok(value.title.height>22.5,'round2 long title wraps');result.uniformLongTitle=value;
+   }
+   // The no-ResizeObserver fallback must measure async summary updates, detail changes and window resize.
+   const fallback=await client.command('Page.addScriptToEvaluateOnNewDocument',{source:'window.ResizeObserver=undefined;'});
+   try{
+    await navigate(url);assert.equal(await evaluate('typeof ResizeObserver'),'undefined','round2 fallback active');await summaryReadable('round2 fallback async summary');
+    await openHeaderDetail('trail');await key('Tab');await evaluate('explore.$("detail-back").focus({preventScroll:true})');await uniformHeader('round2 fallback detail');await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');await summaryReadable('round2 fallback Back restores collapsed height');
+    await client.command('Emulation.setDeviceMetricsOverride',{width:width===320?390:320,height,deviceScaleFactor:3,mobile:true});await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');await summaryReadable('round2 fallback resized');
+   }finally{await client.command('Page.removeScriptToEvaluateOnNewDocument',{identifier:fallback.identifier});await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:2,mobile:true});await navigate(url);}
+  }
   await evaluate('explore.$("layers").click()');const drawer=await evaluate('('+RECT+')(explore.$("drawer"))');if(width<768){assert.ok(drawer.height<=height*.6);assert.ok(await evaluate(AREA)>=35,'B3 map visible');result.drawerFreeMapPct=await evaluate(AREA);assert.ok(result.drawerFreeMapPct>=45,'A11 meaningful map above drawer');assert.equal(await evaluate('explore.sheet.state'),'collapsed','A11 drawer collapses sheet');}else assert.ok(drawer.width<=360);
   const toggle=await evaluate('explore.region.registry.find(x=>x.format==="feature_collection"&&explore.region.layers.get(x.id).count>0).id');
   await evaluate(`document.getElementById(${JSON.stringify('layer-')}+${JSON.stringify(toggle)}).click()`);assert.equal(await evaluate(`window.__visible[${JSON.stringify(toggle)}]`),false,'B3 map toggle off');assert.equal(await evaluate('explore.$("drawer").hidden'),false);await evaluate(`document.getElementById('layer-'+${JSON.stringify(toggle)}).click()`);assert.equal(await evaluate(`window.__visible[${JSON.stringify(toggle)}]`),true);await key('Escape');assert.equal(await evaluate('explore.$("drawer").hidden&&document.activeElement===explore.$("layers")'),true,'B3 closes and restores focus');result.checks.push('B3');
@@ -236,6 +378,21 @@ export async function runExploreChecks(client,origin,signal,root){
   assert.equal(await evaluate('[...window.__a11List.querySelectorAll("button")].filter(e=>e.classList.contains("explore-result")||e.parentElement===explore.$("search-results")).length'),await evaluate('window.__a11Count'),'A11 filtered results persist');
   await evaluate(`(()=>{window.__a11Query.value='';window.__a11Query.dispatchEvent(new Event('input',{bubbles:true}));explore.$('sheet-body').scrollTop=120;window.__a11Scroll=explore.$('sheet-body').scrollTop;const result=[...window.__a11List.querySelectorAll('button')].find(e=>e.classList.contains('explore-result')||e.parentElement===explore.$('search-results'));result.click();explore.$('detail-back').click()})()`);
   assert.ok(await evaluate('window.__a11Scroll')>0,'A11 scrolling list fixture');assert.equal(await evaluate('explore.$("sheet-body").scrollTop'),await evaluate('window.__a11Scroll'),'A11 Back restores practical list scroll');
+  if(id==='douglas-co'&&width===390){
+   assert.equal(await evaluate('explore.$("summary").textContent'),'Closures unconfirmed. 102 trail segments · 5 campgrounds · 17 trailheads · 14 other listed sites','Douglas phone summary puts closure caution first and keeps pinned counts');
+   await evaluate(`(()=>{explore.$('search').click();const list=[...explore.$('list-view').children].find(e=>!e.hidden),filters=list.querySelector('.explore-filters');filters.querySelector('summary').click();const mode=list.querySelector('#mode');if(![...mode.options].some(o=>o.textContent==='Other listed sites'))throw Error('Other listed sites mode is not available');mode.value='other-sites';mode.dispatchEvent(new Event('input',{bubbles:true}));const query=list.querySelector('#query');query.value='Cabin Ridge PS';query.dispatchEvent(new Event('input',{bubbles:true}));const rows=[...list.querySelectorAll('#results .explore-result')];if(rows.length!==1||rows[0].dataset.feature!=='recreation-3316544')throw Error('Cabin Ridge PS is not reachable by the Other listed sites finder');rows[0].click()})()`);
+   assert.equal(await evaluate('!explore.$("detail-view").hidden'),true,'Other listed sites opens detail on phone');
+   await assertSelection('Other listed sites selection from finder');
+   const siteFacts=await evaluate('explore.$("detail-body").textContent');
+   for(const value of ['Published by the Forest Service — not reviewed by Ohvernight','Fields the source leaves blank are not shown. A blank field does not mean none or no fee.','Fee information (source text; may be historical)','$7 per vehicle per day','Overnight use prohibited.','Vault toilet','Water details (source text)','May 8'])assert.ok(siteFacts.includes(value),'Other listed sites phone detail includes '+value);
+   for(const value of ['Saving a place does not confirm it is suitable or available.','Check approach roads and trailer parking before travel. Directions are for this facility, not a verified riding route.','Campgrounds nearby by straight-line distance','Trailheads nearby by straight-line distance'])assert.ok(siteFacts.includes(value),'Other listed sites retains existing caution or proximity section: '+value);
+   for(const value of ['CABIN RIDGE TH','0.2 straight-line miles · connection unverified','DEVILS HEAD CG','0.5 straight-line miles · connection unverified'])assert.ok(siteFacts.includes(value),'Cabin Ridge nearby point results include '+value);
+   assert.equal(await evaluate('explore.$("detail-title").textContent'),'CABIN RIDGE PS','Other listed sites phone detail title');
+   const evidence=await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='recreation_sites'),f=explore.region.layers.get(entry.id).data.features.find(x=>x.properties.id==='recreation-3316544');return {retrieved:f.properties.evidence.retrieved_at,limitation:explore.manifest.layers.find(x=>x.id===entry.id).limitations}})()`);
+   assert.ok(siteFacts.includes('Source fetched '+evidence.retrieved.slice(0,10))&&siteFacts.includes('older than the refresh policy; refresh needed'),'Other listed sites keeps fetch date and stale notice');assert.ok(siteFacts.includes(evidence.limitation),'Other listed sites keeps layer limitation');
+   assert.ok(await evaluate('[...explore.$("detail-body").querySelectorAll("a")].some(a=>a.textContent==="Directions to facility ↗"&&a.href.includes("destination="))'),'Other listed sites keeps the facility-coordinate link');
+   await evaluate(`(()=>{explore.$('detail-back').click();const list=[...explore.$('list-view').children].find(e=>!e.hidden),mode=list.querySelector('#mode'),query=list.querySelector('#query');mode.value='trails';mode.dispatchEvent(new Event('input',{bubbles:true}));query.value='';query.dispatchEvent(new Event('input',{bubbles:true}))})()`);await assertSelection('Other listed sites Back clears result',true);result.checks.push('Other listed sites phone finder and Cabin Ridge facts');
+  }
   if(id==='aspen'){
    await evaluate(`(()=>{explore.$('search-back').click();explore.sheet.setState('expanded');const panel=explore.$('list-body').querySelector('.explore-filters');panel.open=true;[...panel.querySelectorAll('button')].find(e=>e.textContent==='Campgrounds').click();window.__a11Planner=explore.$('list-body');window.__a11PlannerCount=window.__a11Planner.querySelectorAll('.explore-result').length;window.__a11Planner.querySelector('.explore-result').click();explore.$('detail-back').click()})()`);
    assert.equal(await evaluate('!window.__a11Planner.hidden&&window.__a11Planner.querySelector(".explore-filters").open'),true,'A11 planner list and filter panel persist');
@@ -272,7 +429,7 @@ export async function runExploreChecks(client,origin,signal,root){
   await evaluate('__frameLine(window.__a11Trail)');await mouseTap(await evaluate('__pointForFeature(window.__a11Trail)'));
   assert.equal(await evaluate('explore.state.selection.featureId===window.__a11Trail.properties.id&&!explore.$("detail-view").hidden'),true,'A11 trail tap selects and opens detail');await assertSelection('A11 exact trail tap');
   assert.equal(await evaluate(`(()=>{const b=ExploreShell.bounds({features:[window.__a11Trail]}),v=explore.state.view.bounds;return v[0][0]<=b[0][0]&&v[0][1]<=b[0][1]&&v[1][0]>=b[1][0]&&v[1][1]>=b[1][1]})()`),true,'A11 full trail bounds fitted');
-  const trailText=await evaluate('explore.$("detail-view").textContent'),trailFields=await evaluate('window.__a11Trail.properties');
+  const trailText=await evaluate('explore.$("detail-title").textContent+" "+explore.$("detail-view").textContent'),trailFields=await evaluate('window.__a11Trail.properties');
   for(const value of [trailFields.name,trailFields.trail_number,trailFields.surface,trailFields.allowed_terra_use].filter(Boolean))assert.ok(trailText.includes(value),'A11 carried trail field');
   assert.ok(trailText.includes('Source fetched '+trailFields.evidence.retrieved_at.slice(0,10)));
   assert.ok(trailText.includes(manifest.layers.find(e=>e.kind==='trails').limitations),'A11 trail limitation');assert.doesNotMatch(trailText,/\blength\b|elevation gain/i,'A11 no fabricated trail measures');

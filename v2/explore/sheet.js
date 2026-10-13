@@ -9,6 +9,7 @@
     if(Math.abs(velocity)>.45&&Math.abs(delta)<range*.5)return levels[Math.max(0,Math.min(levels.length-1,index+(delta<0?1:-1)))].state;
     return levels[levels.reduce((best,value,i)=>Math.abs(value.height-height)<Math.abs(levels[best].height-height)?i:best,0)].state;
   }
+  // Legacy 64px fixture helper used by unit tests; live panels measure their collapsed header.
   function snapState(height,start,delta,velocity,viewport){
     return snapPanelState(height,start,delta,velocity,states.map((state,i)=>({state,height:[64,viewport*.4,viewport*.75][i]})));
   }
@@ -50,23 +51,33 @@
   }
   function createSheet(element,toggle,body){
     let state='collapsed';
-    const header=element.querySelector('.explore-sheet-header'),phone=()=>!scope.matchMedia?.('(min-width:768px)').matches;
+    const header=element.querySelector('.explore-sheet-head'),summaryHeader=element.querySelector('.explore-sheet-header'),phone=()=>!scope.matchMedia?.('(min-width:768px)').matches;
+    // Measure the whole visible header; collapsed snaps exclude the optional detail row.
+    const collapsedHeight=()=>summaryHeader.getBoundingClientRect().height+(parseFloat(scope.getComputedStyle?.(header).borderBottomWidth)||0);
+    const measureHeader=()=>element.parentElement?.style.setProperty('--sheet-header-height',header.getBoundingClientRect().height+'px');
+    const resizeHeader=scope.ResizeObserver?new scope.ResizeObserver(measureHeader):null;
+    if(resizeHeader)resizeHeader.observe(header);else scope.addEventListener?.('resize',measureHeader);
+    // Without ResizeObserver, async summaries/title changes still need measurement before paint.
+    const contentHeader=!resizeHeader&&scope.MutationObserver?new scope.MutationObserver(measureHeader):null;
+    contentHeader?.observe(header,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['hidden']});
     function setState(value){
       if(!states.includes(value))return;
       state=value;element.dataset.state=value;element.classList.toggle('expanded',value!=='collapsed');body.inert=value==='collapsed';
       toggle.setAttribute('aria-expanded',String(value!=='collapsed'));
       toggle.textContent=value==='collapsed'?'Results · Expand':'Results · '+(value==='half'&&phone()&&!shortLandscape()?'Expand':'Collapse');
+      measureHeader();
       element.dispatchEvent(new CustomEvent('sheetstatechange',{detail:{state:value}}));
     }
     const cycle=()=>setState(phone()&&!shortLandscape()?states[(states.indexOf(state)+1)%states.length]:state==='collapsed'?'expanded':'collapsed');
     const click=event=>gestures.activate(event,cycle);
     const key=event=>{if(event.key==='Escape'&&state!=='collapsed'&&!document.querySelector('dialog[open],.explore-drawer:not([hidden])')){setState('collapsed');toggle.focus();}};
     const gestures=createPanelGesture(element,header,body,{state:()=>state,setState,
-      levels:()=>states.map((state,i)=>({state,height:[64,panelViewport(element)*.4,panelViewport(element)*.75][i]})),
+      levels:()=>states.map((state,i)=>({state,height:[collapsedHeight(),panelViewport(element)*.4,panelViewport(element)*.75][i]})),
+      ignore:target=>header.contains(target)&&!toggle.contains(target)&&!!target.closest?.('button,a,input,select,textarea,summary,[role="button"],[contenteditable]'),
       enabled:event=>!shortLandscape()&&(phone()||event.type.startsWith('touch'))});
     toggle.addEventListener('click',click);document.addEventListener('keydown',key);
     setState(scope.matchMedia?.('(min-width:1200px)').matches===true?'expanded':'collapsed');
-    return {setState,setExpanded(value){setState(value?'expanded':'collapsed');},get state(){return state;},get expanded(){return state!=='collapsed';},destroy(){toggle.removeEventListener('click',click);document.removeEventListener('keydown',key);gestures.destroy();}};
+    return {setState,refreshHeader:measureHeader,setExpanded(value){setState(value?'expanded':'collapsed');},get state(){return state;},get expanded(){return state!=='collapsed';},destroy(){resizeHeader?.disconnect();contentHeader?.disconnect();if(!resizeHeader)scope.removeEventListener?.('resize',measureHeader);element.parentElement?.style.removeProperty('--sheet-header-height');toggle.removeEventListener('click',click);document.removeEventListener('keydown',key);gestures.destroy();}};
   }
   const api={createSheet,nextState,snapState,createPanelGesture,snapPanelState,panelViewport,shortLandscape};if(typeof module!=='undefined')module.exports=api;scope.ExploreSheet=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
