@@ -1,4 +1,5 @@
 import json
+import copy
 import csv
 import sys
 import math
@@ -12,6 +13,8 @@ sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
 from refresh_m4b_douglas_water import (PAD_DEG, compare_layer, padded_water_geometry)  # noqa: E402
 import refresh_m4b_douglas_water as refresh  # noqa: E402
+from lib.water import group_flowlines, water_display_config  # noqa: E402
+from lib.common import clip_geometry  # noqa: E402
 
 
 class WaterM4BExtentTests(unittest.TestCase):
@@ -26,6 +29,13 @@ class WaterM4BExtentTests(unittest.TestCase):
         self.assertEqual(PAD_DEG, 0.005)
         self.assertEqual(first.wkb, second.wkb)
         self.assertEqual(first, self.county.buffer(0.005))
+
+    def test_only_water_layers_declare_the_approved_padding(self):
+        manifest = json.loads((V2 / "regions/douglas-co/region.json").read_text())
+        for layer in manifest["layers"]:
+            if layer["format"] == "feature_collection":
+                self.assertEqual(layer["extent_padding_deg"],
+                                 0.005 if layer["id"] in {"waterways", "waterbodies"} else 0)
 
     def test_every_douglas_water_geometry_is_covered_by_the_padded_polygon(self):
         tolerated = self.padded.buffer(1e-9)
@@ -52,6 +62,38 @@ class WaterM4BExtentTests(unittest.TestCase):
             with self.subTest(layer=layer):
                 self.assertTrue(old_ids, f"snapshot CSV has no baseline IDs for {layer}")
                 self.assertTrue(old_ids.issubset(current_ids[layer]))
+
+    def test_integrated_south_platte_is_one_group_without_foreign_or_canal_members(self):
+        features = self.bundle["layers"]["waterways"]["features"]
+        result = group_flowlines(features, region_id="douglas-co", coverage=self.padded)
+        check = next(row for row in result["major_river_checks"] if row["gnis_id"] == "00201759")
+        self.assertEqual(check["group_ids"], ["nhd-gnis-00201759"])
+        self.assertGreaterEqual(check["drawn_fraction"], 0.8)
+        self.assertEqual(set(check["member_gnis_ids"]), {"00201759"})
+        members = result["water_groups"]["nhd-gnis-00201759"]
+        self.assertEqual(len(members), 343)
+        by_id = {f["properties"]["id"]: f for f in features}
+        self.assertTrue(all(by_id[i]["properties"]["gnis_id"] != "00183164" for i in members))
+        canals = [f for f in features if f["properties"]["gnis_id"] == "00201759"
+                  and f["properties"]["water_class"] == "canal_ditch"]
+        self.assertEqual(len(canals), 1)
+        self.assertTrue(all(f["properties"]["id"] not in members for f in canals))
+        self.assertTrue(all(f["properties"]["group_id"] is None for f in canals))
+        self.assertTrue(all(f["properties"]["group_id"] == result["group_assignments"][f["properties"]["id"]]
+                            for f in features))
+
+    def test_zero_padding_real_data_fixture_fails_south_platte_check(self):
+        features = []
+        for feature in self.bundle["layers"]["waterways"]["features"]:
+            geometry = clip_geometry(feature["geometry"], self.county)
+            if geometry:
+                clipped = copy.deepcopy(feature)
+                clipped["geometry"] = geometry
+                features.append(clipped)
+        config = copy.deepcopy(water_display_config())
+        self.assertNotIn("pending_external_source_refresh", config)
+        with self.assertRaisesRegex(ValueError, "expected major river 00201759 missing"):
+            group_flowlines(features, config, region_id="douglas-co", coverage=self.county)
 
     def test_difference_guard_explains_only_geometry_growth_into_padding(self):
         county = box(0, 0, 1, 1)

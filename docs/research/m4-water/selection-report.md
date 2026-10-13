@@ -457,29 +457,27 @@ Twenty smallest waterbodies included at 2 ha:
 []
 ```
 
-South Platte River pending marker is Douglas-only; Aspen is not affected.
-
 ## douglas-co
 
 ### Source feature selection by class and category
 
 | Water class | Hydro category | Displayed members or bodies | Not displayed |
 |---|---:|---:|---:|
-| artificial_path | unknown | 94 | 161 |
-| canal_ditch | unknown | 0 | 73 |
+| artificial_path | unknown | 446 | 116 |
+| canal_ditch | unknown | 0 | 77 |
 | connector | unknown | 0 | 1 |
-| lake_pond | intermittent | 0 | 1404 |
-| lake_pond | perennial | 31 | 669 |
-| pipeline | unknown | 0 | 12 |
-| reservoir | unknown | 1 | 29 |
-| stream | intermittent | 0 | 504 |
-| stream | perennial | 1514 | 0 |
+| lake_pond | intermittent | 0 | 1453 |
+| lake_pond | perennial | 41 | 690 |
+| pipeline | unknown | 0 | 14 |
+| reservoir | unknown | 2 | 33 |
+| stream | intermittent | 0 | 532 |
+| stream | perennial | 1548 | 0 |
 | swamp_marsh | unknown | 0 | 1 |
 
 ### Groups and connectivity
 
-- Stream groups: 35
-- Members per group distribution (member count: number of groups): 6: 1, 8: 1, 9: 1, 11: 2, 17: 1, 18: 2, 20: 1, 21: 2, 28: 2, 32: 2, 33: 1, 34: 2, 37: 2, 54: 1, 55: 1, 57: 1, 58: 1, 59: 1, 63: 1, 65: 2, 67: 1, 76: 2, 80: 1, 87: 1, 109: 1, 182: 1
+- Stream groups: 39
+- Members per group distribution (member count: number of groups): 6: 3, 7: 1, 8: 1, 11: 2, 12: 1, 17: 1, 18: 2, 20: 1, 21: 1, 23: 1, 28: 2, 32: 2, 33: 1, 34: 2, 37: 2, 54: 1, 55: 1, 57: 1, 58: 1, 63: 1, 65: 2, 67: 1, 71: 1, 76: 1, 80: 1, 82: 1, 87: 1, 109: 1, 183: 1, 343: 1
 - Multi-part GNIS IDs and part group IDs: none
 - Connectors used with geodesic lengths in km: none
 - Extent-edge splits and drawn line counts: none
@@ -489,8 +487,8 @@ South Platte River pending marker is Douglas-only; Aspen is not affected.
 
 | Threshold | Unnamed included | Total displayed | Water display bytes |
 |---|---:|---:|---:|
-| 0.5 ha (0.005 km²) | 109 | 127 | 1063829 |
-| 2 ha (0.02 km²) | 14 | 32 | 954452 |
+| 0.5 ha (0.005 km²) | 118 | 142 | 1191529 |
+| 2 ha (0.02 km²) | 19 | 43 | 1076496 |
 
 Largest waterbodies excluded at 2 ha and included at 0.5 ha:
 
@@ -532,8 +530,8 @@ Largest waterbodies excluded at 2 ha and included at 0.5 ha:
     "area_sqkm": 0.016,
     "elevation_m": null,
     "coordinates_lon_lat": [
-      -105.053467,
-      39.563052
+      -105.052618,
+      39.563159
     ]
   },
   {
@@ -677,6 +675,16 @@ Largest waterbodies excluded at 2 ha and included at 0.5 ha:
     ]
   },
   {
+    "id": "nhd-120656219",
+    "name": null,
+    "area_sqkm": 0.011000000000000001,
+    "elevation_m": null,
+    "coordinates_lon_lat": [
+      -104.661142,
+      39.254871
+    ]
+  },
+  {
     "id": "nhd-120656283",
     "name": null,
     "area_sqkm": 0.011000000000000001,
@@ -684,16 +692,6 @@ Largest waterbodies excluded at 2 ha and included at 0.5 ha:
     "coordinates_lon_lat": [
       -104.764223,
       39.223391
-    ]
-  },
-  {
-    "id": "nhd-120656359",
-    "name": null,
-    "area_sqkm": 0.011000000000000001,
-    "elevation_m": null,
-    "coordinates_lon_lat": [
-      -104.759965,
-      39.191321
     ]
   }
 ]
@@ -703,6 +701,16 @@ Twenty smallest waterbodies included at 2 ha:
 
 ```json
 [
+  {
+    "id": "nhd-117822891",
+    "name": "Ladybug Lake",
+    "area_sqkm": 0.0021294300000000003,
+    "elevation_m": null,
+    "coordinates_lon_lat": [
+      -105.041015,
+      39.570065
+    ]
+  },
   {
     "id": "nhd-120655126",
     "name": "Franktown Parker FPS-1 Reservoir",
@@ -799,8 +807,8 @@ Twenty smallest waterbodies included at 2 ha:
     "area_sqkm": 0.028,
     "elevation_m": null,
     "coordinates_lon_lat": [
-      -105.049695,
-      39.564362
+      -105.049561,
+      39.564779
     ]
   },
   {
@@ -814,13 +822,53 @@ Twenty smallest waterbodies included at 2 ha:
     ]
   },
   {
+    "id": "nhd-117822713",
+    "name": null,
+    "area_sqkm": 0.030000000000000002,
+    "elevation_m": null,
+    "coordinates_lon_lat": [
+      -105.063611,
+      39.562959
+    ]
+  },
+  {
+    "id": "nhd-117822919",
+    "name": null,
+    "area_sqkm": 0.031,
+    "elevation_m": null,
+    "coordinates_lon_lat": [
+      -105.081261,
+      39.514307
+    ]
+  },
+  {
+    "id": "nhd-117819355",
+    "name": null,
+    "area_sqkm": 0.034,
+    "elevation_m": null,
+    "coordinates_lon_lat": [
+      -105.088811,
+      39.493703
+    ]
+  },
+  {
     "id": "nhd-117822893",
     "name": "Wolhurst Lake",
     "area_sqkm": 0.034,
     "elevation_m": null,
     "coordinates_lon_lat": [
-      -105.037521,
-      39.566117
+      -105.036583,
+      39.567043
+    ]
+  },
+  {
+    "id": "nhd-117822699",
+    "name": "Blackrock Lake",
+    "area_sqkm": 0.03497715,
+    "elevation_m": null,
+    "coordinates_lon_lat": [
+      -105.042009,
+      39.568494
     ]
   },
   {
@@ -844,63 +892,13 @@ Twenty smallest waterbodies included at 2 ha:
     ]
   },
   {
-    "id": "nhd-117822921",
-    "name": null,
-    "area_sqkm": 0.048,
-    "elevation_m": null,
+    "id": "nhd-120654810",
+    "name": "Inverness Reservoir",
+    "area_sqkm": 0.041,
+    "elevation_m": 1760.2,
     "coordinates_lon_lat": [
-      -105.077691,
-      39.509936
-    ]
-  },
-  {
-    "id": "nhd-120655219",
-    "name": "Circle 2 Ranch Reservoir Number 1",
-    "area_sqkm": 0.049,
-    "elevation_m": 1886.7,
-    "coordinates_lon_lat": [
-      -104.72402,
-      39.46434
-    ]
-  },
-  {
-    "id": "nhd-d55467f0-7114-4faf-a083-e3aff252fd30",
-    "name": null,
-    "area_sqkm": 0.054,
-    "elevation_m": null,
-    "coordinates_lon_lat": [
-      -104.776708,
-      39.515239
-    ]
-  },
-  {
-    "id": "nhd-117819477",
-    "name": "Wakeman Reservoir",
-    "area_sqkm": 0.058,
-    "elevation_m": null,
-    "coordinates_lon_lat": [
-      -105.053864,
-      39.438169
-    ]
-  },
-  {
-    "id": "nhd-117800481",
-    "name": "Waucondah Reservoir",
-    "area_sqkm": 0.07400000000000001,
-    "elevation_m": null,
-    "coordinates_lon_lat": [
-      -104.985177,
-      39.259497
-    ]
-  },
-  {
-    "id": "nhd-117844343",
-    "name": "J O Hill Reservoir",
-    "area_sqkm": 0.075,
-    "elevation_m": null,
-    "coordinates_lon_lat": [
-      -105.160492,
-      39.143258
+      -104.856667,
+      39.568438
     ]
   }
 ]
@@ -913,7 +911,15 @@ Twenty smallest waterbodies included at 2 ha:
   {
     "gnis_id": "00185007",
     "name": "Happy Canyon Creek",
-    "artificial_path_length_km": 6.543,
+    "artificial_path_length_km": 7.124,
+    "drawn_artificial_path_length_km": 0.0,
+    "drawn_fraction": 0.0,
+    "group_ids": []
+  },
+  {
+    "gnis_id": "00185047",
+    "name": "Piney Creek",
+    "artificial_path_length_km": 2.121,
     "drawn_artificial_path_length_km": 0.0,
     "drawn_fraction": 0.0,
     "group_ids": []
@@ -929,26 +935,16 @@ Twenty smallest waterbodies included at 2 ha:
   {
     "gnis_id": "00185141",
     "name": "East Cherry Creek",
-    "artificial_path_length_km": 2.448,
+    "artificial_path_length_km": 3.118,
     "drawn_artificial_path_length_km": 0.0,
     "drawn_fraction": 0.0,
     "group_ids": [
       "nhd-gnis-00185141"
     ]
-  },
-  {
-    "gnis_id": "00201759",
-    "name": "South Platte River",
-    "artificial_path_length_km": 9.514,
-    "drawn_artificial_path_length_km": 0.0,
-    "drawn_fraction": 0.0,
-    "group_ids": []
   }
 ]
 ```
 
-**PENDING_EXTERNAL_SOURCE_REFRESH:** Douglas South Platte River `00201759` is absent from the committed source bundle. Douglas counts and geometry will change when the padded NHD refresh lands.
-
 ## Reviewer notes
 
-To be written by Codex after the padded refresh and checked by the coordinator.
+[Measured padded-water integration and member traceability](south-platte-integrated-report.md). Independent coordinator review and owner device acceptance remain before merge.

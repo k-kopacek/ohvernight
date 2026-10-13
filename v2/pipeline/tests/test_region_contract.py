@@ -32,12 +32,17 @@ class RegionContractTests(unittest.TestCase):
     def test_usgs_nhd_scope_strings_match_approved_literals(self):
         expected = {
             "aspen": "USGS National Hydrography Dataset, retired by USGS in 2023 and no longer maintained. Flowlines, areas and waterbodies with the source's type and hydrographic category; also used for setback screening. The source does not establish recreation, access or permission, or present-day flow.",
-            "douglas-co": "Named waterbodies and flowlines only, selected by name. A display subset, not complete hydrology. A name does not indicate recreational usefulness, public access, fishing or paddling permission.",
+            "douglas-co": "USGS National Hydrography Dataset, retired by USGS in 2023 and no longer maintained. Named flowlines and all waterbodies with the source's type and hydrographic category, kept to about 500 m beyond the county line; not complete hydrology. The source does not establish recreation, access or permission, or present-day flow.",
         }
         for region_id, scope in expected.items():
             with self.subTest(region=region_id):
                 manifest = self.load(f"regions/{region_id}/region.json")
                 self.assertEqual(manifest["sources"]["usgs_nhd"]["scope"], scope)
+
+    def test_douglas_padded_water_coverage_statement_is_pinned(self):
+        manifest = self.load("regions/douglas-co/region.json")
+        self.assertEqual(manifest["coverage"]["statement"],
+                         'County boundary used to clip sources. Water features are kept to about 500 m beyond it so that rivers on the county line are not cut into pieces. It is not a land-ownership or access boundary. Nothing else is known outside it.')
 
     def test_real_water_features_do_not_carry_mislabeled_elevation(self):
         for manifest_path in (V2 / "regions").glob("*/region.json"):

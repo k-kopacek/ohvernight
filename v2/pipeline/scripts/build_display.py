@@ -529,12 +529,12 @@ def build_selection_report(root: Path = ROOT) -> str:
                                    'group_ids': group_gnis.get(gnis_id, [])})
         lines.extend(['### Named artificial-path rivers over 2 km that are undrawn or under 80%', '',
                       '```json', json.dumps(wide_paths, ensure_ascii=False, indent=2), '```', ''])
-        if region_id == 'douglas-co':
+        if region_id == 'douglas-co' and grouped['pending_external_source_refresh']:
             lines.extend(['**PENDING_EXTERNAL_SOURCE_REFRESH:** Douglas South Platte River `00201759` is absent from the committed source bundle. Douglas counts and geometry will change when the padded NHD refresh lands.', ''])
-        else:
+        elif grouped['pending_external_source_refresh']:
             lines.extend(['South Platte River pending marker is Douglas-only; Aspen is not affected.', ''])
     lines.extend(['## Reviewer notes', '',
-                  'To be written by Codex after the padded refresh and checked by the coordinator.', ''])
+                  '[Measured padded-water integration and member traceability](south-platte-integrated-report.md). Independent coordinator review and owner device acceptance remain before merge.', ''])
     return '\n'.join(lines)
 
 

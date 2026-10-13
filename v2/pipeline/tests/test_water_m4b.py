@@ -210,19 +210,19 @@ class WaterGroupingFixtures(unittest.TestCase):
         self.assertEqual(report["aspen"]["group_count"], 69)
         self.assertEqual(report["aspen"]["members_per_expected_river"]["00174812"]["member_counts"], [111])
         self.assertEqual(report["aspen"]["waterbodies_displayed_at_0_02_sqkm"], 46)
-        self.assertEqual(report["douglas-co"]["group_count"], 35)
+        self.assertEqual(report["douglas-co"]["group_count"], 39)
         self.assertEqual(report["douglas-co"]["members_per_expected_river"]["00201759"]["state"],
-                         "PENDING_EXTERNAL_SOURCE_REFRESH")
-        self.assertEqual(report["douglas-co"]["waterbodies_displayed_at_0_02_sqkm"], 32)
+                         "confirmed")
+        self.assertEqual(report["douglas-co"]["waterbodies_displayed_at_0_02_sqkm"], 43)
 
-    def test_section_8_6_report_is_deterministic_and_marks_pending_source(self):
+    def test_section_8_6_report_is_deterministic_and_has_no_pending_source(self):
         report = build_selection_report(V2)
         self.assertEqual(report, build_selection_report(V2))
         for section in ('## aspen', '## douglas-co', 'Members per group distribution',
                         'Extent-edge splits', '0.5 ha (0.005 km²)',
-                        'PENDING_EXTERNAL_SOURCE_REFRESH',
-                        'To be written by Codex after the padded refresh and checked by the coordinator.'):
+                        'Reviewer notes'):
             self.assertIn(section, report)
+        self.assertNotIn("PENDING_EXTERNAL_SOURCE_REFRESH", report)
 
 
 class WaterContractFixtures(unittest.TestCase):
@@ -551,8 +551,8 @@ class WaterContractFixtures(unittest.TestCase):
                           "display": {"select": "bodies"}}
             validate_m4b_water_layer({"region": {"id": region_id}}, body_layer,
                                      body_features, [row["feature"] for row in bodies], config)
-            expected_groups = 69 if region_id == "aspen" else 35
-            expected_bodies = 46 if region_id == "aspen" else 32
+            expected_groups = 69 if region_id == "aspen" else 39
+            expected_bodies = 46 if region_id == "aspen" else 43
             with self.subTest(region=region_id):
                 self.assertEqual(len(grouped["groups"]), expected_groups)
                 self.assertEqual(len(bodies), expected_bodies)
@@ -650,7 +650,9 @@ import json; print(json.dumps(r['water_groups'],sort_keys=True))"""
         config = copy.deepcopy(CONFIG)
         config["expected_major_rivers"] = {"douglas-co": [
             {"gnis_id": "00201759", "minimum_drawn_fraction": 0.8}]}
-        pending = config["pending_external_source_refresh"]
+        pending = {"region_id": "douglas-co", "gnis_id": "00201759",
+                   "state": "PENDING_EXTERNAL_SOURCE_REFRESH", "reason": "fixture pending source"}
+        config["pending_external_source_refresh"] = pending
         short = group([flow("seed", [[0, 0], [0.5, 0]], gnis="00201759"),
                        flow("undrawn", [[10, 0], [110, 0]], gnis="00201759",
                             ftype=558, fcode=55800)], config=config, region_id="douglas-co")
@@ -666,6 +668,9 @@ import json; print(json.dumps(r['water_groups'],sort_keys=True))"""
 
     def test_present_seed_requires_pending_marker_removal(self):
         config = copy.deepcopy(CONFIG)
+        config["pending_external_source_refresh"] = {
+            "region_id": "douglas-co", "gnis_id": "00201759",
+            "state": "PENDING_EXTERNAL_SOURCE_REFRESH", "reason": "fixture pending source"}
         config["expected_major_rivers"] = {"douglas-co": [
             {"gnis_id": "00201759", "minimum_drawn_fraction": 0.8}]}
         seed = flow("south-seed", [[0, 0], [1, 0]], gnis="00201759",
