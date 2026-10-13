@@ -232,6 +232,15 @@ export async function runExploreChecks(client,origin,signal,root){
     const gestureState=()=>evaluate(`(()=>{const s=explore.$('sheet');return {state:explore.sheet.state,dragging:s.classList.contains('is-dragging'),height:s.style.height}})()`);
     result.headerInput=[];
     for(const kind of ['trail','site'])for(const state of ['half','expanded']){
+     // Cross Chrome's tap slop so touchmove reaches the sheet; no click is expected.
+     await openHeaderDetail(kind);await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');
+     const beforeDrag=await gestureState(),dragBack=await pointFor('detail-back');
+     await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[dragBack]});
+     await delay(110,undefined,{signal});
+     await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:dragBack.x,y:dragBack.y+30}]});
+     assert.deepEqual(await gestureState(),beforeDrag,'round3 Back over-slop movement leaves sheet unchanged while finger is down');
+     await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+     assert.deepEqual(await gestureState(),beforeDrag,'round3 Back over-slop release leaves sheet unchanged');
      await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:3,mobile:false});
      await client.command('Emulation.setTouchEmulationEnabled',{enabled:false});
      await openHeaderDetail(kind);await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');
@@ -251,7 +260,7 @@ export async function runExploreChecks(client,origin,signal,root){
      await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
      assert.equal(await evaluate('explore.$("detail-view").hidden'),true,'round3 real touch Back with 6px jitter closes detail');
      assert.deepEqual(await gestureState(),before,'round3 touch Back leaves sheet state unchanged');
-     result.headerInput.push({kind,state,mouseBack:true,touchBackJitterPx:6});
+     result.headerInput.push({kind,state,mouseBack:true,touchBackJitterPx:6,touchBackDragPx:30});
     }
     await openHeaderDetail('trail');
     const title=await evaluate(`(()=>{const range=document.createRange();range.selectNodeContents(explore.$('detail-title'));const r=range.getClientRects()[0];return {x:r.x+r.width/2,y:r.y+r.height/2}})()`),initial=await evaluate('explore.$("sheet").getBoundingClientRect().height');
