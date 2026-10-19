@@ -2,9 +2,7 @@
 
 Status: DRAFT — NOT APPROVED. Proposed by the coordinator for owner review; nothing here is decided.
 
-INCOMPLETE — resume at section 16.
-
-**For:** Codex (implementation), once approved. **Reviewer / coordinator:** Claude. **Research:** Hermes. **Base:** `main` at `c04f5d6`.
+**For:** Codex (implementation), once approved. **Reviewer / coordinator:** Claude. **Research:** coordinator, with Hermes optional while it is unavailable. **Base:** `main` at `c04f5d6`.
 **Delivery (proposed):** four small sequential pull requests, PR A to PR D (section 16), on the two pilot regions only.
 **Owner decisions:** every choice that is the owner's is listed in section 20 as M5-D1 to M5-D17, each with options, a recommendation and the bear case. None is taken. Where this document says "M5 does X", read "this draft proposes that M5 does X, subject to the decision named".
 
@@ -254,7 +252,7 @@ Canonical data keeps every SMA feature, including `sma-co-pvt`. The display buil
 
 - Inside the coverage boundary, land the source assigns to no public managing agency is **unshaded**, and W5 becomes true for the first time. The legend adds LW1 (section 11) to say why so much is unshaded.
 - It is **not selectable**. A tap there behaves as a bare-map tap (M3 A14), or selects a named unit where PR C draws one.
-- Shaded share after PR B, computed from the audit's areas: Douglas County 28.2% (`USFS` 26.16, `LG` 0.87, `OTHFE` 0.66, `ST` 0.51) and unshaded 71.8%; Aspen 86.9% shaded and 13.1% unshaded. [V-audit] [INF] Most of Douglas County will read as unknown. That is honest, and it may look like a regression (section 18, risk K3).
+- Shaded share after PR B, computed from the audit's areas: Douglas County 28.2% (`USFS` 26.16, `LG` 0.87, `OTHFE` 0.66, `ST` 0.51) and unshaded 71.8%; Aspen 86.9% shaded and 13.1% unshaded. [V-audit] [INF] Most of Douglas County will read as unknown. That is honest, and it may look like a regression (section 18, risk RK3).
 - W4 is no longer used and is retired. No other W string changes.
 
 Alternatives for the owner: keep the residual polygon selectable with no fill and a detail sheet; or keep today's tint with a new label. Section 20 gives the cases.
@@ -308,7 +306,7 @@ Rules:
 
 At most five units per region, chosen as the units that contain the most displayed trail length or recreation sites in that region, reviewed in that order. Expected candidates: in Douglas County, the unit holding Pike National Forest and the unit holding Chatfield (recorded by PAD-US with manager `USACE` [V-live], a deliberate test of "manager is not operator"); in Aspen, the unit holding White River National Forest. If PR C did not land, the subjects are SMA IDs (for example `sma-co-usfs`) and the summary may say only what the agency's page says about that agency's land in Colorado.
 
-Hermes prepares each as a dossier (page URL, the exact sentences relied on, date read) under `docs/research/m5-land/coverage/`. A Hermes retrieval is not a review (ADR-004, ADR-005).
+Each record has a dossier (page URL, the exact sentences relied on, date read) under `docs/research/m5-land/coverage/`. The coordinator reads the managing agency's page and writes the dossier. Hermes may prepare a draft dossier when it is available, but PR D does not depend on it: Hermes web research has been unavailable since 2026-10-08 (coordinator correction K4, PR #38). Whoever retrieves the page, a retrieval is not a review (ADR-004, ADR-005): `last_confirmed_at` is set only after the coordinator has read the page and the owner has approved the record in the pull request.
 
 ### 9.3 Fact coverage
 
@@ -342,7 +340,7 @@ Rules for later milestones, recorded here so they are not lost; none is implemen
 Only `v2/explore/land-style.js` (legend and detail), the display build and the manifests and `explore.json` files change. The adapter, its exports, hit testing and the camera policy of M3 A14 are untouched. Section 13 of M3 stands except where this section says otherwise:
 
 - **PR B.** The legend no longer lists a `PVT` entry, because no `PVT` feature is displayed; W4 is retired. LW1 is added after the class entries and before W5 whenever the display index reports at least one feature excluded as `none_recorded` for that layer (section 12). W5 remains last and always present.
-- **PR C.** The `land_units` layer is tier G with one neutral tint from the existing palette, fill opacity at most 0.06, dashed outline at most 1 px and none at zoom 14 or more. It has no per-type legend entries; its legend is LW2 only. It is listed above `land` in `explore.json`, so where both are drawn a tap selects the unit. A unit whose source name is null is not displayed and is counted in the PR C report. The generic overlap chooser stays deferred (M3 A13).
+- **PR C.** The `land_units` layer is tier G with one neutral tint from the existing palette, fill opacity at most 0.06, dashed outline at most 1 px and none at zoom 14 or more. It has no per-type legend entries; its legend is LW2 only. It is listed above `land` in `explore.json`, so where both are drawn a tap selects the unit. A unit whose source name is null is not displayed and is counted in the PR C report. A unit whose `management_level` is `private_recorded` (a privately managed protected area the source reports) is kept in canonical data and not displayed in M5: naming it on the map raises a question M5 cannot answer, and LW3 would then print the word "Private" as a source label (M5-D7). The generic overlap chooser stays deferred (M3 A13).
 - **PR D.** Coverage lines (LW6 or LW7, then LW8) are added to every land detail.
 
 No land layer uses red, a warning style, a clearance style or a ranking. Nothing on a land feature is styled to suggest access or its absence.
@@ -409,8 +407,8 @@ New stable rule IDs, continuing after R76. Each has at least one negative test o
 |---|---|---|
 | R77 | Every `land_management` feature has `source_namespace` in the namespace table of 7.1, a non-empty source key, and `id` equal to the prefix plus the sanitised key computed from its own source fields. No land ID contains the region ID or a value equal to a source row number. IDs are unique within the region | A, C |
 | R78 | `land_classes.json` has exactly the tables of 8.1; every land feature's `management_level` equals the value computed from its code by that file; a code outside the table is `unrecognised` | A, C |
-| R79 | No land feature, canonical or display, carries a reserved property of contract 5.4 other than `id`, `name` and `evidence`; none carries a property whose name contains `access`, `permission`, `camp` or `open`; and no property value equals `private` (case-insensitive) except `management_level` `private_recorded` on a `usgs_padus` feature whose `mang_type` is `PVT` | A, C |
-| R80 | A land display artifact contains no feature whose `management_level` is `none_recorded`; its feature set equals the canonical set minus exactly those features; `excluded_by_class` equals the computed counts | B |
+| R79 | No land feature, canonical or display, carries a reserved property of contract 5.4 other than `id`, `name` and `evidence`; none carries a property whose name contains `access`, `permission`, `camp` or `open`; and no property value equals or begins with `private` (case-insensitive) except `management_level` `private_recorded` on a `usgs_padus` feature whose `mang_type` is `PVT` | A, C |
+| R80 | A land display artifact contains no feature whose `management_level` is `none_recorded` or, from PR C, `private_recorded`; its feature set equals the canonical set minus exactly those features (and, for `land_units`, units with a null name); `excluded_by_class` equals the computed counts | B, C |
 | R81 | `legacy_ids` on land features is an array of distinct non-empty strings; no legacy ID appears on two features; no legacy ID equals the current ID of any feature in the region | A |
 | R82 | Repository level, across every region manifest: a land unit ID present in more than one region has the same `source_namespace` and identical values for every `fields.source` property in each | A, C |
 | R83 | `land-coverage.json` conforms to 9.1: `subject_id` resolves to a land unit in that region; `category` is `management` (an `access` record fails in M5); one record per subject and category; `summary` non-empty and at most 160 characters; complete evidence with `basis` `manual_review`; `source_url` not on a host listed in `land_classes.json` `non_review_hosts` (initially the ArcGIS hosts named in section 5 and the community hosts named in the M4 configuration) | D |
@@ -448,7 +446,7 @@ Offline, clock-free, nothing written inside the repository, as in M3 and M4.
 
 **Python (validator, build, fetch transforms):** a negative fixture for each of R77–R85; the tables of 8.1, including an unknown SMA code and an unknown PAD-US type; ID sanitising, an empty key and a collision (each stops the build); legacy matching by agency code and state, where a changed row number still matches and a changed code does not; a legacy ID equal to a current ID fails; the residual feature is in canonical data and absent from display; `excluded_by_class` counts; a feature with a `private` value outside the allowed case fails; a land feature carrying `pub_access`, `camping_permission` or `access_status` fails; the same unit ID in two fixture regions with one differing source field fails R82; a PAD-US fixture record keeps every field of 6.2 and none of the not-kept fields; a coverage record with category `access`, an empty summary, a 161-character summary, an ArcGIS `source_url`, a duplicate subject and category, or an unresolved `subject_id` each fails R83; `reviewed_partial` without a coverage record fails R84; freshness of a coverage record as a pure function with an injected time.
 
-**Node:** the legend for `land` contains no `PVT` entry, contains LW1 before W5, and W5 is last; no legend text or detail title for any land feature contains the word "private" except within LW1 and the manifest sentences of 11.3; every LW, LL and OS string against its literal; W4 is no longer referenced; unit detail order of 11.4; LW7 and LW8 render for a unit with no record; LW6 with summary and link for a reviewed unit, and WW7 when past age; LW8 renders for every land unit, whatever its records.
+**Node:** the legend for `land` contains no `PVT` entry, contains LW1 before W5, and W5 is last; no legend text, detail line or title for any land feature contains the word "private" except within W5, LW1 and the manifest sentences of 11.3, each of which says the land is not found to be private; every LW, LL and OS string against its literal; W4 is no longer referenced; unit detail order of 11.4; LW7 and LW8 render for a unit with no record; LW6 with summary and link for a reviewed unit, and WW7 when past age; LW8 renders for every land unit, whatever its records.
 
 **Browser check (both regions, the four sizes of M3):** land layers load within budget; at a Douglas point inside today's `PVT` polygon (for example Cheesman Lake's centroid, from canonical water data) no land tint is drawn and a tap opens no SMA land detail; at a point inside the USFS polygon the detail shows W11, the W8 label, W7 and W3; legend shows LW1 and W5 last; from PR C a tap at a point inside a displayed unit opens that unit's detail with LW3 and LW4; from PR D every land detail shows LW8.
 
@@ -456,14 +454,161 @@ Offline, clock-free, nothing written inside the repository, as in M3 and M4.
 
 ## 16. Delivery
 
+Four small sequential pull requests on the two pilot regions only. Each is independently revertible, leaves `main` green, and needs the owner's approval of its exact head SHA before merge. No PR touches the loader, the adapter, Leaflet or any non-land layer's data. No PR adds a region or any statewide data.
+
+### PR A — Land source preservation and one schema
+
+In: the one controlled S1 refresh for both regions (5.3); the fields of 6.1; the identifier rule of 7.1 and `legacy_ids` of 7.3; `land_classes.json`; the Aspen layer renamed `land` in `region.json` and `explore.json`; removal of the unread vocabulary and constants; LL1 in both manifests; R77, R78, R79, R81, R82 and the R28 amendment; the snapshot and difference record `docs/research/m5-land/sma-snapshot.md`; contract documentation; display artifacts rebuilt.
+
+Must not change: which land polygons are displayed, their geometry beyond the refresh's reported differences, their tints, their labels, any W string, any interaction, or any non-land canonical file (byte-identical, proven). The browser check's assertions pass unchanged except for land feature and layer IDs.
+
+Reports: the saved-state and URL search of 7.3; the map-usable bytes per region; land display bytes before and after.
+
+Gate before merge: the owner reads the difference report and approves LL1.
+
+### PR B — The residual class reads as unknown
+
+In: the display rule of 8.2; R80; `excluded_by_class` in the display index; register entry N19; the legend and detail changes of 11.1 for PR B; W4 retired; LW1; LL2; OS1 in both manifests; the Node and browser tests of section 15 for PR B; three performance sessions.
+
+Must not change: canonical land data; any other layer; W1–W3 and W5–W11.
+
+Gate before merge: the owner approves LW1, LL2 and OS1 as rendered, and does an iPhone check of both regions: the Douglas map reads as mostly unshaded without looking broken, the legend explains it, a tap on unshaded land opens no land sheet, and a tap on Forest Service land shows the unchanged sheet.
+
+### PR C — Named land units (only if M5-D6 approves a unit source)
+
+Step 1, a measured spike with no data committed, reported in `docs/research/m5-land/padus-spike.md`: features per region after clipping; display bytes and vertices; null names; `Source_PAID` presence, formats and uniqueness in both regions together; records that overlap one another inside a region, with area; the distribution of `src_date`; the units containing each region's displayed trails and recreation sites. PR C stops and reports if the budget of section 14 is exceeded, if any `Source_PAID` is missing or duplicated, or if overlapping records would make a tap ambiguous over a material area. The owner reads the spike before step 2.
+
+Step 2: the one controlled S3 fetch; the `land_units` layer in both regions with the fields of 6.2; R85 and the PAD-US cases of R77, R78, R79 and R82; LW2–LW5; LL3; OS2; the detail of 11.4; budgets; three performance sessions.
+
+If the owner chose S4 instead, PR C is re-specified for national-forest identity from S4 by amendment before it starts. If the owner declined both, PR C is not built.
+
+Gate before merge: the owner approves LW2–LW5, LL3 and OS2 as rendered, and does an iPhone check of both regions.
+
+### PR D — Land evidence coverage
+
+In: `land-coverage.json` for both regions with the initial set of 9.2; the manifest `land_coverage` path; R83 and R84; LW6–LW8; OS3; `fact_coverage.ownership` `reviewed_partial` where a record exists; dossiers under `docs/research/m5-land/coverage/`, written by the coordinator (Hermes optional).
+
+Gate before merge: the owner approves each record's summary and source in the pull request.
+
+### Milestone close
+
+M5 is complete when PR A, PR B and PR D are merged, and PR C too unless the owner declined every unit source under M5-D6. The coordinator then writes the product review of [product-scorecard.md](../product/product-scorecard.md) from a run of the [Douglas dirt-bike scenario](../product/acceptance-scenario-douglas-dirt-bike.md) by a dedicated tester who did not implement any M5 pull request, on a phone (section 21).
+
 ## 17. Rollback
+
+- PR A: revert. The previous canonical land files, IDs and display artifacts return together because they are committed together; the snapshot record's pre-refresh SHA-256 values identify the state to return to. The Aspen layer ID returns to `land_ownership`.
+- PR B: revert. The residual polygon is drawn again with W4, exactly as before; canonical data is untouched by PR B.
+- PR C: revert, or remove the `land_units` layer from both manifests. The SMA layer is unaffected.
+- PR D: revert, or empty `land-coverage.json`. Every unit then shows LW7 and LW8, and `fact_coverage.ownership` returns to `context`.
+- A single wrong coverage record: delete it in a one-line change; the unit shows LW7. Always safe, because a management review grants nothing.
+- A wrong class mapping: a one-line change to `land_classes.json` and a rebuild; R78 catches any drift.
 
 ## 18. Risks
 
+Risk IDs use `RK` so they cannot be confused with validator rule IDs.
+
+| ID | Risk | Mitigation |
+|---|---|---|
+| RK1 | A finer or named land layer looks more certain than it is, and a user reads a unit, a manager or a reviewed management line as permission. The central risk of the milestone | Every M5 layer `generalized`; LW4 and W7 on every detail; LW8 on every detail; no access field anywhere (R79); management reviews never mention access (9.1) |
+| RK2 | A source access default (PAD-US `Pub_Access` "OA" from "GAP - Default") leaks into a label, filter or colour | Not retained (6.2, R79, R85); mutation proof |
+| RK3 | Showing 71.8% of Douglas County as unshaded reads as a broken map or a regression | LW1 in the legend; owner's iPhone check in PR B; the product review reports it as a trust improvement, not hidden |
+| RK4 | PAD-US local records are old (sampled Douglas rows dated 2010) and a unit may have changed [V-live] | LW5 shows the source's date; LL3 says records can be years old; never described as current |
+| RK5 | PAD-US granularity is uneven: Pike National Forest is one 1,097,242-acre record beside small county properties [V-live] | "Unit" means "a record the source keeps", stated in 7.2; no merging or splitting |
+| RK6 | `Source_PAID` or the SMA key is not persistent, so a coverage record detaches silently after a refresh | R82 and R83 fail on an unresolved subject; any later refresh needs a difference report and a legacy map, as M4 A4 requires |
+| RK7 | The PR A refresh changes boundaries for reasons the source does not explain | Difference report; stop-and-report rule (5.3) |
+| RK8 | Overlapping land layers make a tap select something the user did not intend | Unit layer above SMA; spike measures overlaps; the overlap chooser stays a recorded deferral; owner device check |
+| RK9 | Sources disagree at edges (3.57 km² of Aspen wilderness on today's `PVT`; Forest Service trails crossing it) and the user infers private or allowed | After PR B that land is unshaded and unknown, so no contradiction is drawn; no relationship is inferred from crossing (section 10) |
+| RK10 | Licence drift: unread PAD-US Explorer terms, unstated SMA and USFS terms, or restrictive CPW and county terms are assumed away | Section 5 quotes only; M5-D6 and M5-D17 are owner decisions; no source is used before its decision |
+| RK11 | Byte or time budget missed, especially Douglas map-usable headroom | Section 14 limits; nothing land-related before map usable; report, never tune |
+| RK12 | Manual review becomes a standing workload that grows with regions; reviews go overdue | Initial set capped at five per region; one-year default age (M5-D13); overdue shown, not hidden |
+| RK13 | Hermes is unavailable, delaying dossiers | PR D depends on the coordinator's own reading; Hermes optional |
+| RK14 | Research samples are five rows per source; they show that defaults and nulls exist, not how common they are [V-live] | PR A difference report and PR C spike measure the real records before anything is committed |
+
 ## 19. Unknowns
+
+Stated as unknown. None blocks approval of this specification; each is resolved, or stopped on, inside the PR named.
+
+- Whether the refreshed SMA layer still has exactly one row per agency per state, and whether its boundaries have changed since 2026-09-25 and 2026-09-27 (PR A).
+- Whether any saved state, URL or configuration references a land feature ID or the layer ID `land_ownership` (PR A).
+- The terms of use of the PAD-US Data Explorer, and whether they restrict republishing a clipped, reclassified subset (M5-D6; not read by anyone).
+- Whether `Source_PAID` is unique within the pilot records and persistent across PAD-US releases (PR C spike for uniqueness; persistence stays unknown until a second release is compared).
+- PAD-US feature counts, bytes, null names and overlaps after clipping to each region (PR C spike).
+- Whether the BLM Colorado SMA `PRI` class is a residual like the national "Private or Unknown" class [E3].
+- Whether the USFS Administrative Forest `ADMINFORESTID` is persistent (only if M5-D6 chooses S4).
+- The State Land Board's official GIS publication and terms; CPW and county reuse terms (M5-D17).
+- Douglas County's current headroom to the 500,000-byte map-usable budget (PR A reports it).
+- How two overlapping land layers behave under a tap on an iPhone (PR C device check).
+- Which units the PR D reviews will name, and whether each agency page agrees with the unit record (PR D).
 
 ## 20. Owner decisions requested
 
+Every decision below is the owner's. The recommendation is the coordinator's proposal only; the bear case is the strongest argument against it.
+
+| ID | Decision | Options | Recommendation | Bear case against the recommendation |
+|---|---|---|---|---|
+| M5-D1 | Scope and delivery | (a) Four PRs A–D on Aspen and Douglas only, with "no renderer change" read as no change to the loader, adapter, Leaflet or ADR-006 while `land-style.js`, manifests and `explore.json` change; (b) the same without PR C; (c) one combined PR | (a) | Four gates and four device checks for a milestone whose main user-visible change is in PR B; the owner may prefer to ship PR B's fix sooner and alone |
+| M5-D2 | How the SMA residual class (`PVT`, "Private or Unknown") is shown | (a) Kept in canonical data, not displayed, not selectable; LW1 explains; (b) displayed with no fill, selectable, with its own detail sheet; (c) today's tint with a new label | (a) | Users lose any way to tap "why is this blank?" and learn the source's class; under (a) a tap gives nothing, and a careful user might want the source's own words |
+| M5-D3 | Classification vocabulary | (a) The `management_level` values and both tables of 8.1, with SMA `PVT` → `none_recorded` and `private_recorded` only from PAD-US `mang_type` `PVT`; (b) no derived vocabulary, source codes only; (c) a coarser federal / non-federal / unknown split | (a) | A derived vocabulary is one more mapping to keep right; `tribal`, `joint` and `special_district` exist for completeness without pilot data to test them; "non-federal" in (c) invites the very inference the roadmap forbids |
+| M5-D4 | Management background source | (a) Keep BLM National SMA (S1); (b) switch to BLM Colorado SMA (S2), public domain by its metadata, finer, no unit names; (c) both | (a) for M5, with S2 recorded as a candidate | S1's geometry is coarse (105–190 m per vertex, 127 of 142 Aspen USFS parts under 1 ha) [V-audit]; S2 has a clearer public-domain statement than S1, which states no licence at all |
+| M5-D5 | Live refresh | (a) One controlled refresh of S1 in PR A with a snapshot and difference record; (b) no refresh, keeping today's two fields | (a) | Every other attribute is lost without a refresh; but a refresh may change boundaries with no source explanation and widen PR A |
+| M5-D6 | Named-unit source, including the licence reading | (a) PAD-US 4.1 fee layer (S3), after the owner reads and accepts the Data Explorer terms; (b) USFS Administrative Forest (S4), national forests only; (c) none in M5 | (a), conditional on the owner's reading; (b) if the terms are not acceptable or cannot be found | The PAD-US terms are unread by anyone; many records originate with states, counties and land trusts whose own terms the item does not say are extinguished; records can be 15 years old |
+| M5-D7 | Ownership dimension, and privately managed units | (a) Retain PAD-US `own_type` canonically, not displayed; do not retain `Own_Name`; keep `private_recorded` units canonical and undisplayed; (b) also display owner type, and display `private_recorded` units with the source's label; (c) retain nothing about ownership | (a) | Keeping an undisplayed field invites a later consumer to show it without review; hiding reported private conservation land removes a true source record from the map and leaves it unshaded, which a user may read as "nothing here" |
+| M5-D8 | Source access attributes (`Pub_Access`, `Access_Src`, `Access_Dt` and county equivalents) | (a) Not retained anywhere; (b) retained canonically, never displayed or branched on | (a) | The attribute is a real source fact, and a later access milestone may want to compare it against reviewed records; it would have to be re-fetched |
+| M5-D9 | Spatial precision claims | (a) Every M5 layer `generalized`; tier A stays undefined and unused; (b) PAD-US declared `source_published` (tier P, solid outline) | (a) | PAD-US boundaries are often finer than the SMA's; drawing them as generalized understates them and makes the two land layers look alike |
+| M5-D10 | Identifier scheme | (a) `sma-<state>-<agency>` and `padus-<Source_PAID>`, no row numbers, no region ID, `legacy_ids`, no alias file unless a reference is found; (b) keep row-number IDs | (a) | `sma-co-usfs` names a statewide aggregate, so it is identity in form but not a place; the scheme's value rests on `Source_PAID`, whose persistence is unknown |
+| M5-D11 | Layer rename and vocabulary removal | (a) Rename Aspen `land_ownership` to `land`; remove Aspen's derived `manager`, `land_class`, `camping_permission` and Douglas's `name`; (b) keep IDs and properties for compatibility | (a) | A rename can break an unknown external reference or bookmark; the audit found no reader, but absence of a reader is not proof |
+| M5-D12 | Land freshness policy | (a) One value for both regions, 8,760 hours (one year), applied as retrieval age; (b) keep `null` in Aspen and 168 in Douglas; (c) 2,160 hours | (a) | The same source is "refresh needed" forever in Douglas today and never in Aspen; a year is long for a source BLM calls a dynamic assembly, and a changed boundary could sit unflagged for months |
+| M5-D13 | Coverage model | (a) Categories `management` and `access`; only `management` records accepted in M5; `summary` field; 8,760-hour default age; at most five units per region; (b) also accept `access` records, restriction-first, populated later; (c) no coverage in M5 | (a) | "Management: reviewed" next to a forest name may still be read as "this place checks out"; the one category users care about, access, stays empty |
+| M5-D14 | Every new or retired user-visible string | Approve, edit or reject each of LW1–LW8, LL1–LL3, OS1–OS3 and the retirement of W4 (11.2, 11.3) | Approve as drafted | Fourteen new strings is more wording surface than M3's W set; LW1 is long for a legend line on a phone |
+| M5-D15 | Land budgets | (a) The limits of section 14, including 250,000 bytes per region for `land_units`, provisional until the spike; (b) set after the spike only | (a) | A provisional number may anchor the decision before anything is measured |
+| M5-D16 | What completes M5 | (a) PR A, PR B and PR D, plus PR C unless every unit source is declined; (b) PR A and PR B only | (a) | Without PR C, PR D's reviews attach to statewide agency aggregates, which adds little for a user |
+| M5-D17 | State and local sources (State Land Board, CPW, county open space) | (a) Excluded from M5 until each publisher's terms are established in writing; (b) admit any whose service carries no restrictive text | (a) | State trust land, state wildlife areas and county open space are where "can I be here" answers differ most [H]; leaving them out leaves Douglas's state and local land as two small generalized classes |
+
+Any change to the trust principles, the contract's normative rules or `ROADMAP.md` is outside this list and would need its own approved pull request.
+
 ## 21. Acceptance criteria
 
+PR A:
+1. Offline Python and Node suites and the browser check pass; display rebuild has no diff.
+2. Snapshot and difference record committed; every unexplained difference resolved or reported.
+3. Every non-land canonical file is byte-identical to `c04f5d6`.
+4. The displayed land polygons, tints and labels are unchanged apart from IDs, properties and reported refresh differences.
+5. R77, R78, R79, R81, R82 pass on real data with negative tests and mutation proofs.
+
+PR B:
+6. R80 passes with negative tests and mutation proofs; no `none_recorded` feature is in any display artifact.
+7. No legend entry, detail line, title or label for any land feature contains the word "private" except inside W5, LW1 and the manifest sentences of 11.3, each of which says the land is not found to be private.
+8. LW1, LL2 and OS1 match their literals; W4 is not rendered anywhere.
+9. Byte budgets hold; three performance sessions reported.
+10. The owner's iPhone check of both regions passes.
+
+PR C (if built):
+11. Spike report committed and read by the owner before data is committed.
+12. R85 and the PAD-US cases of R77–R79 and R82 pass with negative tests and mutation proofs.
+13. No access attribute exists in canonical or display data.
+14. LW2–LW5, LL3 and OS2 match their literals; the unit layer is within its budget; three performance sessions reported; the owner's iPhone check passes.
+
+PR D:
+15. R83 and R84 pass with negative tests and mutation proofs.
+16. Every coverage record cites the managing agency's own page, read by the coordinator, and is approved by the owner in the pull request.
+17. Every land detail shows LW8; a unit with no record shows LW7.
+
+Milestone (from [product-scorecard.md](../product/product-scorecard.md)):
+18. A dedicated tester who did not implement any M5 pull request runs the Douglas dirt-bike scenario on a phone, recording every measure against the previous result.
+19. The coordinator writes the product review under its six headings. It states plainly that M5 is mostly foundation. Predictions to be tested, not results: step 8 ("where each fact came from") improves for land; step 9 ("what remains unknown") improves, because land the source does not attribute is now shown as unknown and access is listed as not reviewed; "Evidence coverage shown" gains land categories (management reviewed or not, access not reviewed); time to a viable trip, planning steps and external sites are not expected to improve, and access and camping questions still send the tester elsewhere; the count of proximity assumptions is expected to be unchanged, and any rise caused by land presentation is a regression.
+20. No scorecard line is improved by hiding an unknown. Fewer apparent unknowns reached by not showing them fails the review.
+
+All: no access, permission or camping claim; no parcel or owner name; no source used before its owner decision; no change to the loader, adapter, Leaflet or any non-land layer; no merge without the owner's approval of the specific pull request and head SHA.
+
 ## Appendix A. Evidence basis
+
+| Fact | Basis | Where |
+|---|---|---|
+| Feature counts, area shares, tiling, vertex spacing, wilderness and trail overlaps, schemas | [V-audit] | `current-land-audit.md` sections 1–6 (on `docs/research-drafts`) |
+| National SMA aggregates (`OBJECTID` 413 is USFS for all Colorado; `ADMIN_UNIT_NAME` null); SMA's ownership disclaimer; BLM Colorado public-domain statement; PAD-US unit names, `Source_PAID` sample, default `Pub_Access`; USFS, county, OIT and CPW terms text | [V-live] | `M5-preliminary-research-gate.md` sections 2, 3, 5 and appendix A |
+| "Private or Unknown" sublayer; its Colorado row is `PVT`; `OBJECTID` differs between layers | [E1] [E2] | [m5-spec-evidence.md](../research/m5-land/m5-spec-evidence.md) |
+| BLM Colorado SMA class labels, including `PRI` "Private" | [E3] | Same |
+| PAD-US 4.1 citation text, `Source_PAID` field, coded domains for `Pub_Access`, `Own_Type`, `Mang_Type` | [E4] | Same |
+| State Land Board, COMaP, county policy, CPW programme statements, USFS Administrative Forest fields | [H] | `hermes/m5-land-source-matrix.md`, `source-watchlist-m5-m8.md` |
+| Contract rules, W strings, tiers, budgets, M4 precedents | [REPO] | `data-contract.md`, M3 section 13 and A10, M4 sections 7, 9, 14 |
+| Display file sizes 172,001 and 206,335 bytes | [REPO] | `v2/regions/*/display/` at `c04f5d6` |
