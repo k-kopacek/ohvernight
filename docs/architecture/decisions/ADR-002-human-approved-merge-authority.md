@@ -37,7 +37,10 @@ The owner may also merge personally.
 - Before merging, an agent confirms the pull request's current head still
   equals the approved SHA. If it does not, the agent stops and asks again.
 - A pull request waits for the owner even when it is reviewed and green.
-- At the time of writing, `main` has no GitHub branch protection, so this rule
-  is held by convention and agent instruction, not by the platform. Enabling
-  protection that requires the `python` and `node` checks is an owner
-  follow-up noted in the M1 specification.
+- At the time of writing, `main` had no GitHub branch protection. Since then
+  the repository ruleset `protect-main` requires a pull request, the `python`
+  and `node` checks on a branch up to date with `main`, and forbids force
+  pushes and deletion of `main` (observed 2026-10-19). It requires no
+  approving review, and `browser` is not a required check, so the human
+  approval in this decision and a green `browser` check are still held by
+  convention and agent instruction, not by the platform.

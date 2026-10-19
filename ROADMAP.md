@@ -231,6 +231,28 @@ and every group, claim, exclusion and alias survive the mapping.
   [continuous geographic Explore](docs/architecture/continuous-explore.md) is
   implemented in or before M8 is the owner's decision when M8 is specified.
 
+## Colorado coverage track — Planned
+
+A delivery track, not a milestone, added by owner decision D4 of the
+[autonomy activation packet](docs/agent-stack/autonomous-program/17-owner-activation-packet.md).
+The target is one continuous Colorado Explore surface with explicit coverage
+per kind of fact, following
+[continuous-explore.md](docs/architecture/continuous-explore.md) and the
+charter's [Colorado coverage strategy](docs/agent-stack/autonomous-program/08-colorado-coverage.md).
+
+- Region packages stay the unit of publication, validation and provenance; a
+  small coverage index and per-view lazy loading deliver them.
+- Statewide means the map can be navigated statewide and says where coverage
+  is missing. It never means every place, activity or permission is verified.
+- Rollout order: an Aspen and Douglas edge-crossing contract proof, then a
+  third region chosen by source availability, then regional waves.
+- No source or data model is scaled statewide before its identity, licensing,
+  trust, performance and coverage behaviour are validated on the pilot
+  regions.
+- Its specification is drafted after M4 closes and needs owner approval. No
+  loader, catalog or statewide change happens before that, and the single-
+  region loader and ADR-006 stay in force until then.
+
 ## Constraints that apply to every milestone
 
 - [Trust principles](docs/product/trust-principles.md) and the
