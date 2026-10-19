@@ -11,3 +11,4 @@
 | L7 | Unattended runtime (supervisor, usage probes, scheduled waves) | D7 approval, then implementation, pilot and a separate activation decision | — |
 | L8 | Hermes web research | Owner restores Hermes billing (K4); no spending without the owner | Coordinator reads primary pages itself where a spec requires it |
 | L9 | Local Qwen/Odysseus | `PAUSED_BY_OWNER` until the owner lifts it | — |
+| L10 | M5 production (PRs A–D) | Owner answers M5-D1…D17 and approves the specification in PR #41 (PR C additionally needs the owner's reading of the PAD-US Data Explorer terms, M5-D6) | M6 research inputs (#29, #33, #35) |
