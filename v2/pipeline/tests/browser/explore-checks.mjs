@@ -169,20 +169,24 @@ export async function runSheetLayoutChecks(client,origin,evaluate,navigate){
   measurements.push({region,width,height,feature,results,detail,scroll});
  }
  // Recorded on c04f5d6 before implementation: desktop/short-landscape outer
- // geometry and toolbar/first-content positions must survive the relocation.
+ // geometry and toolbar/detail-container positions must survive the relocation.
+ // Re-measured detail-body on the base: its top follows the toolbar bottom;
+ // paragraphs/headings inside it vary with the source content.
  for(const [width,height,half,expanded] of [[1024,768,[8,452.8125,340,307.1875],[8,184,340,576]],[1440,900,[8,532,340,360],[8,217,340,675]],[667,375,[8,108,266.796875,255],[8,108,266.796875,255]]])for(const region of ['aspen','douglas-co']){
   await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<768});await navigate(origin+'/v2/?region='+region+'&view=map');
-  const rects=()=>evaluate(`(()=>{const rect=e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height]};return {sheet:rect(explore.$('sheet')),header:rect(explore.$('sheet-header')),body:rect(explore.$('sheet-body')),toggle:rect(explore.$('sheet-toggle')),toolbar:rect(explore.$('detail-heading')),first:explore.$('detail-view').hidden?null:rect(explore.$('detail-body').querySelector('p,a'))}})()`);
+  const rects=()=>evaluate(`(()=>{const rect=e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height]};return {sheet:rect(explore.$('sheet')),header:rect(explore.$('sheet-header')),body:rect(explore.$('sheet-body')),toggle:rect(explore.$('sheet-toggle')),toolbar:rect(explore.$('detail-heading')),content:explore.$('detail-view').hidden?null:rect(explore.$('detail-body'))}})()`);
   const near=(actual,expected,label)=>actual.forEach((v,i)=>assert.ok(Math.abs(v-expected[i])<=1,label+' '+i+': '+v+' vs '+expected[i]));
   for(const detail of [false,true]){
-   if(detail)await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='water'),fs=explore.region.layers.get(entry.id).data.features;explore.showDetail(entry,fs.find(f=>/American Lake|Roaring Fork River/.test(f.properties.name))||fs[0])})()`);
+   if(detail)await evaluate(`(()=>{const id=${JSON.stringify(region==='aspen'?'nhd-72968354':'nhd-120656489')},entry=explore.region.registry.find(e=>e.kind==='water'&&explore.region.layers.get(e.id)?.data?.features.some(f=>f.properties.id===id));if(!entry)throw Error('Missing desktop baseline feature '+id);explore.showDetail(entry,explore.region.layers.get(entry.id).data.features.find(f=>f.properties.id===id))})()`);
    for(const state of ['collapsed','half','expanded']){
     await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');const m=await rects(),expected=state==='half'?half:state==='expanded'?expanded:[8,height-(width===667?12:8)-64,width===667?200:280,64],label='sheet baseline '+region+' '+width+' '+detail+' '+state;
     near(m.sheet,expected,label+' outer');near(m.toggle,[expected[0]+12,expected[1]+4,expected[2]-24,44],label+' toggle');
     if(detail&&state!=='collapsed'){
-     const toolbarHeight=region==='aspen'?44:53;
+     const toolbarHeight=region==='aspen'?44:width===667?75.5:53;
+     // 1024 half widens to the accepted 316px: compare height with c04f5d6 at that same width.
+     if(width===1024&&state==='half')assert.equal(m.toolbar[2],316,label+' toolbar accepted width');
      near(m.toolbar.slice(0,2),[expected[0]+12,expected[1]+76],label+' toolbar original position');assert.equal(m.toolbar[3],toolbarHeight,label+' toolbar original height');
-     near(m.first.slice(0,2),[expected[0]+12,expected[1]+76+toolbarHeight+8],label+' first content original position');
+     near(m.content.slice(0,2),[expected[0]+12,expected[1]+76+toolbarHeight],label+' detail container original position');
      assert.ok(m.body[1]>=m.header[1]+m.header[3]-1,label+' body after header');
     }
     measurements.push({region,width,height,state,detail,...m});
