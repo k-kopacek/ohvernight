@@ -15,7 +15,7 @@ states the exact scope.
 | M1 | Verification Baseline / Repo Hygiene | **Complete** |
 | M2 | Regional Data Contract + Evidence Semantics | **Complete** |
 | M3 | Unified Mobile-First Explore Architecture | **Complete** |
-| M4 | Functional Recreational Water | **In progress — M4-A complete; M4-B PAUSED_BY_OWNER** |
+| M4 | Functional Recreational Water | **In progress — M4-A merged; M4-B in owner review (PR #17)** |
 | M5 | Land Classification v1 | Planned |
 | M6 | Trails / COTREX | Planned |
 | M7 | Camping / Dispersed Camping | Planned |
@@ -138,12 +138,13 @@ Deferred beyond M3, each recorded so it is not lost:
 Status: research is complete ([docs/research/m4-water/](docs/research/m4-water/))
 and the [specification](docs/specs/M4-functional-recreational-water.md) was
 approved by the owner on 2026-10-06 (decisions D1–D12 and O1–O9, including
-the exact wording). M4-A source preservation merged in PR #12. M4-B is in
-progress on draft PR #17, PAUSED_BY_OWNER on 2026-10-08 at checkpoint 45f877d
-(retrieval complete and validated; padded Douglas integration, South Platte
-validation, wording, performance sessions, device check and owner approval
-outstanding). M4-C reviewed official recreation claims and optional M4-D for
-CPW structured data remain later delivery stages.
+the exact wording). M4-A source preservation merged in PR #12. M4-B is on
+draft PR #17: the padded Douglas water refresh is integrated, the South Platte
+passes its major-river check, CI and independent review pass, and three
+performance sessions are recorded. The owner's threshold confirmation,
+performance disposition, iPhone check of both regions and merge approval are
+outstanding. M4-C reviewed official recreation claims is next; optional M4-D
+for CPW structured data remains later. M4 is complete with A, B and C.
 
 Technical debt recorded by M4 (owner decision D1): USGS retired the National
 Hydrography Dataset on 1 October 2023. M4 uses a documented NHD snapshot as a
