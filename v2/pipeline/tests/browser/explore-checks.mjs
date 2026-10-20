@@ -151,8 +151,40 @@ export async function runSheetLayoutChecks(client,origin,evaluate,navigate){
   await evaluate('explore.$("sheet-body").scrollTop=0');const back=await point('detail-back');
   await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[back]});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:back.x,y:back.y+30}]});
   assert.equal(await evaluate('explore.$("sheet").classList.contains("is-dragging")'),false,label+' Back movement exempt');await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[back]});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:back.x,y:back.y+6}]});await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  assert.equal(await evaluate('explore.$("detail-view").hidden'),true,label+' native Back jitter works');await inspect(false,label+' Back results');
+  const backHit=await evaluate(`(()=>{
+   const button=explore.$('detail-back'),p=${JSON.stringify(back)},hit=document.elementFromPoint(p.x,p.y);
+   window.__backEvents=[];window.__backClicks=[];
+   // Retain the Event so defaultPrevented is read after every handler has run.
+   const record=event=>window.__backEvents.push({event,at:Date.now()}),reached=event=>window.__backClicks.push(event);
+   const types=['touchstart','touchmove','touchend','touchcancel','click'];
+   for(const type of types)document.addEventListener(type,record,{capture:true,passive:true});
+   button.addEventListener('click',reached,{capture:true,passive:true});
+   window.__stopBackTrace=()=>{for(const type of types)document.removeEventListener(type,record,true);button.removeEventListener('click',reached,true);};
+   return {target:hit?.id||hit?.tagName,onBack:button.contains(hit)};
+  })()`);
+  try{
+   await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[back]});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:back.x,y:back.y+6}]});await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+   const touchEndResolvedAt=Date.now();
+   // CDP can acknowledge touchEnd before a deferred GestureTap synthesizes click
+   // (Chromium TouchEmulatorImpl::HandleTouchEventAck). Wait for the click itself.
+   const backState=await evaluate(`(async()=>{
+    const started=performance.now(),deadline=started+2000,initialHidden=explore.$('detail-view').hidden;
+    while(${backHit.onBack}&&!window.__backEvents.some(({event:e})=>e.type==='click'||e.type==='touchcancel'||e.defaultPrevented)){
+     const remaining=deadline-performance.now();if(remaining<=0)break;
+     await new Promise(resolve=>setTimeout(resolve,Math.min(20,remaining)));
+    }
+    const sheet=explore.$('sheet');
+    return {initialHidden,waitedMs:performance.now()-started,hidden:explore.$('detail-view').hidden,state:explore.sheet.state,view:sheet.dataset.view,classes:sheet.className,
+     active:document.activeElement?.id||document.activeElement?.tagName,
+     events:window.__backEvents.map(({event:e,at})=>({type:e.type,target:e.target.id||e.target.tagName,at,prevented:e.defaultPrevented,reachedBack:window.__backClicks.includes(e)}))};
+   })()`);
+   const message=label+' native Back jitter works '+JSON.stringify({point:back,hit:backHit,touchEndResolvedAt,...backState});
+   assert.ok(backHit.onBack,message);
+   assert.ok(backState.events.some(e=>e.type==='click'&&e.reachedBack),message);
+   assert.ok(backState.events.every(e=>!e.prevented&&e.type!=='touchcancel'&&(e.type!=='click'||e.reachedBack)),message);
+   assert.equal(backState.hidden,true,message);
+  }finally{await evaluate('window.__stopBackTrace();delete window.__stopBackTrace;delete window.__backEvents;delete window.__backClicks');}
+  await inspect(false,label+' Back results');
   await evaluate('explore.showDetail(window.__sheetEntry,window.__sheetFeature);explore.sheet.setState("collapsed")');
   for(const [from,to,id] of [['collapsed','half','sheet-toggle'],['half','expanded','summary'],['expanded','half','detail-title']]){
    const p=await point(id),delta=await evaluate(`(()=>{const s=explore.$('sheet'),h=s.getBoundingClientRect().height,usable=ExploreSheet.panelViewport(s);return h-usable*${to==='half'?.4:.75};})()`);
