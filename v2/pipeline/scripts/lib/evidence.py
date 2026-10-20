@@ -35,6 +35,16 @@ def freshness(record, now):
         return "unavailable"
     return "stale" if (current - timestamp).total_seconds() > hours * 3600 else "current"
 
+def water_claim_freshness(claim, now):
+    """Present a water claim without weakening a restriction, using injected time."""
+    status = claim.get("status") if isinstance(claim, dict) else None
+    if status not in {"allowed", "restricted", "prohibited"}:
+        return {"status": "unknown", "overdue": False}
+    current = freshness(claim.get("evidence"), now) == "current"
+    return {"status": "unknown" if status == "allowed" and not current else status,
+            "overdue": not current and status in {"restricted", "prohibited"}}
+
+
 def make_evidence(source_url, agency, confidence="unverified", verification_method="source_fetch",
                   last_verified=None, notes=None, photos=None, **extra):
     if confidence not in {"high", "medium", "low", "unverified"}:

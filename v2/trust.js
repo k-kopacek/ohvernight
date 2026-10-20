@@ -6,6 +6,13 @@
     if(!Number.isFinite(timestamp)||!Number.isFinite(hours)||hours<=0||timestamp>now)return 'unavailable';
     return now-timestamp>hours*3600000?'stale':'current';
   }
+  function waterClaimFreshness(claim,now){
+    const status=claim?.status;
+    if(!['allowed','restricted','prohibited'].includes(status))return {status:'unknown',overdue:false};
+    const current=Number.isFinite(now)&&freshness(claim.evidence,now)==='current';
+    return {status:status==='allowed'&&!current?'unknown':status,
+      overdue:!current&&(status==='restricted'||status==='prohibited')};
+  }
   function sameTrip(a,b){return !!a&&!!b&&['arrive','depart','vehicle'].every(k=>a[k]===b[k]);}
   function applyRules(place,registry,now=Date.now()){
     const matches=(registry?.rules||[]).filter(r=>r.place_ids?.includes(place.id));
@@ -52,7 +59,7 @@
       fireState:interpreted?'current':fireAge==='stale'?'stale':'unavailable'
     };
   }
-  const api={freshness,sameTrip,applyRules,sourceSummary};
+  const api={freshness,waterClaimFreshness,sameTrip,applyRules,sourceSummary};
   if(typeof module!=='undefined')module.exports=api;
   scope.Trust=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

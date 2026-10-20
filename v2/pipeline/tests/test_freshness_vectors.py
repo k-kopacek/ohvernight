@@ -8,7 +8,7 @@ from pathlib import Path
 V2 = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(V2 / "pipeline" / "scripts"))
 
-from lib.evidence import freshness
+from lib.evidence import freshness, water_claim_freshness
 
 
 class FreshnessVectorTests(unittest.TestCase):
@@ -18,6 +18,9 @@ class FreshnessVectorTests(unittest.TestCase):
             raw = vector["now"]
             current = datetime.fromisoformat((raw + "T00:00:00Z") if len(raw) == 10 else raw.replace("Z", "+00:00"))
             self.assertEqual(freshness(vector["record"], current), vector["expected"], vector["name"])
+            if "claim_status" in vector:
+                claim = {"status": vector["claim_status"], "evidence": vector["record"]}
+                self.assertEqual(water_claim_freshness(claim, current), vector["expected_water"], vector["name"])
 
 
 if __name__ == "__main__":

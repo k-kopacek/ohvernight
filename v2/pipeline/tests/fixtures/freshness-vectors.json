@@ -13,5 +13,20 @@
   {"name":"string threshold","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"2026-09-25T00:00:00Z","max_age_hours":"24"},"expected":"unavailable"},
   {"name":"unparseable timestamp","now":"2026-09-26T00:00:00Z","record":{"last_confirmed_at":"not-a-date","max_age_hours":24},"expected":"unavailable"},
   {"name":"date-only timestamp","now":"2026-09-26T12:00:00Z","record":{"last_confirmed_at":"2026-09-26","max_age_hours":24},"expected":"current"},
-  {"name":"null record","now":"2026-09-26T00:00:00Z","record":null,"expected":"unavailable"}
+  {"name":"null record","now":"2026-09-26T00:00:00Z","record":null,"expected":"unavailable"},
+  {"name":"water allowed inside 2160 hours","now":"2026-12-29T23:59:59Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"current","claim_status":"allowed","expected_water":{"status":"allowed","overdue":false}},
+  {"name":"water allowed boundary 2160 hours","now":"2026-12-30T00:00:00Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"current","claim_status":"allowed","expected_water":{"status":"allowed","overdue":false}},
+  {"name":"water allowed past 2160 hours","now":"2026-12-30T00:00:01Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"stale","claim_status":"allowed","expected_water":{"status":"unknown","overdue":false}},
+  {"name":"water restricted inside 2160 hours","now":"2026-12-29T23:59:59Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"current","claim_status":"restricted","expected_water":{"status":"restricted","overdue":false}},
+  {"name":"water restricted boundary 2160 hours","now":"2026-12-30T00:00:00Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"current","claim_status":"restricted","expected_water":{"status":"restricted","overdue":false}},
+  {"name":"water restricted past 2160 hours","now":"2026-12-30T00:00:01Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"stale","claim_status":"restricted","expected_water":{"status":"restricted","overdue":true}},
+  {"name":"water prohibited inside 2160 hours","now":"2026-12-29T23:59:59Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"current","claim_status":"prohibited","expected_water":{"status":"prohibited","overdue":false}},
+  {"name":"water prohibited boundary 2160 hours","now":"2026-12-30T00:00:00Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"current","claim_status":"prohibited","expected_water":{"status":"prohibited","overdue":false}},
+  {"name":"water prohibited past 2160 hours","now":"2026-12-30T00:00:01Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"stale","claim_status":"prohibited","expected_water":{"status":"prohibited","overdue":true}},
+  {"name":"water unknown inside 2160 hours","now":"2026-12-29T23:59:59Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"current","claim_status":"unknown","expected_water":{"status":"unknown","overdue":false}},
+  {"name":"water unknown boundary 2160 hours","now":"2026-12-30T00:00:00Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"current","claim_status":"unknown","expected_water":{"status":"unknown","overdue":false}},
+  {"name":"water unknown past 2160 hours","now":"2026-12-30T00:00:01Z","record":{"last_confirmed_at":"2026-10-01","max_age_hours":2160},"expected":"stale","claim_status":"unknown","expected_water":{"status":"unknown","overdue":false}},
+  {"name":"water allowed future confirmation","now":"2026-10-01T00:00:00Z","record":{"last_confirmed_at":"2026-10-02","max_age_hours":2160},"expected":"unavailable","claim_status":"allowed","expected_water":{"status":"unknown","overdue":false}},
+  {"name":"water restricted future confirmation","now":"2026-10-01T00:00:00Z","record":{"last_confirmed_at":"2026-10-02","max_age_hours":2160},"expected":"unavailable","claim_status":"restricted","expected_water":{"status":"restricted","overdue":true}},
+  {"name":"water prohibited future confirmation","now":"2026-10-01T00:00:00Z","record":{"last_confirmed_at":"2026-10-02","max_age_hours":2160},"expected":"unavailable","claim_status":"prohibited","expected_water":{"status":"prohibited","overdue":true}}
 ]

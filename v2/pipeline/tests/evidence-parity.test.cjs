@@ -9,5 +9,6 @@ const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/freshn
 for (const vector of fixture) {
   test(`freshness parity: ${vector.name}`, () => {
     assert.equal(Trust.freshness(vector.record, Date.parse(vector.now)), vector.expected);
+    if(vector.claim_status)assert.deepEqual(Trust.waterClaimFreshness({status:vector.claim_status,evidence:vector.record},Date.parse(vector.now)),vector.expected_water);
   });
 }
