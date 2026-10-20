@@ -581,7 +581,111 @@ Small sequential pull requests on Aspen and Douglas County only. Each is indepen
 
 If the source policy is declined or delayed, M6-A and M6-B still ship, M6-C ships if M6-D2 is granted on its own, and the milestone review says plainly that activity permission and trailheads were not delivered (M6-D16).
 ## 19. Rollback
+
+- **M6-A:** revert. No data or visible change.
+- **M6-B:** revert; the M3 detail wording returns.
+- **M6-C:** revert. Canonical data loses only `trail_id`; display returns to segments; saved segment IDs resolve as before because they were never changed.
+- **M6-D:** revert; the snapshot record's pre-fetch SHA-256 values identify the state to return to.
+- **M6-E / M6-F:** revert, or empty the registry. With no registry every activity shows not established and no trailhead link is shown.
+- **A single wrong claim or link:** set it to `unknown` or delete the link in a one-line change; always safe. A wrong grouping record: delete it; the trails fall back to source-route grouping.
+
 ## 20. Risks
+
+Engineering risks with their mitigations. The material risks the owner should weigh are in 22.3.
+
+| Risk | Mitigation |
+|---|---|
+| Grouping joins or splits wrongly | TG1–TG14, negative fixtures for the Difficult Creek, Turtle Mountain and Indian Creek shapes, the near-miss and zero-padding reports, owner device check |
+| A member name conflict blocks the build on real data | Build stops and reports (TG2); no name is picked; the owner decides per case |
+| Trail display bytes or performance regress | Budgets enforced; grouping is expected to reduce per-feature properties; report, do not tune |
+| Saved plans break | `trail-aliases.json`; PC13; tests for both resolving and non-resolving IDs |
+| A claim is wrong at entry | Restrictions first; the instrument publisher's own page only; owner approves each record |
+| A claim goes stale | 9.4 freshness; restrictions never weaken; one-line downgrade |
+| Two sources disagree | AE8: both kept; never `allowed` from a conflict |
+| Research inputs treated as truth | Every [DRAFT-PR] item is an input; `last_confirmed_at` only after the coordinator's read and the owner's approval |
+
 ## 21. Unknowns
+
+Stated as unknown; none blocks approval of the source-neutral sections.
+
+- Whether the current segment key (`objectid`) persists across the publisher's releases. [UNK]
+- Whether the current route number is unique within a forest, a ranger district or nationally, and so what the scope in 8.2 is (L3). [UNK]
+- Which designation instrument the source policy names for motorized use, and its field semantics and date meaning (L4). PR #24 reports map-versus-service disagreements for some Rampart routes. [DRAFT-PR 24]
+- Whether any approved site source names the trail a trailhead serves in a structured field (L5). PR #24 found none complete. [DRAFT-PR 24]
+- Whether the M5 specification is approved with stable land unit IDs, and whether the trail source carries a managing-unit field (M6-D10).
+- Whether PR #20 (Rampart scenario) is merged before M6 closes.
+- How many pilot trails will have a reviewed designation record in M6-E.
+- Whether 12 new strings (PC1) are enough once the detail is drafted.
+
 ## 22. Owner decision packet
+
+One packet. The owner can acknowledge 22.1 explicitly (silence is not approval), approve 22.2 in one reply ("accept the recommended defaults", or list exceptions by ID), and should read 22.3 before replying. A recommendation is the coordinator's proposal only.
+
+### 22.1 Settled by default (no decision needed; already binding)
+
+These follow from approved repository documents and are restated, not chosen, here:
+
+1. Unknown is the default and is shown as unknown (trust principle 1, contract rule 1).
+2. Never infer permission or access from a mapped trail, ownership or proximity (trust principle 2, contract rule 15).
+3. Staleness never weakens a restriction; positive claims fail closed (trust principles 5 and 6, contract rules 6 and 14).
+4. Presentation never exceeds the evidence; trust-bearing wording changes only with owner approval (trust principles 7 and 8).
+5. Canonical source records are preserved; trails are not merged or renamed on geometric continuity or matching names alone; identity survives a jurisdiction or package boundary (ROADMAP M6).
+6. Proximity is not a relationship; relationships are source-backed, reviewed or unknown (product principle 12, adventure model section 3).
+7. No community or third-party content in production data (M4 D8).
+8. Budgets and performance limits inherited from M3 and M4.
+9. Milestone close requires a phone run of the canonical scenario by an independent tester and the six-heading product review (product scorecard).
+10. No merge without the owner's approval of the exact head SHA; no ROADMAP, trust-principle or contract-rule change outside its own approved pull request.
+
+### 22.2 Recommended defaults (acceptable in one reply)
+
+| ID | Decision | Options | Recommendation | Bear case against it |
+|---|---|---|---|---|
+| M6-D1 | Scope and delivery | (a) PRs M6-A to M6-F on Aspen and Douglas only, neutral PRs first; (b) one combined PR after the source policy | (a) | Six gates and up to four device checks; owner bandwidth may be the binding constraint |
+| M6-D2 | Narrow unlock for M6-C | (a) Confirm now that the already-published USFS trails layer keeps its segment-geometry and route-identity roles and that `trail_number` is its route identity within a stated scope, so M6-C can proceed before the full policy; (b) wait for the full source policy | (a), only if the owner is comfortable deciding this one role ahead of PR #24 | It pre-empts part of the source policy; if PR #24 later changes the geometry source, trail IDs and aliases are reworked |
+| M6-D3 | Vocabulary and statuses | (a) The 9.1 keys, including reserved e-bike classes and `ohv_wide`, and the four statuses `allowed`, `restricted`, `prohibited`, `unknown`, matching M4; (b) three states `allowed`, `prohibited`, `unknown` | (a) | `restricted` is broad; a reader may not distinguish "season only" from "permit only" without reading the summary |
+| M6-D4 | Disconnected pieces of one source route | (a) One trail with several parts, disclosed (PC6), no line between parts; (b) M4's model: each part its own trail with the same name | (a) | See MR3: a single trail feature invites a continuity assumption even with the parts line |
+| M6-D5 | Reviewed grouping records | (a) Mechanism in M6-A, file ships empty unless the owner supplies records; (b) no mechanism in M6 | (a) | An empty mechanism is unused surface area; the first record will set precedent for what "one trail a user would name" means |
+| M6-D6 | Adjacency tolerance | (a) Exact at six decimals, near-misses within 25 m reported only; (b) a snapping tolerance | (a) | Real pieces 6 m apart (Indian Creek) stay separate parts, which under (a) of M6-D4 only changes the parts count, but under (b) of M6-D4 creates two trails |
+| M6-D7 | What can produce `allowed` | (a) Only a reviewed legal designation; (b) also a reviewed agency use statement; (c) also a validated structured field without manual review | (a) for M6, with (b) for non-motorized activities only as a later amendment | Hiking, biking and equestrian use is rarely legally designated, so under (a) almost every non-motorized activity stays not established |
+| M6-D8 | Concurrent routes on one segment | (a) A segment belongs to at most one trail (TG6); concurrency only via a reviewed record; (b) many-to-many membership | (a) | A real shared section (two named trails on one tread) shows under one trail only |
+| M6-D9 | Trail systems and recreation areas | (a) Reserved entity and `member_of` link; none created unless a stating source is approved; (b) create from reviewed agency pages in M6 | (a) | Rampart is a named area users think of as one place; (a) leaves it absent in M6 |
+| M6-D10 | `governed_by` to M5 land units | (a) Only if M5 is approved with stable unit IDs and the trail source has a managing-unit field, through a reviewed mapping; otherwise deferred; (b) defer to M8 | (a) | Couples M6 to an unapproved M5 draft |
+| M6-D11 | Roads and `approached_via` | (a) M7, sharing the 9.1 vehicle-class vocabulary; (b) M6 | (a) | Scenario A step 4 and Rampart's road-rules question do not improve in M6 |
+| M6-D12 | Freshness defaults | (a) 2,160 hours for claims, shorter for seasonal at the reviewer's choice; 8,760 for grouping and relationship records; (b) 720 hours for motorized claims | (a) | See MR5; 90 days may be long for designations re-issued each season |
+| M6-D13 | Map-level status | (a) None, as M4 O3; status in the detail; (b) a neutral style for trails with a reviewed motorized prohibition | (a) | A rider scanning the map cannot see where motorcycles are prohibited without opening each trail |
+| M6-D14 | Wording process | (a) Constraints PC1–PC14 now; literals drafted and approved in the PR that renders them; (b) all literals in this specification before approval | (a) | Literals approved one PR at a time can drift in tone; owner sees them piecemeal |
+| M6-D15 | Budgets | (a) Section 15: inherited limits, grouping ≤ today's bytes, new sources measured before commit; (b) a fixed trail-layer byte cap now | (a) | Without a number, a LOCKED source could arrive large; the stop-and-report rule is the only control |
+| M6-D16 | What completes M6 | (a) M6-A, B, C, E and F, with D as needed; if the source policy is declined, A to C with the review saying plainly that activity permission and trailheads were not delivered; (b) M6 is not complete without E | (a) | A milestone titled Trails could close without answering "may I ride here?" for any trail |
+
+### 22.3 Material risks (flagged separately)
+
+| ID | Risk | Bear case |
+|---|---|---|
+| MR1 | **The source policy stays undecided.** M6-C to M6-F wait on PR #24. | M6 ships identity and wording only; Scenario A step 2 moves at best from "partly, confusing" to "correctly unknown", and the milestone is foundation, not product. Building identity on the current source first (M6-D2) may then need rework. |
+| MR2 | **Route identity is the wrong key.** Grouping by the source route number is safe only if the number means "one trail" within the stated scope. | If numbers are reused across units, recycled, or assigned to segments rather than routes, number-based grouping is the "merge on a matching label" error in another form, and it would ship to every user on day one of M6-C. |
+| MR3 | **One trail feature implies continuity.** Under M6-D4 (a), Indian Creek is one trail in four pieces, up to about 2.3 km apart. | The parts line may be ignored on a phone; a rider can plan through a gap that is a private inholding or does not exist on the ground. GPX of the whole trail makes the gap easy to miss. |
+| MR4 | **Designation versus management confusion persists, or worsens.** Research reports disagreements between a designation map and its service fields for some Rampart routes. [DRAFT-PR 24] | Under AE8 every conflicted trail shows "not established" for motorcycles; on the very trails riders care about the product appears to regress, and the pressure to pick a reading will be strong. |
+| MR5 | **Review load and ageing.** Every positive claim reverts to not established after its age. | With one reviewer and a 90-day default, the product's allowed answers decay each season unless reviews keep pace; Scenario A scores can fall between milestones with no code change. |
+| MR6 | **Identifier persistence is unknown.** Segment IDs use `objectid`, whose persistence is not established. | A refresh that re-keys or re-segments could orphan saved items and claims; geometry matching cannot follow a re-segmented trail, and claims scoped to segment IDs would silently lose their subject. |
+| MR7 | **A seasonal window read the wrong way round.** Designated-open windows and restriction windows have opposite meanings; the source's legend decides which (L4). The Rampart baseline is already auditing a `12/01-03/14` reading. [DRAFT-PR 20] | One mis-mapped field displays a prohibited season as allowed, the exact false positive trust principle 6 forbids, on every trail sharing that value. |
+
+**Unlock.** Approving the M6 source policy (PR #24) — the sources per role, their terms reading, and the L3–L6 mappings — unlocks M6-C (without needing M6-D2), M6-D, M6-E and M6-F.
+
 ## Appendix A. Evidence basis
+
+| Fact | Basis | Where |
+|---|---|---|
+| Segment counts, trail numbers, connectivity, Difficult Creek, Turtle Mountain, Indian Creek, padding, activity values, display bytes, saved-plan storage | [MEAS] | [m6-spec-evidence.md](../research/m6-trails/m6-spec-evidence.md) T1–T6 |
+| Trail ID form, activity keys and verbatim strings | [REPO] [MEAS] | `v2/pipeline/scripts/fetch_trails.py`; contract R29 |
+| Browser handling of use dates and straight-line listings | [MEAS] | `v2/explore/trail-seasons.js`, `browse.js`, `capabilities.js` |
+| Trust rules, evidence semantics, fact coverage, display rules, register N1 | [REPO] | `docs/product/trust-principles.md`; `v2/pipeline/docs/data-contract.md` |
+| User-facing trail identity requirement, product-alignment expectations | [REPO] | `ROADMAP.md` M6 |
+| Relationship origins, coverage model, M6 obligations to M8 | [REPO] | `docs/architecture/adventure-model.md` sections 3–5 |
+| Package boundary implications | [REPO] | `docs/architecture/continuous-explore.md` |
+| Grouping, claim, freshness, alias and wording precedents | [REPO] | `docs/specs/M4-functional-recreational-water.md` sections 7–11, A1–A4, O3, O6 |
+| Rule numbering after R85; coverage-record shape; `governed_by` rule | [DRAFT M5] | `k-kopacek/m5-spec-draft`: `docs/specs/M5-land-classification.md` sections 9, 10, 13 |
+| Source-policy proposal, candidate concepts, route-label match sample (14/25), map-service conflicts | [DRAFT-PR 24] | `docs/research/m6-trails/m6-source-policy-proposal.md` on `docs/m6-source-policy-proposal` |
+| Per-class designation shape, date parsing states, candidate-only joins | [DRAFT-PR 33] | `docs/research/m6-trails/m6-prototype-notes.md`, `v2/pipeline/prototypes/m6/motorized_evidence.py` |
+| Model gaps: conflicting readings, instruments, day use | [DRAFT-PR 29] | `docs/research/m8-adventure/rampart-worked-example.md` |
+| Rampart scenario, baseline, `12/01-03/14` audit | [DRAFT-PR 20] | `docs/product/acceptance-scenario-rampart-day-use.md` on `docs/rampart-day-use-scenario` |
+| Orders as entities (M7) | [DRAFT-PR 35] | `docs/research/m7-camping/orders-as-entities.md` |
