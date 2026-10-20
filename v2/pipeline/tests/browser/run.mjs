@@ -155,7 +155,7 @@ async function main(){
     site=await staticServer();
     const debugPort=await freePort();
     profile=await mkdtemp(join(tmpdir(),'ohvernight-browser-'));
-    browser=spawn(chrome.candidate,[`--headless=new`,`--enable-features=SyntheticPointerActions`,`--no-sandbox`,`--disable-gpu`,`--disable-dev-shm-usage`,`--remote-debugging-port=${debugPort}`,`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','ignore']});
+    browser=spawn(chrome.candidate,[`--headless=new`,`--no-sandbox`,`--disable-gpu`,`--disable-dev-shm-usage`,`--remote-debugging-port=${debugPort}`,`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','ignore']});
     lifecycle=trackProcess(browser);
     await waitFor(`http://127.0.0.1:${debugPort}/json/version`,{chrome,processState:()=>lifecycle.state,exitSignal:lifecycle.signal});
     const targets=await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json();

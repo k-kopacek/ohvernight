@@ -233,7 +233,9 @@ export async function runExploreChecks(client,origin,signal,root){
  const interception=async(method,params)=>{try{return await client.command(method,params);}catch(error){if(!error.message.includes('Invalid InterceptionId'))throw error;}};
  const evaluate=async expression=>{signal.throwIfAborted();if(pumpError)throw pumpError;const r=await client.command('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw new Error(expression+' '+JSON.stringify(r.exceptionDetails));return r.result.value;};
  const pump=(async()=>{while(running){const e=client.events.shift();if(!e){await delay(5,undefined,{signal});continue;}
-  if(e.method==='Fetch.requestPaused'){
+  if(e.method==='Tracing.dataCollected'){client.__tapTrace?.push(...e.params.value);}
+  else if(e.method==='Tracing.tracingComplete'){client.__tapTraceComplete=true;}
+  else if(e.method==='Fetch.requestPaused'){
    const {requestId,request}=e.params,url=new URL(request.url);
    if(url.origin!==origin){current.externalBlocked++;await interception('Fetch.failRequest',{requestId,errorReason:'BlockedByClient'});continue;}
    const replacement=await current.intercept?.(url);
