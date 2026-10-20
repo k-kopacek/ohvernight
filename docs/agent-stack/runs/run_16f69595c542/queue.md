@@ -16,6 +16,7 @@ Runtime: `RUNTIME_NOT_READY` (no verified host supervisor). Capacity: `QUOTA_UNK
 | Q8 | Colorado coverage specification draft | Claude | after M4 closes and D4 | Waiting | L6 |
 | Q10 | M5 revision to owner direction (D1 A; PVT unknown; shorter legend; PAD-US not cleared) and one consolidated decision packet — brief `.missions/claude-m5-revision-packet.md` | Claude worker `ctx_a32dc644347c` (`task_7f5746d1083a`) | `37572d1` (PR #41) | **Done** — `2c329e3` on PR #41, reviewed, no blocking finding | Owner: `M5: accept defaults; R1 a` |
 | Q11 | PR #39 CI failure: read-only diagnosis (Q2 step 1) — brief `.missions/claude-pr39-ci-diagnosis.md` | Claude worker `ctx_7825d4943902` (`task_0d9c8c2dbeec`), scratch branch `k-kopacek/pr39-ci-diagnosis` | `b83b2b0` | **Done** — inconclusive, leaning race; test-only diff in `.missions/pr39-ci-diagnosis-report.md`; Codex brief updated to start at step 2 | Q2 (L4) |
+| Q12 | Design-tooling upgrade evaluation (Emil Kowalski skills, Impeccable, Taste, Figma MCP, Playwright MCP/Test): proposal, draft design spec with protected trust tokens, one isolated non-production pilot — brief `.missions/claude-design-tooling-upgrade.md` (owner request 2026-10-20) | Claude worker `ctx_2a93e0defd41` (`task_1335d63b32d2`), worktree `design-tooling-upgrade-2`, branch `k-kopacek/design-tooling-upgrade` | `c04f5d6` | Running | No installation, no Figma access, no production UI; coordinator review then draft PR |
 | Q9 | Runtime observer/admission-controller specification (D7 i) | Claude | after D7 | Waiting | L7 |
 
 Done this run:
