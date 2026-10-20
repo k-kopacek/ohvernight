@@ -1,5 +1,9 @@
 # Optional local Qwen evidence advisory tooling
 
+**Status: `PAUSED_BY_OWNER` (owner instruction, 2026-10-19).** No agent
+resumes, extends, schedules or uses this tooling, or the Odysseus/Qwen
+integration, until the owner explicitly lifts the pause.
+
 Step 1 packages the optional adapter for offline review. No inference is
 authorized here. The recovered adapter and test were imported with only their
 private endpoint literal replaced by a neutral placeholder, under the explicit

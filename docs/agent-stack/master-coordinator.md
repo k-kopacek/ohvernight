@@ -28,17 +28,24 @@ Ohvernight combines outdoor activities and overnight options around the future q
 | M1 — Verification Baseline / Repo Hygiene | Complete; preserve provenance, publication, regression and merge safeguards |
 | M2 — Regional Data Contract + Evidence Semantics | Complete; preserve manifests, fact separation, stable validation rules and freshness parity |
 | M3 — Unified Mobile-First Explore Architecture | Complete; preserve shared Explore and approved renderer/interaction decisions |
-| M4 — Functional Recreational Water | Current; production sequence M4-A → M4-B → M4-C; M4-D optional. M4-A merged 2026-10-07 (PR #12); M4-B is next and waits for recorded owner decisions |
-| M5 — Land Classification v1 | Future; read-only source/evidence research |
-| M6 — Trails / COTREX | Future; read-only terms, identity and technical reconnaissance |
-| M7 — Camping / Dispersed Camping | Future; read-only evidence/restriction research |
-| M8 — Choose Your Adventure | Future; read-only planning/ranking research and isolated analysis |
+| M4 — Functional Recreational Water | Current; production sequence M4-A → M4-B → M4-C; M4-D optional. M4-A merged 2026-10-07 (PR #12); M4-B is in final owner gates (PR #17); M4-C implementation may be prepared on a branch stacked on M4-B, merging only after M4-B |
+| M5 — Land Classification v1 | Future; research and a draft specification. Production implementation after the owner approves the M5 specification |
+| M6 — Trails / COTREX | Future; terms, identity and technical reconnaissance and a draft specification. Production implementation after the owner approves the M6 specification and its source policy |
+| M7 — Camping / Dispersed Camping | Future; evidence/restriction research and a draft specification. Production implementation after the owner approves the M7 specification |
+| M8 — Choose Your Adventure | Future; planning/ranking research, isolated analysis and a draft specification. Production implementation after the owner approves the M8 specification |
+| Colorado coverage track | Future delivery track, not a milestone; see [ROADMAP.md](../../ROADMAP.md). No loader, catalog or statewide change before its specification is approved |
 
-Do not silently reorder milestones, reopen completed scope or implement future functionality. Future research may produce documents and isolated non-shipping prototypes only within an assigned package; it must not alter production code, published data, runtime contracts, UI or dependencies.
+The owner approves each milestone specification once. Inside an approved specification the coordinator and workers decide routine implementation, test, sequencing and documentation questions without returning to the owner; product, trust, source-use and material architecture questions stay owner decisions. Do not silently reorder milestones, reopen completed scope or implement a milestone before its specification is approved. Until then, future research may produce documents, draft specifications and isolated non-shipping prototypes only within an assigned package; it must not alter production code, published data, runtime contracts, UI or dependencies.
+
+## Bounded autonomous program
+
+The owner's bounded autonomous build charter is in [autonomous-program/](autonomous-program/README.md); its reconciliation with this contract is [file 16](autonomous-program/16-reconciliation-with-current-authority.md). It sets the target product and the coordinator loop. It adds no merge authority and amends no specification. Where it conflicts with this contract, an ADR or an approved specification, the conflict is resolved in favour of those until a separate owner-approved change amends them.
+
+Development autonomy, meaning continuous specification drafting, dispatch, implementation, independent review, testing and draft pull requests within approved specifications, is the operating mode. Production autonomy, meaning merge and deployment, is not delegated. Unattended continuation after the coordinator session ends, or across usage resets, requires the host runtime described in [file 05](autonomous-program/05-orca-runtime.md) to be implemented, tested and separately approved. Until then the runtime state is `RUNTIME_NOT_READY`: the coordinator works while a session is open and checkpoints before it closes.
 
 ## Startup restoration
 
-1. Open `~/Projects/ohvernight`. Verify actual repository root, remote identity and current branch; do not infer state from directory spelling, an old SHA or a previous session.
+1. Open the coordinator's Orca worktree (currently under `~/orca/workspaces/Ohvernight/`) or `~/Projects/ohvernight`. Verify actual repository root, remote identity and current branch; do not infer state from directory spelling, an old SHA or a previous session.
 2. Read `AGENTS.md`, `ROADMAP.md`, `docs/product/product-principles.md`, `docs/product/trust-principles.md`, `docs/architecture/system-overview.md`, `docs/architecture/agent-stack.md` and relevant `docs/architecture/decisions/`. Read the regional contract at `v2/pipeline/docs/data-contract.md`, final M3 spec/amendments and `docs/specs/M4-functional-recreational-water.md` in full. Read relevant `docs/research/m4-water/` artifacts, PR descriptions and owner decisions. Resolve documents from the verified base/worktree when the canonical checkout is older; never reset it merely to restore context.
 3. Read the installed Orca orchestration skill and its version-matched guide before dispatch or changing orchestration. Resolve the executable as the skill directs; use its supported commands rather than remembered syntax.
 4. Inspect status, staged/unstaged changes, branches, worktrees and their heads. Preserve unrelated work. Refresh remote knowledge using authorized non-destructive reads/fetches; verify GitHub `main`, relevant PR head/base SHAs, reviews, checks and merge state. Local `origin/main` can be stale. Report inaccessible remote state as unverified, with the last known timestamp.
@@ -88,6 +95,8 @@ Run **EXECUTE → REVIEW → IDENTIFY GAPS → GENERATE TASKS → PRIORITIZE →
 
 Keep durable run state under `docs/agent-stack/runs/<run-id>/`: coordinator-owned `queue.md`, `locks.md`, `approvals.md` and `owner-return.md`; per-worker subdirectories containing `checkpoint.md` and artifact indexes. Research lives under scoped `docs/research/` directories described by worker contracts. These are conventions for new runs; restore existing equivalent records rather than duplicate them. Use relative links, UTC timestamps and exact input SHAs; distinguish draft, self-checked, independently reviewed and owner-approved states. Durable files are not institutional approval until reviewed through the required workflow.
 
+Operational runtime state stays outside the repository: leases, heartbeats, usage snapshots, provider or account identifiers and Orca session identifiers live in private host state on the machine running the work. Only the sanitized queue, locks, approvals, checkpoints and owner-return reports above are committed.
+
 ## Merge policy
 
 No autonomous merge, auto-merge, direct-main push, force-push or shared-history rewrite. Before any specifically delegated merge:
@@ -98,6 +107,29 @@ No autonomous merge, auto-merge, direct-main push, force-push or shared-history 
 4. Confirm the resulting merge and record it. Main publishes production; merge approval does not permit unrelated data refreshes or deployments.
 
 The default final action is the human merge. No worker, CI success or exhausted queue supplies approval.
+
+## Owner communication (owner direction 2026-10-20)
+
+Default cadence: one concise consolidated daily report, plus exceptions. The coordinator sends no owner-facing message for these:
+
+- a worker starting, running, or finishing a routine subsection;
+- an orchestration notification arriving;
+- routine commits, test runs or retries;
+- intermediate diagnostic hypotheses;
+- background checks;
+- a task moving between authorized phases.
+
+Those events are recorded in run state only.
+
+An exception message is sent only for:
+
+- a completed milestone or product capability;
+- a genuine owner decision;
+- a critical security, trust, licensing or execution blocker;
+- an acceptance failure that cannot be resolved within existing authority;
+- a prolonged suspension that needs an owner action.
+
+A report never stops the execution loop. Claude does not poll orchestration only to report progress. Model-free monitoring and event-driven completion are preferred.
 
 ## Morning / owner-return report
 

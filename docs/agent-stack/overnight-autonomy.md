@@ -68,3 +68,7 @@ For a hang or loop:
 One worker finishing, one pool reaching a limit, a completed initial queue or an unanswered owner gate is not a global stop. At a protected reserve, stop discretionary work for that pool, save state and move only to a compatible authorized pool with spare capacity. At Claude's limit, independent workers continue within their contracts.
 
 Stop the run for the master contract's global conditions: explicit owner stop; unsafe shared state; missing master contract; no usable authorized capacity above reserves; or documented saturation. If all work is owner-locked and discovery yields no independent task, checkpoint and wait. Leave an owner-return report, queue/locks, artifacts and exact resume points. On owner return, report clearly before further long dispatch; continue only within standing authorization.
+
+## Runtime limits
+
+This contract runs inside a live coordinator session. Nothing in it keeps a session alive, wakes a coordinator after a usage reset, or dispatches when no coordinator is present. Unattended continuation needs the host runtime of [autonomous-program/05-orca-runtime.md](autonomous-program/05-orca-runtime.md), implemented, tested and approved separately; until then the runtime state is `RUNTIME_NOT_READY`. Before a session ends, checkpoint every task and leave already-dispatched workers with complete packages. Do not describe the run as continuing after the session ends unless the runtime has been verified to do so.

@@ -47,6 +47,10 @@ authoritative unless a newer explicit owner instruction supersedes them.
 - A Hermes researcher reads `docs/agent-stack/hermes-research.md`.
 - Every agent reads `docs/agent-stack/roles.md` for its write and merge
   boundaries.
+- The owner's bounded autonomous build charter is in
+  `docs/agent-stack/autonomous-program/`. It sets the target product and the
+  coordinator loop; its authority is limited by these contracts, the ADRs and
+  approved specifications, and it grants no merge authority.
 
 ## Working rules
 
