@@ -91,6 +91,154 @@ export function trailSamples(features,crossingIds){
 }
 // Readiness must belong to the loaded destination document, not its forwarding page.
 export function destinationLoaded(frame,url,loaded){return frame.url===url&&loaded.has(frame.loaderId);}
+// Inspect rendered geometry and hit testing, including the scrollport's clipping.
+export async function runSheetLayoutChecks(client,origin,evaluate,navigate){
+ const measurements=[];
+ const point=async id=>evaluate(`(()=>{const r=explore.$(${JSON.stringify(id)}).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+ const inspect=async(detail,label)=>{
+  const m=await evaluate(`(()=>{
+   const header=explore.$('sheet-header')||document.querySelector('.explore-sheet-header'),body=explore.$('sheet-body'),summary=explore.$('summary'),toolbar=explore.$('detail-heading')||document.querySelector('.explore-detail-heading');
+   const rect=e=>{const r=e.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+   const h=rect(header),b=rect(body),intersects=(a,z)=>a.left<z.right&&a.right>z.left&&a.top<z.bottom&&a.bottom>z.top;
+   const overlaps=[];
+   for(const e of body.querySelectorAll('*')){
+    const r=rect(e);if(!r.width||!r.height||getComputedStyle(e).visibility==='hidden'||e.closest('[hidden]'))continue;
+    // A scrolled descendant can have an offscreen DOMRect; only its painted,
+    // clipped portion is visible. Hit testing below separately detects bleed.
+    const painted={left:Math.max(r.left,b.left),right:Math.min(r.right,b.right),top:Math.max(r.top,b.top),bottom:Math.min(r.bottom,b.bottom)};
+    if(painted.right>painted.left&&painted.bottom>painted.top&&intersects(painted,h))overlaps.push(e.id||e.tagName);
+   }
+   const rows=[explore.$('sheet-toggle'),summary,...(${detail}?[toolbar]:[])];
+   return {header:h,body:b,summary:rect(summary),toolbar:rect(toolbar),inside:header.contains(toolbar),overlaps,
+    hits:rows.map(e=>{const r=rect(e);return header.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2));}),
+    padding:parseFloat(getComputedStyle(summary).paddingBottom)+parseFloat(getComputedStyle(header).borderBottomWidth),
+    labelled:document.getElementById(explore.$('detail-view').getAttribute('aria-labelledby'))===explore.$('detail-title')};
+  })()`);
+  assert.ok(m.body.top>=m.header.bottom-1,label+' body follows header');assert.deepEqual(m.overlaps,[],label+' no painted body descendant intersects header');assert.ok(m.hits.every(Boolean),label+' header rows win hit testing');
+  if(detail){assert.ok(m.inside,label+' toolbar inside header');assert.ok(Math.abs(m.toolbar.top-m.summary.bottom)<=1,label+' toolbar flush with summary');assert.ok(m.toolbar.bottom<=m.header.bottom&&m.toolbar.top>=m.header.top,label+' toolbar contained');assert.ok(m.toolbar.bottom<=m.body.top,label+' toolbar above body');assert.ok(m.labelled,label+' detail accessible title resolves');}
+  return m;
+ };
+ for(const [width,height] of [[390,844],[320,568]])for(const region of ['aspen','douglas-co']){
+  const label='sheet '+region+' '+width+'×'+height;console.log(label);
+  await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:2,mobile:true});await client.command('Emulation.setTouchEmulationEnabled',{enabled:true});
+  await navigate(origin+'/v2/?region='+region+'&view=map');
+  // Realistic portrait insets also give the short Aspen water detail a real
+  // scroll range at 390px; use the production safe-area override contract.
+  await evaluate('explore.$("map").parentElement.style.setProperty("--test-safe-top","59px");explore.$("map").parentElement.style.setProperty("--test-safe-bottom","34px");explore.sheet.setState("half")');
+  const results=await inspect(false,label+' results');
+  if(region==='aspen')assert.ok(Math.abs(results.header.bottom-results.summary.bottom-results.padding)<=2,label+' no blank summary band');
+  else{const aspen=measurements.find(m=>m.width===width&&m.region==='aspen');assert.ok(results.summary.height>aspen.results.summary.height,label+' real Douglas summary wraps');assert.ok(results.header.height>aspen.results.header.height,label+' wrapped summary grows header');}
+  for(const state of ['collapsed','half','expanded','half']){await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');if(state!=='collapsed')await inspect(false,label+' results cycle '+state);}
+  const feature=await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind===${JSON.stringify(region==='aspen'?'water':'recreation_sites')}),features=explore.region.layers.get(entry.id).data.features;
+   const feature=features.find(f=>/American Lake|Roaring Fork River/.test(f.properties.name))||[...features].sort((a,b)=>JSON.stringify(b.properties).length-JSON.stringify(a.properties).length)[0];
+   window.__sheetEntry=entry;window.__sheetFeature=feature;explore.showDetail(entry,feature);return {id:feature.properties.id,title:feature.properties.name};})()`);
+  const detail=await inspect(true,label+' detail');
+  async function scrolled(suffix){
+   await evaluate('explore.$("sheet-body").scrollTop=0');const before=await inspect(true,label+suffix+' before scroll');
+   const scroll=await evaluate('(()=>{const b=explore.$("sheet-body"),max=b.scrollHeight-b.clientHeight;b.scrollTop=Math.min(200,max);return {max,top:b.scrollTop}})()');
+   assert.ok(scroll.top>0,label+' long detail scroll fixture');assert.ok(scroll.top>=Math.min(200,scroll.max)-1,label+' scroll at least 200px or maximum');
+   const after=await inspect(true,label+suffix+' scrolled');assert.deepEqual(after.toolbar,before.toolbar,label+' toolbar unchanged by content scroll');assert.deepEqual(after.header,before.header,label+' whole header unchanged by content scroll');return {scroll,...after};
+  }
+  const scroll=await scrolled('');
+  for(const state of ['collapsed','half','expanded','half']){
+   await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');
+   if(state==='collapsed')assert.equal(await evaluate('getComputedStyle(explore.$("detail-heading")).display'), 'none',label+' collapsed toolbar hidden');
+   else await inspect(true,label+' cycle '+state);
+  }
+  await scrolled(' after cycle');
+  // Native Back input: over-slop movement must never become a sheet drag;
+  // ordinary 6px touch jitter must still activate Back and restore focus/list.
+  await evaluate('explore.$("sheet-body").scrollTop=0');const back=await point('detail-back');
+  // FlingController filters a tap that cancels a fling; use slow movement (run 39436598475).
+  await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[back]});
+  for(let i=1;i<=5;i++){await delay(80);await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:back.x,y:back.y+6*i}]});}
+  await delay(150);
+  assert.equal(await evaluate('explore.$("sheet").classList.contains("is-dragging")'),false,label+' Back movement exempt');assert.equal(await evaluate('explore.$("sheet").style.height'),'',label+' Back movement leaves no inline height');
+  await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  assert.equal(await evaluate('explore.$("sheet").classList.contains("is-dragging")'),false,label+' Back movement exempt');assert.equal(await evaluate('explore.$("sheet").style.height'),'',label+' Back movement leaves no inline height');
+  const backHit=await evaluate(`(()=>{
+   const button=explore.$('detail-back'),p=${JSON.stringify(back)},hit=document.elementFromPoint(p.x,p.y);
+   window.__backEvents=[];window.__backClicks=[];
+   // Retain the Event so defaultPrevented is read after every handler has run.
+   const record=event=>window.__backEvents.push({event,at:Date.now()}),reached=event=>window.__backClicks.push(event);
+   const types=['touchstart','touchmove','touchend','touchcancel','click'];
+   for(const type of types)document.addEventListener(type,record,{capture:true,passive:true});
+   button.addEventListener('click',reached,{capture:true,passive:true});
+   window.__stopBackTrace=()=>{for(const type of types)document.removeEventListener(type,record,true);button.removeEventListener('click',reached,true);};
+   return {target:hit?.id||hit?.tagName,onBack:button.contains(hit)};
+  })()`);
+  try{
+   await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[back]});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:back.x,y:back.y+6}]});await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+   const touchEndResolvedAt=Date.now();
+   // CDP can acknowledge touchEnd before a deferred GestureTap synthesizes click
+   // (Chromium TouchEmulatorImpl::HandleTouchEventAck). Wait for the click itself.
+   const backState=await evaluate(`(async()=>{
+    const started=performance.now(),deadline=started+2000,initialHidden=explore.$('detail-view').hidden;
+    while(${backHit.onBack}&&!window.__backEvents.some(({event:e})=>e.type==='click'||e.type==='touchcancel'||e.defaultPrevented)){
+     const remaining=deadline-performance.now();if(remaining<=0)break;
+     await new Promise(resolve=>setTimeout(resolve,Math.min(20,remaining)));
+    }
+    const sheet=explore.$('sheet');
+    return {initialHidden,waitedMs:performance.now()-started,hidden:explore.$('detail-view').hidden,state:explore.sheet.state,view:sheet.dataset.view,classes:sheet.className,
+     active:document.activeElement?.id||document.activeElement?.tagName,
+     events:window.__backEvents.map(({event:e,at})=>({type:e.type,target:e.target.id||e.target.tagName,at,prevented:e.defaultPrevented,reachedBack:window.__backClicks.includes(e)}))};
+   })()`);
+   const message=label+' native Back jitter works '+JSON.stringify({point:back,hit:backHit,touchEndResolvedAt,...backState});
+   assert.ok(backHit.onBack,message);
+   assert.ok(backState.events.some(e=>e.type==='click'&&e.reachedBack),message);
+   assert.ok(backState.events.every(e=>!e.prevented&&e.type!=='touchcancel'&&(e.type!=='click'||e.reachedBack)),message);
+   assert.equal(backState.hidden,true,message);
+  }finally{await evaluate('window.__stopBackTrace();delete window.__stopBackTrace;delete window.__backEvents;delete window.__backClicks');}
+  await inspect(false,label+' Back results');
+  await evaluate('explore.showDetail(window.__sheetEntry,window.__sheetFeature);explore.sheet.setState("collapsed")');
+  for(const [from,to,id] of [['collapsed','half','sheet-toggle'],['half','expanded','summary'],['expanded','half','detail-title']]){
+   const p=await point(id),delta=await evaluate(`(()=>{const s=explore.$('sheet'),h=s.getBoundingClientRect().height,usable=ExploreSheet.panelViewport(s);return h-usable*${to==='half'?.4:.75};})()`);
+   await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[p]});
+   for(let i=1;i<=3;i++){await delay(110);await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:p.x,y:p.y+delta*i/3}]});}
+   await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.equal(await evaluate('explore.sheet.state'),to,label+' native '+id+' drag '+from+' to '+to);await inspect(true,label+' native '+to);
+  }
+  if(region==='douglas-co'){
+   await evaluate(`(()=>{const entry=explore.region.registry.find(e=>e.kind==='water'),f=[...explore.region.layers.get(entry.id).data.features].sort((a,b)=>(b.properties.name||'').length-(a.properties.name||'').length)[0];explore.showDetail(entry,f)})()`);
+   const long=await inspect(true,label+' long real water title');assert.ok(long.toolbar.height>detail.toolbar.height,label+' wrapped title grows header');
+   assert.equal(await evaluate('explore.$("detail-title").scrollWidth>explore.$("detail-title").clientWidth'),false,label+' long title stays within toolbar');
+  }
+  await evaluate('explore.sheet.setState("collapsed")');
+  measurements.push({region,width,height,feature,results,detail,scroll});
+ }
+ // Recorded on c04f5d6 before implementation: desktop/short-landscape outer
+ // geometry and toolbar/detail-container positions must survive the relocation.
+ // Re-measured detail-body on the base: its top follows the toolbar bottom;
+ // paragraphs/headings inside it vary with the source content.
+ for(const [width,height,half,expanded] of [[1024,768,[8,452.8125,340,307.1875],[8,184,340,576]],[1440,900,[8,532,340,360],[8,217,340,675]],[667,375,[8,108,266.796875,255],[8,108,266.796875,255]]])for(const region of ['aspen','douglas-co']){
+  await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<768});await navigate(origin+'/v2/?region='+region+'&view=map');
+  const rects=()=>evaluate(`(()=>{const rect=e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height]};return {sheet:rect(explore.$('sheet')),header:rect(explore.$('sheet-header')),body:rect(explore.$('sheet-body')),toggle:rect(explore.$('sheet-toggle')),toolbar:rect(explore.$('detail-heading')),content:explore.$('detail-view').hidden?null:rect(explore.$('detail-body'))}})()`);
+  const near=(actual,expected,label)=>actual.forEach((v,i)=>assert.ok(Math.abs(v-expected[i])<=1,label+' '+i+': '+v+' vs '+expected[i]));
+  for(const detail of [false,true]){
+   if(detail)await evaluate(`(()=>{const id=${JSON.stringify(region==='aspen'?'nhd-72968354':'nhd-120656489')},entry=explore.region.registry.find(e=>e.kind==='water'&&explore.region.layers.get(e.id)?.data?.features.some(f=>f.properties.id===id));if(!entry)throw Error('Missing desktop baseline feature '+id);explore.showDetail(entry,explore.region.layers.get(entry.id).data.features.find(f=>f.properties.id===id))})()`);
+   for(const state of ['collapsed','half','expanded']){
+    await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');const m=await rects(),expected=state==='half'?half:state==='expanded'?expanded:[8,height-(width===667?12:8)-64,width===667?200:280,64],label='sheet baseline '+region+' '+width+' '+detail+' '+state;
+    near(m.sheet,expected,label+' outer');near(m.toggle,[expected[0]+12,expected[1]+4,expected[2]-24,44],label+' toggle');
+    if(detail&&state!=='collapsed'){
+     const toolbarContent=await evaluate(`(()=>{
+      const toolbar=explore.$('detail-heading');
+      // The original toolbar needs at least 44px, or the tallest child's margin box.
+      // Measure children independently so extra toolbar height cannot validate itself.
+      const height=Math.max(44,...[...toolbar.children].map(child=>{const style=getComputedStyle(child);return child.getBoundingClientRect().height+parseFloat(style.marginTop)+parseFloat(style.marginBottom)}));
+      return {height,scrollHeight:toolbar.scrollHeight,clientHeight:toolbar.clientHeight};
+     })()`);
+     // 1024 half widens to the accepted 316px: compare height with c04f5d6 at that same width.
+     if(width===1024&&state==='half')assert.equal(m.toolbar[2],316,label+' toolbar accepted width');
+     near(m.toolbar.slice(0,2),[expected[0]+12,expected[1]+76],label+' toolbar original position');assert.equal(m.toolbar[3],toolbarContent.height,label+' toolbar fits laid-out content');
+     assert.ok(toolbarContent.scrollHeight<=toolbarContent.clientHeight+1,label+' toolbar content is not clipped');
+     near(m.content.slice(0,2),[expected[0]+12,m.toolbar[1]+m.toolbar[3]],label+' detail container original position');
+     assert.ok(m.body[1]>=m.header[1]+m.header[3]-1,label+' body after header');
+    }
+    measurements.push({region,width,height,state,detail,...m});
+   }
+  }
+ }
+ return measurements;
+}
 export async function runExploreChecks(client,origin,signal,root){
  let running=true,current={externalBlocked:0,responses:[],escaped:[],errors:[],consoleErrors:[]},pumpError;const loaded=new Set();
  const interception=async(method,params)=>{try{return await client.command(method,params);}catch(error){if(!error.message.includes('Invalid InterceptionId'))throw error;}};
@@ -146,6 +294,8 @@ export async function runExploreChecks(client,origin,signal,root){
  }
  const results=[];
  try{
+ const sheetLayouts=await runSheetLayoutChecks(client,origin,evaluate,navigate);
+ results.push({sheetLayouts});
  for(const id of ['aspen','douglas-co'])for(const [width,height,minimum] of [[320,568,72],[390,844,80],[768,1024,80],[1440,900,75]]){
   console.log('B1–B10 '+id+' '+width+'×'+height);
   await client.command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:width<1200?2:1,mobile:width<1200});await client.command('Emulation.setTouchEmulationEnabled',{enabled:true});
@@ -272,7 +422,7 @@ export async function runExploreChecks(client,origin,signal,root){
   await evaluate('__frameLine(window.__a11Trail)');await mouseTap(await evaluate('__pointForFeature(window.__a11Trail)'));
   assert.equal(await evaluate('explore.state.selection.featureId===window.__a11Trail.properties.id&&!explore.$("detail-view").hidden'),true,'A11 trail tap selects and opens detail');await assertSelection('A11 exact trail tap');
   assert.equal(await evaluate(`(()=>{const b=ExploreShell.bounds({features:[window.__a11Trail]}),v=explore.state.view.bounds;return v[0][0]<=b[0][0]&&v[0][1]<=b[0][1]&&v[1][0]>=b[1][0]&&v[1][1]>=b[1][1]})()`),true,'A11 full trail bounds fitted');
-  const trailText=await evaluate('explore.$("detail-view").textContent'),trailFields=await evaluate('window.__a11Trail.properties');
+  const trailText=await evaluate('explore.$("detail-title").textContent+explore.$("detail-view").textContent'),trailFields=await evaluate('window.__a11Trail.properties');
   for(const value of [trailFields.name,trailFields.trail_number,trailFields.surface,trailFields.allowed_terra_use].filter(Boolean))assert.ok(trailText.includes(value),'A11 carried trail field');
   assert.ok(trailText.includes('Source fetched '+trailFields.evidence.retrieved_at.slice(0,10)));
   assert.ok(trailText.includes(manifest.layers.find(e=>e.kind==='trails').limitations),'A11 trail limitation');assert.doesNotMatch(trailText,/\blength\b|elevation gain/i,'A11 no fabricated trail measures');

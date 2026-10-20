@@ -109,3 +109,52 @@ test('A12 short landscape disables height dragging and keeps an open/collapse ti
  for(const [type,y] of [['touchstart',300],['touchmove',200],['touchend',200]]){const e=new Event(type,{cancelable:true});Object.defineProperty(e,'target',{value:header});e.touches=type==='touchend'?[]:[{clientX:30,clientY:y}];e.changedTouches=[{clientX:30,clientY:y}];element.dispatchEvent(e);}
  assert.equal(sheet.state,'collapsed');assert.equal(element.style.height,undefined);const click=new Event('click');click.detail=0;toggle.dispatchEvent(click);assert.equal(sheet.state,'expanded');toggle.dispatchEvent(click);assert.equal(sheet.state,'collapsed');sheet.destroy();
 });
+
+function sheetFixture(resizeObserver=true){
+ const fs=require('node:fs'),vm=require('node:vm');
+ class Node extends EventTarget{
+  constructor(){super();this.dataset={};this.attrs={};this.style={setProperty(){},removeProperty(){}};this.classList={toggle(){},add(){},remove(){}};}
+  setAttribute(k,v){this.attrs[k]=v;}contains(e){return e===this||e.parent===this;}closest(){return this.control?this:null;}
+  getBoundingClientRect(){return {height:this.height||64};}focus(){}
+ }
+ const element=new Node(),header=new Node(),collapsedHeader=new Node(),toggle=new Node(),back=new Node(),title=new Node(),body=new Node(),doc=new Node();
+ for(const node of [toggle,back,title])node.parent=header;back.control=true;body.scrollTop=0;doc.querySelector=()=>null;
+ element.querySelector=selector=>selector==='.explore-sheet-header'?collapsedHeader:header;element.parentElement=new Node();
+ const observers=[],listeners=new Map(),Observer=class{constructor(fn){this.fn=fn;observers.push(this);}observe(...args){this.observed=args;}disconnect(){this.disconnected=true;}};
+ const context={module:{exports:{}},document:doc,CustomEvent,innerHeight:600,matchMedia:()=>({matches:false}),[resizeObserver?'ResizeObserver':'MutationObserver']:Observer,
+  addEventListener(name,fn){if(!listeners.has(name))listeners.set(name,new Set());listeners.get(name).add(fn);},removeEventListener(name,fn){listeners.get(name)?.delete(fn);}};
+ vm.runInNewContext(fs.readFileSync(require.resolve('../../explore/sheet.js'),'utf8'),context);
+ const sheet=context.module.exports.createSheet(element,toggle,body);
+ function touch(type,target,y,time){const e=new Event(type,{cancelable:true});Object.defineProperties(e,{target:{value:target},timeStamp:{value:time}});e.touches=type==='touchend'?[]:[{clientX:30,clientY:y}];e.changedTouches=[{clientX:30,clientY:y}];element.dispatchEvent(e);return e;}
+ return {element,header,collapsedHeader,toggle,back,title,body,sheet,touch,observers,listeners};
+}
+test('sheet header controls never capture or cancel touch movement beyond tap slop',()=>{
+ const f=sheetFixture();f.sheet.setState('half');
+ f.touch('touchstart',f.back,400,0);assert.equal(f.touch('touchmove',f.back,430,100).defaultPrevented,false);f.touch('touchend',f.back,430,110);
+ assert.equal(f.sheet.state,'half');assert.equal(f.element.style.height,undefined);f.sheet.destroy();
+});
+test('sheet title/background drag keeps 6px tap jitter and starts beyond 10px slop',()=>{
+ const f=sheetFixture();f.sheet.setState('half');
+ f.touch('touchstart',f.title,400,0);assert.equal(f.touch('touchmove',f.title,394,20).defaultPrevented,false);
+ assert.equal(f.touch('touchmove',f.title,390,30).defaultPrevented,false);
+ assert.equal(f.touch('touchmove',f.title,389,40).defaultPrevented,true);f.touch('touchend',f.title,340,80);
+ assert.equal(f.sheet.state,'expanded');f.sheet.destroy();
+});
+test('sheet measures only the overall header for collapsed sizing and releases observation',()=>{
+ const f=sheetFixture(),measured=[];f.element.parentElement.style.setProperty=(name,value)=>measured.push([name,value]);
+ assert.equal(f.observers.length,1);f.header.height=140;f.collapsedHeader.height=86;f.observers[0].fn();
+ assert.deepEqual(measured,[['--sheet-header-height','140px']]);
+ f.element.height=86;f.touch('touchstart',f.header,400,0);f.touch('touchmove',f.header,330,70);f.touch('touchend',f.header,330,171);
+ assert.equal(f.sheet.state,'collapsed','slow small drag uses measured collapsed height');f.sheet.destroy();assert.equal(f.observers[0].disconnected,true);
+});
+test('sheet without ResizeObserver updates async header content and removes fallback listeners',()=>{
+ const f=sheetFixture(false),measured=[];f.element.parentElement.style.setProperty=(name,value)=>measured.push([name,value]);
+ assert.equal(f.observers[0].observed[0],f.header);assert.deepEqual(Array.from(f.observers[0].observed[1].attributeFilter),['hidden']);
+ f.header.height=151;f.observers[0].fn();assert.deepEqual(measured,[['--sheet-header-height','151px']]);
+ f.sheet.destroy();assert.equal(f.observers[0].disconnected,true);assert.equal(f.listeners.get('resize').size,0);assert.equal(f.listeners.get('orientationchange').size,0);
+});
+test('shared panel default keeps the existing 4px drawer threshold',()=>{
+ const f=sheetFixture();f.sheet.destroy();
+ const gestures=Sheet.createPanelGesture(f.element,f.header,f.body,{state:()=> 'peek',setState(){},levels:()=>[{state:'peek',height:64},{state:'expanded',height:450}],enabled:()=>true});
+ f.touch('touchstart',f.header,400,0);assert.equal(f.touch('touchmove',f.header,394,20).defaultPrevented,true);f.touch('touchend',f.header,394,40);gestures.destroy();
+});
