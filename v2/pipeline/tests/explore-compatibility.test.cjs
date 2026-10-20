@@ -36,9 +36,11 @@ test('T9: adventure ordering, trail search and both nearby lists equal base-comm
 test('T9: Douglas browse mode counts, Rampart literal and coverage note are pinned before migration',()=>{
  const data=read('regions/douglas-co/research.json');
  assert.deepEqual({trails:data.layers.trails.features.length,camping:1+D.camping(data.layers.recreation.features).length,
-  trailheads:data.layers.recreation.features.filter(f=>f.properties.site_type==='TRAILHEAD').length},base.browseCounts);
+  trailheads:data.layers.recreation.features.filter(f=>f.properties.site_type==='TRAILHEAD').length,
+  otherSites:data.layers.recreation.features.filter(f=>!['CAMPGROUND','TRAILHEAD','DISPERSED_AREA'].includes(f.properties.site_type)).length},base.browseCounts);
  assert.ok(fs.readFileSync(path.join(root,'regions/douglas-co/extras.js'),'utf8').includes('const area='+base.rampartText+';'));
  assert.ok(fs.readFileSync(path.join(root,'regions/douglas-co/extras.js'),'utf8').includes(base.coverage));
  const B=require('../../explore/browse.js'),extras=require('../../regions/douglas-co/extras.js');
- for(const mode of ['trails','camping','trailheads'])assert.equal(B.rows(data.layers.trails.features,data.layers.recreation.features,extras.area,mode,'','').length,base.browseCounts[mode]);
+ for(const mode of ['trails','camping','trailheads','other-sites'])assert.equal(B.rows(data.layers.trails.features,data.layers.recreation.features,extras.area,mode,'','').length,base.browseCounts[mode==='other-sites'?'otherSites':mode]);
+ assert.equal(B.rows(data.layers.trails.features,data.layers.recreation.features,extras.area,'other-sites','Cabin Ridge','').length,1,'other sites are searchable by name');
 });
