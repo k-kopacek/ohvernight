@@ -23,6 +23,11 @@
     "file": "docs/research/m4-water/hermes/track-a-authoritative-water-sources.md",
     "line": 24
   },
+  "facebook.com": {
+    "file": "v2/pipeline/config/water_display.json",
+    "revision": "06d642597609ab7da88cb2c5a780ef63b74a9039",
+    "line": 49
+  },
   "fishbrain.com": {
     "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
     "line": 26
@@ -46,6 +51,11 @@
   "inaturalist.org": {
     "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
     "line": 30
+  },
+  "instagram.com": {
+    "file": "v2/pipeline/config/water_display.json",
+    "revision": "06d642597609ab7da88cb2c5a780ef63b74a9039",
+    "line": 52
   },
   "maps.pitkincounty.com": {
     "file": "docs/research/m4-water/hermes/track-a-authoritative-water-sources.md",
@@ -79,6 +89,11 @@
     "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
     "line": 32
   },
+  "wikiloc.com": {
+    "file": "v2/pipeline/config/water_display.json",
+    "revision": "06d642597609ab7da88cb2c5a780ef63b74a9039",
+    "line": 54
+  },
   "wikipedia.org": {
     "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
     "line": 32
@@ -86,5 +101,10 @@
   "yelp.com": {
     "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
     "line": 23
+  },
+  "youtube.com": {
+    "file": "v2/pipeline/config/water_display.json",
+    "revision": "06d642597609ab7da88cb2c5a780ef63b74a9039",
+    "line": 51
   }
 }

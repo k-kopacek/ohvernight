@@ -31,6 +31,21 @@ class WaterRecreationTests(unittest.TestCase):
         self.assertEqual(registry['records'][0]['claims']['fishing']['evidence'],
                          registry['records'][0]['claims']['boating']['evidence'])
 
+    def test_JSON_distinct_equal_claims_pass_and_serialized_references_fail(self):
+        manifest, registry = self.fixture()
+        record = registry['records'][0]
+        record['claims']['paddling'] = copy.deepcopy(record['claims']['boating'])
+        # The approved all-boating example has equal summaries and evidence values.
+        parsed = json.loads(json.dumps(registry))
+        self.assertTrue(self.validate(manifest, parsed))
+        for reference in ({'$ref':'#/records/0/claims/boating/evidence'},
+                          {'pointer':'/records/0/claims/boating/evidence'}):
+            invalid = json.loads(json.dumps(registry))
+            invalid['records'][0]['claims']['paddling']['evidence'] = reference
+            with self.assertRaises(ContractError) as error:
+                self.validate(manifest, json.loads(json.dumps(invalid)))
+            self.assertEqual(error.exception.rule, 'R74')
+
     def assert_mutation(self, rule, mutate):
         manifest, registry = self.fixture()
         self.assertTrue(self.validate(manifest, registry))
@@ -149,8 +164,15 @@ class WaterRecreationIntegrationTests(unittest.TestCase):
         config=json.loads((V2/'pipeline/config/water_display.json').read_text())
         provenance=json.loads((Path(__file__).parent/'fixtures/non-claim-hosts-provenance.json').read_text())
         self.assertEqual(config['non_claim_hosts'], sorted(provenance))
+        self.assertLessEqual({'facebook.com','reddit.com','youtube.com','instagram.com',
+                              'alltrails.com','wikiloc.com','tripadvisor.com'}, set(config['non_claim_hosts']))
         for host,ref in provenance.items():
-            line=(V2.parent/ref['file']).read_text().splitlines()[ref['line']-1]
+            if 'revision' in ref:
+                import subprocess
+                content=subprocess.check_output(['git','show',ref['revision']+':'+ref['file']],cwd=V2.parent,text=True)
+            else:
+                content=(V2.parent/ref['file']).read_text()
+            line=content.splitlines()[ref['line']-1]
             self.assertIn(host, line, host)
 
 

@@ -52,12 +52,14 @@
     "arcgis.com",
     "data.colorado.gov",
     "data.dnrgis.state.co.us",
+    "facebook.com",
     "fishbrain.com",
     "gis.blm.gov",
     "google.com",
     "hipcamp.com",
     "hydro.nationalmap.gov",
     "inaturalist.org",
+    "instagram.com",
     "maps.pitkincounty.com",
     "ndismaps.nrel.colostate.edu",
     "openstreetmap.org",
@@ -66,8 +68,10 @@
     "services5.arcgis.com",
     "tripadvisor.com",
     "wikidata.org",
+    "wikiloc.com",
     "wikipedia.org",
-    "yelp.com"
+    "yelp.com",
+    "youtube.com"
   ],
   "expected_major_rivers": {
     "aspen": [
