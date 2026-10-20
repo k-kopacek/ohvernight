@@ -4,8 +4,8 @@ Sanitized; account, session and lease details stay in private host state. Policy
 
 | Pool | Latest observation | Source | Mode | Admission |
 |---|---|---|---|---|
-| Codex (shared with Hermes) | ~78% consumed, 2026-10-20 ~14:25Z | Owner planning observation (not telemetry) | **SUSPENDED for new work** (past the 75% effective ceiling under the 25% reserve; above CONSERVE in any case) | The one running bounded section (`ctx_e63673a0f954`, PR #39 test-sequencing fix: one test file, already in validation) may finish. Nothing new is admitted |
-| Claude | ~1% consumed, 2026-10-20 ~14:25Z | Owner planning observation | ACTIVE (incident rule C1: one Claude worker beside the coordinator while there is no telemetry) | Observer spec worker `ctx_d68c424d40ac` running |
+| Codex (shared with Hermes) | ~78% consumed; **owner-authorized exception 2026-10-20 ~14:40Z: 'allow it to keep working'** — PR #39 toolbar-pin task `ctx_7cb483f8ec6b` running, 2026-10-20 ~14:25Z | Owner planning observation (not telemetry) | **SUSPENDED for new work** (past the 75% effective ceiling under the 25% reserve; above CONSERVE in any case) | The one running bounded section (`ctx_e63673a0f954`, PR #39 test-sequencing fix: one test file, already in validation) may finish. Nothing new is admitted |
+| Claude | ~6% consumed, 2026-10-20 ~14:40Z | Owner planning observation (`orca usage` is not available in Orca 1.4.224, so there is no machine reading) | ACTIVE; primary worker (owner: transition work to Claude) | Cap raised from one to three concurrent Claude workers on the owner's observation: observer spec `ctx_d68c424d40ac`, M7 spec `ctx_d6dd8647b5a8`, Codex-ready briefs `ctx_d63fcb401482`. Re-check against the owner's next observation before adding more |
 | Hermes | Unavailable (billing, K4); pool independence from Codex not verified | — | Not used | — |
 
 Reset condition for Codex: a verified reset (a supported reading or an owner statement), then `READY_TO_RESUME`. The coordinator does not poll Codex usage with Claude.
