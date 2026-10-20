@@ -39,3 +39,4 @@ Done this run:
   - **PR #36** reconcile brief queued for the Codex reset (~18:28Z).
   - **MR1** closure audit dispatched to Claude `ctx_f1ccb3f48a3a`. It is read-only, in the shared runtime-observer-spec worktree; the worker was warned that the worktree is shared.
   - **MR6:** RIDB lock L12.
+- 2026-10-20 ~16:30Z: **MR1 audit done** (`.missions/mr1-closure-audit.md`, Claude `ctx_f1ccb3f48a3a`, released). Of the 51 Aspen computed research areas, 32 OVERLAP in-force camping prohibitions (WRNF 2025-07 and others; coordinator verified the order page is live and the quoted corridor text), 10 are POSSIBLE and 9 have NO EVIDENCE. Recommendation: fail-closed whole-layer removal from display now, with full retirement in M7-B. Codex brief `.missions/codex-mr1-hide-research-areas.md` is GATED on owner approval and Codex capacity. **Critical trust exception reported to the owner.**
