@@ -219,11 +219,18 @@ export async function runSheetLayoutChecks(client,origin,evaluate,navigate){
     await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');const m=await rects(),expected=state==='half'?half:state==='expanded'?expanded:[8,height-(width===667?12:8)-64,width===667?200:280,64],label='sheet baseline '+region+' '+width+' '+detail+' '+state;
     near(m.sheet,expected,label+' outer');near(m.toggle,[expected[0]+12,expected[1]+4,expected[2]-24,44],label+' toggle');
     if(detail&&state!=='collapsed'){
-     const toolbarHeight=region==='aspen'?44:width===667?75.5:53;
+     const toolbarContent=await evaluate(`(()=>{
+      const toolbar=explore.$('detail-heading');
+      // The original toolbar needs at least 44px, or the tallest child's margin box.
+      // Measure children independently so extra toolbar height cannot validate itself.
+      const height=Math.max(44,...[...toolbar.children].map(child=>{const style=getComputedStyle(child);return child.getBoundingClientRect().height+parseFloat(style.marginTop)+parseFloat(style.marginBottom)}));
+      return {height,scrollHeight:toolbar.scrollHeight,clientHeight:toolbar.clientHeight};
+     })()`);
      // 1024 half widens to the accepted 316px: compare height with c04f5d6 at that same width.
      if(width===1024&&state==='half')assert.equal(m.toolbar[2],316,label+' toolbar accepted width');
-     near(m.toolbar.slice(0,2),[expected[0]+12,expected[1]+76],label+' toolbar original position');assert.equal(m.toolbar[3],toolbarHeight,label+' toolbar original height');
-     near(m.content.slice(0,2),[expected[0]+12,expected[1]+76+toolbarHeight],label+' detail container original position');
+     near(m.toolbar.slice(0,2),[expected[0]+12,expected[1]+76],label+' toolbar original position');assert.equal(m.toolbar[3],toolbarContent.height,label+' toolbar fits laid-out content');
+     assert.ok(toolbarContent.scrollHeight<=toolbarContent.clientHeight+1,label+' toolbar content is not clipped');
+     near(m.content.slice(0,2),[expected[0]+12,m.toolbar[1]+m.toolbar[3]],label+' detail container original position');
      assert.ok(m.body[1]>=m.header[1]+m.header[3]-1,label+' body after header');
     }
     measurements.push({region,width,height,state,detail,...m});
