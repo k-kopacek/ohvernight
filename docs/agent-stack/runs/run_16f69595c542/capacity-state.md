@@ -34,3 +34,13 @@ Next autonomous action: `ctx_e63673a0f954` is done (`e9d9f4d`, reviewed and push
 ## Model-free monitoring
 
 `.missions/usage_probe.py` (outside the repo) reads the newest `rate_limits` record in `~/.codex/sessions`. A background shell watcher re-reads it every 60 s. At ≥ 90% it sends the running Codex worker a SUSPENDED message through `orca orchestration send`, with no model call. Codex reached **90% at 14:54Z: SUSPENDED**. The watcher sent `ctx_7cb483f8ec6b` the stop-at-safe-boundary message. Resume condition: a reading below 70%, or the reset time (18:28Z) passing, wakes the coordinator. The reset is then verified on the first Codex activity before more than one task is admitted.
+
+## Claude readings (2026-10-20 ~15:00Z)
+
+Claude Code transcripts (`~/.claude/projects/*/*.jsonl`) record token counts for each message. They contain a `quotaLimits` record only when a request is **rejected** at a limit; that record has the type (`five_hour` or `seven_day`) and `resetsAt`. No plan percentage is stored locally.
+
+The probe now reports Claude tokens over the trailing 5 hours as a relative load signal: output 632k, cache writes 1.99M, cache reads 141M. It also reports the last rejection, which is none in the last 5 hours.
+
+Percentages for Claude still come from owner observations. A rejection record moves Claude to SUSPENDED until its `resetsAt`. `~/.claude/.credentials.json` holds credentials and is not read.
+
+Codex 14:57Z: 92%. The in-flight worker overshot after the SUSPENDED message, and no new Codex work has been admitted.
