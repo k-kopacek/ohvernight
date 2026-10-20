@@ -26,10 +26,14 @@ Grant 1 needs nothing from grants 2 or 3. Until grant 3 is activated the program
 | D6 | Where run state lives | Sanitized queue, locks, approvals and reports go in `docs/agent-stack/runs/`. Lease, heartbeat, quota and session IDs stay in private host state. |
 | D8 | Record the Qwen/Odysseus pause in the repo | **Approve** one banner line in `tools/local-ai/qwen/README.md`. |
 | D2 | Merge authority | **(a)** Per-PR exact-SHA owner approval stays. A delegated low-risk merge policy (file 10) would need its own ADR. That ADR is not proposed now. |
-| D5 | Usage ceiling | **(a)** `min(90%, 100% − reserve)` per window: at most 75% of the shared Codex/Hermes pool and 85% of Claude. This holds until telemetry is verified, then becomes a plain 90%. |
+| D5 | Usage ceiling and provider modes (updated 2026-10-20) | **(a)** `min(90%, 100% − reserve)` per window: at most 75% of the shared Codex/Hermes pool and 85% of Claude. The owner's modes (CONSERVE at 75–80%, CLOSING at 85%, SUSPENDED at the ceiling, Claude pivot) apply within that limit (PR #40, `capacity-routing.md`). Under the current 25% reserve the Codex pool is therefore SUSPENDED from 75%, and the 85% and 90% stages take effect only if you also choose **(c) lower the Codex/Hermes reserve to 10%**. The coordinator recommends keeping 25% until a verified quota reading exists (U5, U6), so that a mis-estimate cannot exhaust the pool. |
 | D7 | Runtime path | **Approve (i)–(iv):** (i) observer/admission-controller spec, (ii) offline implementation and tests, (iii) one authenticated quota read each for Codex and Claude using existing sign-ins, (iv) a disposable lifecycle pilot, with permission to restart Orca, sleep and reboot once. **(v) activation is decided later**, after the pilot results. |
 | D10 | Codex startup update prompt | The owner is handling the prompt in the terminal (2026-10-19). **Also approve (c)** within D7: a Codex setting that suppresses the startup update check for agent launches, so an unattended run is never stopped by it. The owner applies updates deliberately. |
 | D9 | Governance PR | Draft PR #40 already applies these defaults. If an answer differs, it is edited to match before approval. |
+
+## Communication (owner direction 2026-10-20)
+
+One consolidated daily report, plus exceptions: a milestone, an owner decision, a critical blocker, an unresolvable acceptance failure, or a prolonged suspension. Routine worker events are recorded in run state, not messaged. This is proposed in `master-coordinator.md` (PR #40).
 
 ## Material risks, flagged separately
 
