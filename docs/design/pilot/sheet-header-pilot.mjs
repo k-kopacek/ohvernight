@@ -106,11 +106,15 @@ try{
     if(!ready?.ready)throw new Error('mockup did not load: '+JSON.stringify(ready));
     // Focus order: Tab from the document start, recording each focused control and its position.
     await evaluate('document.activeElement?.blur(),window.scrollTo(0,0),true');
+    // One pass over the page's controls: stop when focus leaves the document body's controls
+    // (the browser's focus cycle then lands on <body>, which is not a control) or wraps.
     const tabs=[];
-    for(let i=0;i<14;i++){
+    for(let i=0;i<30;i++){
       await client.command('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
       await client.command('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
-      tabs.push(await evaluate(`(()=>{const e=document.activeElement,r=e.getBoundingClientRect();return {el:e.id||e.textContent.trim().slice(0,24),y:Math.round(r.top),x:Math.round(r.left),visibleFocus:getComputedStyle(e).outlineStyle!=='none'};})()`));
+      const stop=await evaluate(`(()=>{const e=document.activeElement;if(!e||e===document.body)return null;const r=e.getBoundingClientRect();return {el:e.id||e.textContent.trim().slice(0,24),y:Math.round(r.top),x:Math.round(r.left),visibleFocus:getComputedStyle(e).outlineStyle!=='none'};})()`);
+      if(!stop||tabs.some(t=>t.el===stop.el))break;
+      tabs.push(stop);
     }
     await evaluate(`document.getElementById('explore-sheet-body').scrollTop=0,document.activeElement?.blur(),true`);
     const sheetTabs=tabs.filter(t=>['explore-sheet-toggle','explore-detail-back'].includes(t.el)||t.y>=height*.55);
