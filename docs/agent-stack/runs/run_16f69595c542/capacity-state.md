@@ -51,7 +51,7 @@ The tool is `npx -y ccusage@20.0.30 claude blocks --offline`. The version is pin
 
 **Estimated cap.** The 5-hour block that hit Claude's limit on 2026-10-19 to 20 began about 21:20Z; it was rejected with a reset at 02:20Z. It had used **$43.15** cost-equivalent, with 416k output tokens. That figure is the empirical cap. It is an estimate, because the provider's limit is not defined in dollars.
 
-**Current block (14:00 to 19:00Z).** $19.02 used, about **44% of the estimated cap**. The burn rate is $13.07 an hour. At that rate the block would reach the cap around 17:15Z. That reading conflicts with the owner's ~6% observation, which may be a weekly figure.
+**Current block (14:00 to 19:00Z).** $19.02 used, about **44% of the estimated cap** (owner confirmed from Orca at 15:30Z: Claude 46%, Codex 92%). The burn rate is $13.07 an hour. At that rate the block would reach the cap around 17:15Z. That reading conflicts with the owner's ~6% observation, which may be a weekly figure.
 
 **Mode: Claude CONSERVE until 19:00Z.**
 - No new Claude worker is dispatched; the observer-spec worker `ctx_d68c424d40ac` finishes.
