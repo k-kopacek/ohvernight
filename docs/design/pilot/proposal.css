@@ -1,0 +1,12 @@
+/*
+  PILOT ONLY - not loaded by the app; a candidate refinement, NOT APPROVED.
+  Layered over main + after.css. Finding: with PR #39's structure, a body line
+  partly scrolled out under the fixed Back + title row reads as overlap because
+  nothing separates the header from the scrolling body. One full-width divider,
+  using the existing --line token; Back keeps its 12px inset and 44px target.
+  No colour, label or wording changes.
+*/
+.explore-sheet[data-view=detail] .explore-detail-heading{margin:0;padding:0 12px;border-bottom:1px solid var(--line)}
+@media(min-width:768px),(orientation:landscape) and (max-height:500px){
+ .explore-sheet[data-view=detail] .explore-detail-heading{margin-top:12px}
+}

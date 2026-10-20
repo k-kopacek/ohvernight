@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pilot mockup: mobile sheet header (NOT PRODUCTION)</title>
+<!--
+  Design-tooling pilot, docs/design/pilot/. NOT PRODUCTION and NOT APPROVED.
+  Loads the production stylesheet and the production evidence/land modules
+  read-only, so the trust-bearing detail text is rendered by the same code
+  the app uses. Nothing here is served by the app.
+
+  ?variant=before  DOM structure on main (c04f5d6): Back + title are a sticky
+                   bar inside the scrolling body.
+  ?variant=after   DOM structure of PR #39 head b83b2b0: Back + title in a
+                   normal-flow header above the single scrolling body. The
+                   PR's CSS changes are copied, unmodified, in after.css.
+  ?variant=proposal  "after" plus one pilot-only refinement in proposal.css:
+                   a full-width divider under the Back + title row.
+-->
+<link rel="stylesheet" href="../../../v2/explore/explore.css">
+<link rel="stylesheet" href="after.css" id="after-css" disabled>
+<link rel="stylesheet" href="proposal.css" id="proposal-css" disabled>
+<style>
+  /* Pilot-only labelling; not a design proposal. */
+  .pilot-label{position:absolute;z-index:400;left:12px;top:112px;font:11px/1.3 system-ui,sans-serif;color:#fafbf6;background:#0008;padding:2px 6px;border-radius:4px;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="explore-root" class="explore-root">
+  <div id="explore-map" class="explore-map" aria-label="Interactive map"></div>
+  <span class="pilot-label" id="pilot-label">PILOT MOCKUP · not production</span>
+  <header class="explore-topbar"><span class="explore-region">Douglas County</span><nav aria-label="Explore"><button id="explore-layers" type="button" aria-expanded="false">Layers</button><button id="explore-search" type="button">Search</button></nav></header>
+  <nav class="explore-tools" aria-label="Map controls"><button id="explore-satellite" type="button" aria-pressed="true">Satellite</button><button id="explore-topo" type="button" aria-pressed="false">Topo</button><button id="explore-fit" type="button">Fit area</button><button id="explore-zoom-in" type="button" aria-label="Zoom in">+</button><button id="explore-zoom-out" type="button" aria-label="Zoom out">−</button></nav>
+  <div id="sheet-slot"></div>
+</div>
+<template id="before">
+  <section id="explore-sheet" class="explore-sheet expanded" data-state="half" aria-label="Results"><div class="explore-sheet-header"><button id="explore-sheet-toggle" class="explore-sheet-toggle" type="button" aria-expanded="true">Results · Expand</button><p id="explore-summary" class="explore-summary" role="status"></p></div><div id="explore-sheet-body" class="explore-sheet-body"><div id="explore-list-view" hidden></div><section id="explore-detail-view"><div class="explore-detail-heading"><button id="explore-detail-back" type="button">Back</button><h2 id="explore-detail-title"></h2></div><div id="explore-detail-body"></div></section></div></section>
+</template>
+<template id="after">
+  <section id="explore-sheet" class="explore-sheet expanded" data-state="half" data-view="detail" aria-label="Results"><header id="explore-sheet-header" class="explore-sheet-head"><div class="explore-sheet-header"><button id="explore-sheet-toggle" class="explore-sheet-toggle" type="button" aria-expanded="true">Results · Expand</button><p id="explore-summary" class="explore-summary" role="status"></p></div><div id="explore-detail-heading" class="explore-detail-heading"><button id="explore-detail-back" type="button">Back</button><h2 id="explore-detail-title"></h2></div></header><div id="explore-sheet-body" class="explore-sheet-body"><div id="explore-list-view" hidden></div><section id="explore-detail-view" aria-labelledby="explore-detail-title"><div id="explore-detail-body"></div></section></div></section>
+</template>
+<script src="../../../v2/explore/transport.js"></script>
+<script src="../../../v2/trust.js"></script>
+<script src="../../../v2/explore/evidence.js"></script>
+<script src="../../../v2/explore/land-style.js"></script>
+<script>
+(async()=>{
+  'use strict';
+  const requested=new URLSearchParams(location.search).get('variant');
+  const variant=['after','proposal'].includes(requested)?requested:'before';
+  document.getElementById('sheet-slot').replaceWith(document.getElementById(variant==='before'?'before':'after').content.cloneNode(true));
+  document.getElementById('after-css').disabled=variant==='before';
+  document.getElementById('proposal-css').disabled=variant!=='proposal';
+  document.getElementById('pilot-label').textContent='PILOT MOCKUP · '+variant+' · not production';
+  const $=id=>document.getElementById('explore-'+id);
+  // Summary: the production Douglas template (v2/explore/browse.js) with mock counts.
+  $('summary').textContent='102 trail segments · 9 campgrounds · 14 trailheads. Closures unconfirmed.';
+  // Detail: a real Douglas land feature rendered by the production land-style detail().
+  const manifest=await (await fetch('../../../v2/regions/douglas-co/region.json')).json();
+  const layer=manifest.layers.find(item=>item.id==='land');
+  const land=await (await fetch('../../../v2/regions/douglas-co/display/land.geojson')).json();
+  const feature=land.features.find(item=>item.properties?.manager==='USFS')||land.features[0];
+  const output=globalThis.ExploreLand.detail(manifest,layer,feature);
+  $('detail-title').textContent=output.title;
+  const body=$('detail-body'),actions=document.createElement('div');actions.className='explore-detail-actions';body.append(actions);
+  for(const item of output.items){
+    const node=document.createElement(item.url?'a':'p');node.textContent=item.text;
+    if(item.url){node.href=item.url;node.target='_blank';node.rel='noopener noreferrer';}
+    body.append(node);
+  }
+  const sources=document.createElement('button');sources.type='button';sources.textContent='Sources & coverage';body.append(sources);
+  window.__pilot={variant,ready:true,detail:output};
+})().catch(error=>{window.__pilot={error:String(error&&error.stack||error)};});
+</script>
+</body>
+</html>
