@@ -14,7 +14,7 @@ Runtime: `RUNTIME_NOT_READY` (no verified host supervisor). Capacity: `QUOTA_UNK
 | Q6 | Post-M4 Douglas baseline scenario run (product-scorecard.md) | Tester who did not implement M4 | after M4 closes | Waiting | L1, L5 |
 | Q7 | M6 specification draft, source-neutral sections (source-dependent sections LOCKED on PR #24) — brief `.missions/claude-m6-source-neutral-spec.md` | Claude worker `ctx_3d717c1af120` (`task_245b2a3ab372`) | `c04f5d6`, branch `k-kopacek/m6-spec-draft` | Running | Owner direction 2026-10-19 |
 | Q8 | Colorado coverage specification draft | Claude | after M4 closes and D4 | Waiting | L6 |
-| Q10 | M5 revision to owner direction (D1 A; PVT unknown; shorter legend; PAD-US not cleared) and one consolidated decision packet — brief `.missions/claude-m5-revision-packet.md` | Claude worker `ctx_a32dc644347c` (`task_7f5746d1083a`) | `37572d1` (PR #41) | Running | Coordinator review, then push to #41 |
+| Q10 | M5 revision to owner direction (D1 A; PVT unknown; shorter legend; PAD-US not cleared) and one consolidated decision packet — brief `.missions/claude-m5-revision-packet.md` | Claude worker `ctx_a32dc644347c` (`task_7f5746d1083a`) | `37572d1` (PR #41) | **Done** — `2c329e3` on PR #41, reviewed, no blocking finding | Owner: `M5: accept defaults; R1 a` |
 | Q11 | PR #39 CI failure: read-only diagnosis (Q2 step 1) — brief `.missions/claude-pr39-ci-diagnosis.md` | Claude worker `ctx_7825d4943902` (`task_0d9c8c2dbeec`), scratch branch `k-kopacek/pr39-ci-diagnosis` | `b83b2b0` | Running | Fix stays with Codex (Q2, L4) |
 | Q9 | Runtime observer/admission-controller specification (D7 i) | Claude | after D7 | Waiting | L7 |
 
