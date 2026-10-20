@@ -22,3 +22,15 @@ Before merging, the coordinator reverified:
 Merged with `--match-head-commit`; the merge commit is `3965dbfd9768696f45f043770e2e6659863e2589`.
 
 A nonblocking owner observation, that the results area is too small in landscape, is recorded as design debt with an acceptance scenario in issue #48.
+
+## 2026-10-20 — M7-MR1 interim presentation mitigation (owner)
+
+**Approved:** remove the entire Aspen "Areas to research" layer from user-facing discovery now. That means the map, the drawer, search, Finder, results and trip planning. Default-off does not satisfy this.
+
+**Preserved:** the canonical data, attribution, evidence and pipeline. Campground and supported overnight records are unchanged.
+
+**Delivery:** one narrow Codex PR, dispatched after a verified Codex reset (brief `.missions/codex-mr1-hide-research-areas.md`). It needs coordinator review and green CI. The coordinator then returns the exact head and a local Aspen iPhone URL. The owner does the device check and gives exact-SHA merge approval separately.
+
+**Status:** interim presentation mitigation authorized. Permanent retirement remains M7-D14.
+
+**Audit record:** the audit is recorded on PR #47 (`b8471b1`) as audit classifications, not legal boundaries.
