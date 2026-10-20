@@ -269,3 +269,32 @@ for(const rejectFirst of [false,true])test('A8: concurrent eligible requests, or
   assert.equal((await retry).state,'loaded');
  }
 });
+
+test('M4-C loads only an explicitly named active-region registry and includes its request bytes',async()=>{
+  const manifest=readJson('regions/aspen/region.json'),index=readJson('regions/aspen/display/index.json');
+  const config=fixtureConfig(manifest),fixture=fixtureFetch(manifest,config,index);
+  const without=await createRegionLoader({fetch:fixture.fetch}).loadRegion('?region=aspen');
+  assert.equal(without.waterRecreation,null);
+  assert.equal(fixture.calls.some(url=>url.endsWith('/water-recreation.json')),false);
+  const baselineCalls=[...fixture.calls];fixture.calls.length=0;
+  const registry=readJson('pipeline/tests/fixtures/water-recreation.json');
+  manifest.water_recreation={path:'regions/aspen/water-recreation.json'};
+  fixture.docs.set(manifest.water_recreation.path,registry);
+  const loaded=await createRegionLoader({fetch:fixture.fetch}).loadRegion('?region=aspen');
+  assert.deepEqual(loaded.waterRecreation,registry);
+  assert.deepEqual(fixture.calls.filter(url=>!baselineCalls.includes(url)),[manifest.water_recreation.path]);
+  const bytes=paths=>[...new Set(paths)].reduce((n,p)=>n+(p===manifest.water_recreation.path?
+    fs.statSync(path.join(root,'pipeline/tests/fixtures/water-recreation.json')).size:fs.statSync(path.join(root,p.split('?')[0])).size),0);
+  assert.equal(bytes(fixture.calls)-bytes(baselineCalls),fs.statSync(path.join(root,'pipeline/tests/fixtures/water-recreation.json')).size);
+});
+
+test('M4-C declared registry failures fail closed and never request a different region',async()=>{
+  for(const mode of ['missing','bad shape','other region']){
+    const manifest=readJson('regions/aspen/region.json'),index=readJson('regions/aspen/display/index.json');
+    manifest.water_recreation={path:mode==='other region'?'regions/other/water-recreation.json':'regions/aspen/water-recreation.json'};
+    const fixture=fixtureFetch(manifest,fixtureConfig(manifest),index);
+    if(mode==='bad shape')fixture.docs.set(manifest.water_recreation.path,{schema_version:2,records:[]});
+    await assert.rejects(createRegionLoader({fetch:fixture.fetch}).loadRegion('?region=aspen'),error=>error.code==='REGION_NOT_AVAILABLE');
+    assert.equal(fixture.calls.some(url=>url.includes('regions/other/')),false);
+  }
+});

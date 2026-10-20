@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M4 water recreation registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "records"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/record"
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "date": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date"
+        },
+        {
+          "type": "string",
+          "format": "date-time"
+        }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_url",
+        "agency",
+        "basis",
+        "last_checked_at",
+        "last_confirmed_at",
+        "max_age_hours"
+      ],
+      "properties": {
+        "source_url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "agency": {
+          "$ref": "#/$defs/text"
+        },
+        "basis": {
+          "const": "manual_review"
+        },
+        "last_checked_at": {
+          "$ref": "#/$defs/date"
+        },
+        "last_confirmed_at": {
+          "$ref": "#/$defs/date"
+        },
+        "max_age_hours": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "effective_from": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/date"
+            }
+          ]
+        },
+        "effective_to": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/date"
+            }
+          ]
+        }
+      }
+    },
+    "unknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "const": "unknown"
+        }
+      }
+    },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "summary",
+        "evidence"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "allowed",
+            "restricted",
+            "prohibited"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "pattern": "\\S",
+          "maxLength": 160
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      }
+    },
+    "claim": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/unknown"
+        },
+        {
+          "$ref": "#/$defs/statement"
+        }
+      ]
+    },
+    "access": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/claim"
+        },
+        {
+          "properties": {
+            "status": {
+              "enum": [
+                "unknown",
+                "restricted"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "water_id",
+        "operator",
+        "claims",
+        "access",
+        "notes"
+      ],
+      "properties": {
+        "water_id": {
+          "$ref": "#/$defs/text"
+        },
+        "operator": {
+          "$ref": "#/$defs/text"
+        },
+        "claims": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fishing",
+            "boating",
+            "paddling",
+            "swimming"
+          ],
+          "properties": {
+            "fishing": {
+              "$ref": "#/$defs/claim"
+            },
+            "boating": {
+              "$ref": "#/$defs/claim"
+            },
+            "paddling": {
+              "$ref": "#/$defs/claim"
+            },
+            "swimming": {
+              "$ref": "#/$defs/claim"
+            }
+          }
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

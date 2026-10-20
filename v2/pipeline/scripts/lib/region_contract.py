@@ -23,6 +23,7 @@ from lib.water import (classify as classify_water, group_flowlines,
                        select_water_features, waterbody_inclusion_allowed)
 
 REGION_MANIFEST_SCHEMA = json.loads((ROOT / "schema/region-manifest.schema.json").read_text())
+WATER_RECREATION_SCHEMA = json.loads((ROOT / "schema/water-recreation.schema.json").read_text())
 WATER_DISPLAY_CONFIG = json.loads((ROOT / "config/water_display.json").read_text())
 
 APPROVED_VERIFICATION_METHODS = {
@@ -467,6 +468,84 @@ def validate_m4b_water_layer(manifest, layer, canonical_features, display_featur
         if props.get("group_id") != expected_membership.get(ident):
             _error("R70", manifest, layer_id, f"canonical group_id membership differs for {ident}")
     return grouped
+
+
+def validate_water_recreation_data(manifest, registry, display_ids, config=None):
+    """R74/R76: validate fixture or resolved registry without reading the clock."""
+    config = WATER_DISPLAY_CONFIG if config is None else config
+    has_claim = False
+    if registry is not None:
+        validator = Draft202012Validator(WATER_RECREATION_SCHEMA, format_checker=FormatChecker())
+        error = next(validator.iter_errors(registry), None)
+        if error is not None:
+            _error("R74", manifest, None, f"water-recreation shape: {error.message}")
+        seen_ids = set()
+        for record in registry["records"]:
+            ident = record["water_id"]
+            if ident not in display_ids or ident in seen_ids:
+                _error("R74", manifest, None, f"unresolved or duplicate water display ID {ident}")
+            seen_ids.add(ident)
+            if all(claim["status"] == "unknown" for claim in
+                   [*record["claims"].values(), record["access"]]):
+                _error("R74", manifest, None, "an all-unknown water record must not be written")
+            evidence_objects = set()
+            for claim in [*record["claims"].values(), record["access"]]:
+                if claim["status"] == "unknown":
+                    continue
+                has_claim = True
+                evidence = claim["evidence"]
+                if id(evidence) in evidence_objects:
+                    _error("R74", manifest, None, "each claim must carry its own evidence object")
+                evidence_objects.add(id(evidence))
+                try:
+                    url = urlparse(evidence["source_url"])
+                    host = (url.hostname or "").lower().rstrip(".")
+                    valid_url = url.scheme in {"http", "https"} and bool(host) and not any(
+                        char.isspace() for char in evidence["source_url"])
+                except ValueError:
+                    valid_url = False
+                    host = ""
+                blocked = any(host == item or host.endswith("." + item)
+                              for item in config.get("non_claim_hosts", []))
+                if not valid_url or blocked:
+                    _error("R74", manifest, None, "claim source must be HTTP(S), on a non-blocked host")
+                for field in ("last_checked_at", "last_confirmed_at", "effective_from", "effective_to"):
+                    if field in evidence and not (field.startswith("effective_") and evidence[field] is None):
+                        if not _parse_timestamp(evidence[field], allow_date=True):
+                            _error("R74", manifest, None, f"claim {field} must be a UTC date or timestamp")
+                if not math.isfinite(evidence["max_age_hours"]):
+                    _error("R74", manifest, None, "claim maximum age must be finite")
+    fact = manifest["fact_coverage"]["recreation_permission"]
+    reviewed = fact["state"] == "reviewed_partial"
+    if reviewed != has_claim:
+        _error("R76", manifest, None, "reviewed_partial requires and follows a non-unknown water claim")
+    if reviewed:
+        water_layers = {layer["id"] for layer in manifest["layers"] if layer["kind"] == "water"}
+        if set(fact["layer_ids"]) != water_layers or len(fact["layer_ids"]) != len(water_layers):
+            _error("R76", manifest, None, "recreation permission layer_ids must name exactly the water layers")
+    return has_claim
+
+
+def _validate_water_recreation(manifest, resolve):
+    registry = None
+    if manifest.get("water_recreation") is not None:
+        path = manifest["water_recreation"]["path"]
+        if path != f"regions/{manifest['region']['id']}/water-recreation.json":
+            _error("R74", manifest, None, "water-recreation path must be region-scoped")
+        try:
+            registry = resolve(path)
+        except (KeyError, ValueError, TypeError, FileNotFoundError):
+            _error("R74", manifest, None, "water-recreation file does not resolve")
+        if registry is None:
+            _error("R74", manifest, None, "water-recreation registry must be an object")
+    display_ids = set()
+    if registry is not None:
+        for layer in manifest["layers"]:
+            if layer["kind"] == "water" and layer.get("display"):
+                document = resolve(layer["display"]["path"])
+                display_ids.update(feature.get("properties", {}).get("id")
+                                   for feature in document.get("features", []))
+    return validate_water_recreation_data(manifest, registry, display_ids)
 
 
 def _validate_water_contract(manifest, resolve):
@@ -1025,10 +1104,12 @@ def validate_region_data(manifest, resolve):
         _error("R04", manifest, None, "declared source is not used")
     if set(manifest["fact_coverage"]) != FACT_DIMENSIONS:
         _error("R01", manifest, None, "fact coverage must contain exactly eight dimensions")
-    for fact in manifest["fact_coverage"].values():
+    has_water_claim = _validate_water_recreation(manifest, resolve)
+    for dimension, fact in manifest["fact_coverage"].items():
         if fact["state"] == "context" and not fact["layer_ids"]:
             _error("R05", manifest, None, "context fact requires layer IDs")
-        if fact["state"] == "reviewed_partial" and manifest.get("rules") is None:
+        if (fact["state"] == "reviewed_partial" and manifest.get("rules") is None
+                and not (dimension == "recreation_permission" and has_water_claim)):
             reviewed_layers = [layer for layer in manifest["layers"] if layer["kind"] == "reviewed_sites"]
             if not reviewed_layers:
                 _error("R05", manifest, None, "reviewed_partial requires rules or reviewed sites")

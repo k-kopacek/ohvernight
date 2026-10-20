@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "water_id": "fixture-lake",
+      "operator": "Fixture Operator",
+      "claims": {
+        "fishing": {
+          "status": "allowed",
+          "summary": "Synthetic fishing statement.",
+          "evidence": {
+            "source_url": "https://operator.example/water/fixture",
+            "agency": "Fixture Operator",
+            "basis": "manual_review",
+            "last_checked_at": "2026-10-01",
+            "last_confirmed_at": "2026-10-01",
+            "max_age_hours": 2160,
+            "effective_from": null,
+            "effective_to": null
+          }
+        },
+        "boating": {
+          "status": "prohibited",
+          "summary": "Synthetic boating statement.",
+          "evidence": {
+            "source_url": "https://operator.example/water/fixture",
+            "agency": "Fixture Operator",
+            "basis": "manual_review",
+            "last_checked_at": "2026-10-01",
+            "last_confirmed_at": "2026-10-01",
+            "max_age_hours": 2160,
+            "effective_from": null,
+            "effective_to": null
+          }
+        },
+        "paddling": {
+          "status": "restricted",
+          "summary": "Synthetic paddling statement.",
+          "evidence": {
+            "source_url": "https://operator.example/water/fixture",
+            "agency": "Fixture Operator",
+            "basis": "manual_review",
+            "last_checked_at": "2026-10-01",
+            "last_confirmed_at": "2026-10-01",
+            "max_age_hours": 2160,
+            "effective_from": null,
+            "effective_to": null
+          }
+        },
+        "swimming": {
+          "status": "unknown"
+        }
+      },
+      "access": {
+        "status": "unknown"
+      },
+      "notes": []
+    }
+  ]
+}

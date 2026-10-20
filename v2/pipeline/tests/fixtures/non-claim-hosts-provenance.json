@@ -1,0 +1,110 @@
+{
+  "alltrails.com": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 25
+  },
+  "americanwhitewater.org": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 28
+  },
+  "api.us.socrata.com": {
+    "file": "docs/research/m4-water/hermes/track-f-cpw-structured-data.md",
+    "line": 437
+  },
+  "arcgis.com": {
+    "file": "docs/research/m4-water/hermes/track-f-cpw-structured-data.md",
+    "line": 344
+  },
+  "data.colorado.gov": {
+    "file": "docs/research/m4-water/hermes/track-f-cpw-structured-data.md",
+    "line": 441
+  },
+  "data.dnrgis.state.co.us": {
+    "file": "docs/research/m4-water/hermes/track-a-authoritative-water-sources.md",
+    "line": 24
+  },
+  "facebook.com": {
+    "file": "v2/pipeline/tests/test_water_recreation.py",
+    "line": 15,
+    "baseline_sha": "06d642597609ab7da88cb2c5a780ef63b74a9039"
+  },
+  "fishbrain.com": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 26
+  },
+  "gis.blm.gov": {
+    "file": "docs/research/m4-water/hermes/track-a-authoritative-water-sources.md",
+    "line": 26
+  },
+  "google.com": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 22
+  },
+  "hipcamp.com": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 27
+  },
+  "hydro.nationalmap.gov": {
+    "file": "docs/research/m4-water/existing-data-audit-facts.md",
+    "line": 8
+  },
+  "inaturalist.org": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 30
+  },
+  "instagram.com": {
+    "file": "v2/pipeline/tests/test_water_recreation.py",
+    "line": 18,
+    "baseline_sha": "06d642597609ab7da88cb2c5a780ef63b74a9039"
+  },
+  "maps.pitkincounty.com": {
+    "file": "docs/research/m4-water/hermes/track-a-authoritative-water-sources.md",
+    "line": 32
+  },
+  "ndismaps.nrel.colostate.edu": {
+    "file": "docs/research/m4-water/hermes/track-a-authoritative-water-sources.md",
+    "line": 22
+  },
+  "openstreetmap.org": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 31
+  },
+  "paddling.com": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 29
+  },
+  "reddit.com": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 21
+  },
+  "services5.arcgis.com": {
+    "file": "docs/research/m4-water/hermes/track-f-cpw-structured-data.md",
+    "line": 281
+  },
+  "tripadvisor.com": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 24
+  },
+  "wikidata.org": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 32
+  },
+  "wikiloc.com": {
+    "file": "v2/pipeline/tests/test_water_recreation.py",
+    "line": 20,
+    "baseline_sha": "06d642597609ab7da88cb2c5a780ef63b74a9039"
+  },
+  "wikipedia.org": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 32
+  },
+  "yelp.com": {
+    "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
+    "line": 23
+  },
+  "youtube.com": {
+    "file": "v2/pipeline/tests/test_water_recreation.py",
+    "line": 17,
+    "baseline_sha": "06d642597609ab7da88cb2c5a780ef63b74a9039"
+  }
+}

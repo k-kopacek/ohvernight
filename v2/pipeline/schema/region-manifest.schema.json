@@ -12,6 +12,7 @@
     "layers": {"type": "array", "items": {"$ref": "#/$defs/layer"}},
     "rules": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/path_ref"}]},
     "water_review": {"$ref": "#/$defs/water_review_ref"},
+    "water_recreation": {"$ref": "#/$defs/water_recreation_ref"},
     "fact_coverage": {
       "type": "object",
       "additionalProperties": false,
@@ -37,6 +38,10 @@
     "display_ref": {
       "type": "object", "additionalProperties": false, "required": ["path"],
       "properties": {"path": {"$ref": "#/$defs/path"}, "select": {"enum": ["streams", "bodies"]}}
+    },
+    "water_recreation_ref": {
+      "type": "object", "additionalProperties": false, "required": ["path"],
+      "properties": {"path": {"type": "string", "pattern": "^regions/[a-z0-9-]+/water-recreation\\.json$"}}
     },
     "water_review_ref": {
       "type": "object", "additionalProperties": false, "required": ["path"],

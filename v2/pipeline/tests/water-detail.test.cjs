@@ -75,3 +75,66 @@ test('water search returns each named stream group and waterbody once and omits 
     ['water_streams','group-1','East Plum Creek'],['water_bodies','body-1','East Lake']
   ]);
 });
+
+const recreation=JSON.parse(require('node:fs').readFileSync(require('node:path').join(__dirname,'fixtures/water-recreation.json'),'utf8'));
+const claimTexts=output=>output.items.map(item=>item.parts?item.parts.map(part=>part.text).join(''):item.text);
+const claimDetail=(registry=recreation,now='2026-10-20')=>Water.feature(manifest,declaration('water_bodies'),
+  feature('fixture-lake','Fixture Lake','lake_pond','perennial',{area_sqkm:0.03}),{registry,now:Date.parse(now)});
+
+test('M4-C fixed statement strings and activity labels match byte-exact literals',()=>{
+  assert.deepEqual(Water.claimWording,{
+    WW3:'Not established',WW4:'Allowed',WW5:'Restricted',WW6:'Prohibited',WW7:'Review overdue',
+    WW8:'Agency or operator statement',WW11:'Reviewed',
+    fishing:'Fishing',boating:'Boating (motorized or trailered)',paddling:'Paddling',swimming:'Swimming',access:'Access'
+  });
+});
+
+test('M4-C fixture detail orders prohibitions/restrictions before allowances, with access last and WW2 final',()=>{
+  const output=claimDetail(),lines=claimTexts(output);
+  assert.deepEqual(lines.slice(-8),[
+    'Agency or operator statement','Fixture Operator',
+    'Boating (motorized or trailered): Prohibited. Synthetic boating statement. Fixture Operator. Reviewed 2026-10-01.',
+    'Paddling: Restricted. Synthetic paddling statement. Fixture Operator. Reviewed 2026-10-01.',
+    'Fishing: Allowed. Synthetic fishing statement. Fixture Operator. Reviewed 2026-10-01.',
+    'Swimming: Not established.', 'Access: Not established.',
+    'A mapped water feature is not permission to enter, fish, boat, paddle, swim, park or camp.'
+  ]);
+  assert.equal(lines.includes(Water.wording.WW1),false);
+  const link=output.items.find(item=>item.parts)?.parts.find(part=>part.url);
+  assert.deepEqual(link,{text:'Fixture Operator',url:'https://operator.example/water/fixture'});
+});
+
+test('M4-C overdue fixture preserves restrictive words and flags while allowed becomes not established',()=>{
+  const lines=claimTexts(claimDetail(recreation,'2026-12-30T00:00:01Z'));
+  assert.ok(lines.includes('Boating (motorized or trailered): Prohibited. Synthetic boating statement. Fixture Operator. Reviewed 2026-10-01. Review overdue.'));
+  assert.ok(lines.includes('Paddling: Restricted. Synthetic paddling statement. Fixture Operator. Reviewed 2026-10-01. Review overdue.'));
+  assert.ok(lines.includes('Fishing: Not established. Fixture Operator. Reviewed 2026-10-01.'));
+  assert.ok(!lines.some(line=>line.includes('Allowed')));
+});
+
+test('M4-C access restriction has its own summary, source and overdue date after all activities',()=>{
+  const registry=structuredClone(recreation);
+  registry.records[0].access=structuredClone(registry.records[0].claims.paddling);
+  registry.records[0].access.summary='Synthetic foot-only access.';
+  assert.equal(claimTexts(claimDetail(registry,'2027-01-01')).at(-2),
+    'Access: Restricted. Synthetic foot-only access. Fixture Operator. Reviewed 2026-10-01. Review overdue.');
+});
+
+test('M4-C missing records preserve WW1 and WW2 without any activity wording',()=>{
+  for(const registry of [null,{schema_version:1,records:[]},{schema_version:1,records:[{...recreation.records[0],water_id:'different-water'}]}]){
+    const output=claimDetail(registry);
+    assert.deepEqual(claimTexts(output).slice(-2),[Water.wording.WW1,Water.wording.WW2]);
+    assert.ok(!claimTexts(output).some(line=>/Fishing|Boating|Paddling|Swimming|Agency or operator statement/.test(line)));
+  }
+});
+
+test('M4-C malformed claims never display a status without complete evidence or an unsafe link',()=>{
+  for(const field of ['source_url','agency','basis','last_checked_at','last_confirmed_at','max_age_hours']){
+    const registry=structuredClone(recreation);delete registry.records[0].claims.fishing.evidence[field];
+    assert.ok(claimTexts(claimDetail(registry)).includes('Fishing: Not established.'),field);
+  }
+  const registry=structuredClone(recreation);registry.records[0].claims.fishing.evidence.source_url='javascript:alert(1)';
+  const output=claimDetail(registry);
+  assert.ok(claimTexts(output).includes('Fishing: Not established.'));
+  assert.ok(!output.items.some(item=>item.parts?.some(part=>part.url?.startsWith('javascript:'))));
+});
