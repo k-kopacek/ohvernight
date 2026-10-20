@@ -54,3 +54,23 @@ The limit does not create new authority. If no coordinator capacity remains to d
 5. If Claude is limited, use the sleep behavior above. If all pools are exhausted or at protected reserves, checkpoint and stop new dispatch until reset or owner adjustment.
 
 No automatic paid upgrade, credit purchase or reserve reduction. Avoid polling unchanged limits. Record reset/resume triggers, and do not promise workers will continue if the runtime has actually stopped them.
+
+## Provider modes and the Claude pivot (owner direction 2026-10-20; governing only once this PR is approved)
+
+Each pool has a mode, recorded in run state with the observation, its timestamp and its source:
+
+| Mode | Entered at (share of the window consumed) | Admission |
+|---|---|---|
+| `ACTIVE` | below the CONSERVE threshold | Normal admission within the reserve |
+| `CONSERVE` | 75–80% | No new discretionary task. Running bounded sections may finish if each is estimated to fit. Queue implementation-ready work for after the reset |
+| `CLOSING` | 85% | Nothing new. Running sections checkpoint at their next safe boundary |
+| `SUSPENDED` | the effective ceiling, `min(90%, 100% − reserve)` | No dispatch. Unfinished implementation tasks are marked `WAITING_FOR_CODEX_CAPACITY`, with worktree, exact SHA, artifacts, tests and next action |
+| `READY_TO_RESUME` | a reset verified from a supported reading | Resume each waiting task exactly once (`--retry-of` or continuation of the same Orca task), never as a duplicate |
+
+**Reconciling with the reserves.** The existing reserves are stricter and stay in force: a 25% reserve on the shared Codex/Hermes pool puts its effective ceiling at 75%. Under this contract the Codex pool is therefore `SUSPENDED` from 75%. The 85% and 90% stages apply to that pool only if the owner separately lowers its reserve. That is owner decision D5 in the activation packet. Nothing here weakens the reserve.
+
+**Owner observations.** An owner-supplied percentage is a planning observation. It is recorded with its time and is not telemetry. Unless a supported reading shows otherwise, a pool the owner reports at or above a threshold is treated as being in that threshold's mode.
+
+**The Claude pivot.** When Codex is in `CONSERVE` or worse, Claude becomes the primary active worker within its role. That covers specifications, architecture, review of completed Codex work, research, test and acceptance design, design review, triage, ADRs, task decomposition and complete Codex briefs for the next reset. Claude does not take over Codex production implementation to get around an exhausted pool. Hermes counts as a separate pool only after its independence from Codex is verified.
+
+**No polling with a model.** Recovery is observed through a model-free scheduler or a supported runtime event. Until the observer (D7) is proven, resumption after a reset happens in an attended session, and the run state says so.

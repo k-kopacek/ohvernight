@@ -108,6 +108,29 @@ No autonomous merge, auto-merge, direct-main push, force-push or shared-history 
 
 The default final action is the human merge. No worker, CI success or exhausted queue supplies approval.
 
+## Owner communication (owner direction 2026-10-20)
+
+Default cadence: one concise consolidated daily report, plus exceptions. The coordinator sends no owner-facing message for these:
+
+- a worker starting, running, or finishing a routine subsection;
+- an orchestration notification arriving;
+- routine commits, test runs or retries;
+- intermediate diagnostic hypotheses;
+- background checks;
+- a task moving between authorized phases.
+
+Those events are recorded in run state only.
+
+An exception message is sent only for:
+
+- a completed milestone or product capability;
+- a genuine owner decision;
+- a critical security, trust, licensing or execution blocker;
+- an acceptance failure that cannot be resolved within existing authority;
+- a prolonged suspension that needs an owner action.
+
+A report never stops the execution loop. Claude does not poll orchestration only to report progress. Model-free monitoring and event-driven completion are preferred.
+
 ## Morning / owner-return report
 
 Write a concise report backed by linked artifacts:
