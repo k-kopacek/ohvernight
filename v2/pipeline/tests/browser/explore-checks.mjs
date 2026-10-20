@@ -149,8 +149,13 @@ export async function runSheetLayoutChecks(client,origin,evaluate,navigate){
   // Native Back input: over-slop movement must never become a sheet drag;
   // ordinary 6px touch jitter must still activate Back and restore focus/list.
   await evaluate('explore.$("sheet-body").scrollTop=0');const back=await point('detail-back');
-  await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[back]});await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:back.x,y:back.y+30}]});
-  assert.equal(await evaluate('explore.$("sheet").classList.contains("is-dragging")'),false,label+' Back movement exempt');await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  // FlingController filters a tap that cancels a fling; use slow movement (run 39436598475).
+  await client.command('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[back]});
+  for(let i=1;i<=5;i++){await delay(80);await client.command('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:back.x,y:back.y+6*i}]});}
+  await delay(150);
+  assert.equal(await evaluate('explore.$("sheet").classList.contains("is-dragging")'),false,label+' Back movement exempt');assert.equal(await evaluate('explore.$("sheet").style.height'),'',label+' Back movement leaves no inline height');
+  await client.command('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  assert.equal(await evaluate('explore.$("sheet").classList.contains("is-dragging")'),false,label+' Back movement exempt');assert.equal(await evaluate('explore.$("sheet").style.height'),'',label+' Back movement leaves no inline height');
   const backHit=await evaluate(`(()=>{
    const button=explore.$('detail-back'),p=${JSON.stringify(back)},hit=document.elementFromPoint(p.x,p.y);
    window.__backEvents=[];window.__backClicks=[];
