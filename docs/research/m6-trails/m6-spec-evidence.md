@@ -104,6 +104,11 @@ straight-line distance") from segment geometry. GPX export writes one segment's
 geometry with the description "County-clipped source geometry, not a navigable
 route or access approval."
 
+Douglas Browse's saved plan stores feature IDs as strings in `localStorage`
+under the region's `plan` storage key (`browse.js` line 17, up to 40 IDs) and
+resolves them against loaded records. A saved trail is therefore stored today
+by its segment ID (`usfs-trail-<objectid>`).
+
 ## T7. Research inputs read (all unmerged, unreviewed)
 
 Read with `git show`; none checked out or merged.
