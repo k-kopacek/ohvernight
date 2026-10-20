@@ -225,11 +225,18 @@ export async function runSheetLayoutChecks(client,origin,evaluate,navigate){
       const metrics=e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect();return {tag:e.tagName,text:e.textContent,rect:{x:r.x,y:r.y,width:r.width,height:r.height},fontFamily:s.fontFamily,fontSize:s.fontSize,lineHeight:s.lineHeight,marginTop:s.marginTop,marginBottom:s.marginBottom,paddingTop:s.paddingTop,paddingBottom:s.paddingBottom,borderTopWidth:s.borderTopWidth,borderBottomWidth:s.borderBottomWidth,minHeight:s.minHeight,scrollHeight:e.scrollHeight,clientHeight:e.clientHeight}};
       return {lineCount:new Set(lines.map(r=>r.y)).size,lines,toolbar:metrics(toolbar),title:metrics(title),children:[...toolbar.children].map(metrics)};
      })()`)}));
-     const toolbarHeight=region==='aspen'?44:width===667?75.5:53;
+     const toolbarContent=await evaluate(`(()=>{
+      const toolbar=explore.$('detail-heading');
+      // The original toolbar needs at least 44px, or the tallest child's margin box.
+      // Measure children independently so extra toolbar height cannot validate itself.
+      const height=Math.max(44,...[...toolbar.children].map(child=>{const style=getComputedStyle(child);return child.getBoundingClientRect().height+parseFloat(style.marginTop)+parseFloat(style.marginBottom)}));
+      return {height,scrollHeight:toolbar.scrollHeight,clientHeight:toolbar.clientHeight};
+     })()`);
      // 1024 half widens to the accepted 316px: compare height with c04f5d6 at that same width.
      if(width===1024&&state==='half')assert.equal(m.toolbar[2],316,label+' toolbar accepted width');
-     near(m.toolbar.slice(0,2),[expected[0]+12,expected[1]+76],label+' toolbar original position');assert.equal(m.toolbar[3],toolbarHeight,label+' toolbar original height');
-     near(m.content.slice(0,2),[expected[0]+12,expected[1]+76+toolbarHeight],label+' detail container original position');
+     near(m.toolbar.slice(0,2),[expected[0]+12,expected[1]+76],label+' toolbar original position');assert.equal(m.toolbar[3],toolbarContent.height,label+' toolbar fits laid-out content');
+     assert.ok(toolbarContent.scrollHeight<=toolbarContent.clientHeight+1,label+' toolbar content is not clipped');
+     near(m.content.slice(0,2),[expected[0]+12,m.toolbar[1]+m.toolbar[3]],label+' detail container original position');
      assert.ok(m.body[1]>=m.header[1]+m.header[3]-1,label+' body after header');
     }
     measurements.push({region,width,height,state,detail,...m});
