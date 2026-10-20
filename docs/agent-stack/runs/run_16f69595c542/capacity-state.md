@@ -33,4 +33,4 @@ Next autonomous action: `ctx_e63673a0f954` is done (`e9d9f4d`, reviewed and push
 
 ## Model-free monitoring
 
-`.missions/usage_probe.py` (outside the repo) reads the newest `rate_limits` record in `~/.codex/sessions`. A background shell watcher re-reads it every 60 s. At ≥ 90% it sends the running Codex worker a SUSPENDED message through `orca orchestration send`, with no model call. Mode now: Codex **CLOSING**, and `ctx_7cb483f8ec6b` has been told to checkpoint at its next safe boundary.
+`.missions/usage_probe.py` (outside the repo) reads the newest `rate_limits` record in `~/.codex/sessions`. A background shell watcher re-reads it every 60 s. At ≥ 90% it sends the running Codex worker a SUSPENDED message through `orca orchestration send`, with no model call. Codex reached **90% at 14:54Z: SUSPENDED**. The watcher sent `ctx_7cb483f8ec6b` the stop-at-safe-boundary message. Resume condition: a reading below 70%, or the reset time (18:28Z) passing, wakes the coordinator. The reset is then verified on the first Codex activity before more than one task is admitted.
