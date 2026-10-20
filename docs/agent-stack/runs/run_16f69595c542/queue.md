@@ -12,10 +12,10 @@ Runtime: `RUNTIME_NOT_READY` (no verified host supervisor). Capacity: `QUOTA_UNK
 | Q4 | Triage review debt: draft PRs #15, #20, #22–#35 | Coordinator | — | **Done** — see [review-debt-triage.md](review-debt-triage.md) | Owner approvals listed there |
 | Q5 | Rebase plan for PR #36 onto PR #39 (its sheet/header changes are superseded by the structural fix) | Codex | after #39 merges | Waiting | L2 |
 | Q6 | Post-M4 Douglas baseline scenario run (product-scorecard.md) | Tester who did not implement M4 | after M4 closes | Waiting | L1, L5 |
-| Q7 | M6 specification draft, source-neutral sections (source-dependent sections LOCKED on PR #24) — brief `.missions/claude-m6-source-neutral-spec.md` | Claude worker `ctx_3d717c1af120` (`task_245b2a3ab372`) | `c04f5d6`, branch `k-kopacek/m6-spec-draft` | Running | Owner direction 2026-10-19 |
+| Q7 | M6 specification draft, source-neutral sections (source-dependent sections LOCKED on PR #24) — brief `.missions/claude-m6-source-neutral-spec.md` | Claude worker `ctx_3d717c1af120` (`task_245b2a3ab372`) | `c04f5d6`, branch `k-kopacek/m6-spec-draft` | **Done** — draft PR #42 at `82a3c84`; coordinator review: no blocking finding, one note added (Aspen MVUM road vehicle classes) | Owner: `M6: accept defaults` + PR #24 source policy |
 | Q8 | Colorado coverage specification draft | Claude | after M4 closes and D4 | Waiting | L6 |
 | Q10 | M5 revision to owner direction (D1 A; PVT unknown; shorter legend; PAD-US not cleared) and one consolidated decision packet — brief `.missions/claude-m5-revision-packet.md` | Claude worker `ctx_a32dc644347c` (`task_7f5746d1083a`) | `37572d1` (PR #41) | **Done** — `2c329e3` on PR #41, reviewed, no blocking finding | Owner: `M5: accept defaults; R1 a` |
-| Q11 | PR #39 CI failure: read-only diagnosis (Q2 step 1) — brief `.missions/claude-pr39-ci-diagnosis.md` | Claude worker `ctx_7825d4943902` (`task_0d9c8c2dbeec`), scratch branch `k-kopacek/pr39-ci-diagnosis` | `b83b2b0` | Running | Fix stays with Codex (Q2, L4) |
+| Q11 | PR #39 CI failure: read-only diagnosis (Q2 step 1) — brief `.missions/claude-pr39-ci-diagnosis.md` | Claude worker `ctx_7825d4943902` (`task_0d9c8c2dbeec`), scratch branch `k-kopacek/pr39-ci-diagnosis` | `b83b2b0` | **Done** — inconclusive, leaning race; test-only diff in `.missions/pr39-ci-diagnosis-report.md`; Codex brief updated to start at step 2 | Q2 (L4) |
 | Q9 | Runtime observer/admission-controller specification (D7 i) | Claude | after D7 | Waiting | L7 |
 
 Done this run:
