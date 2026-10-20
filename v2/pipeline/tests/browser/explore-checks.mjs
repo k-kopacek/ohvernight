@@ -219,6 +219,12 @@ export async function runSheetLayoutChecks(client,origin,evaluate,navigate){
     await evaluate('explore.sheet.setState('+JSON.stringify(state)+')');const m=await rects(),expected=state==='half'?half:state==='expanded'?expanded:[8,height-(width===667?12:8)-64,width===667?200:280,64],label='sheet baseline '+region+' '+width+' '+detail+' '+state;
     near(m.sheet,expected,label+' outer');near(m.toggle,[expected[0]+12,expected[1]+4,expected[2]-24,44],label+' toggle');
     if(detail&&state!=='collapsed'){
+     console.log('TOOLBAR_DIAGNOSTIC '+JSON.stringify({region,width,height,state,...await evaluate(`(()=>{
+      const toolbar=explore.$('detail-heading'),title=explore.$('detail-title'),style=getComputedStyle(title),range=document.createRange();range.selectNodeContents(title);
+      const lines=[...range.getClientRects()].map(r=>({x:r.x,y:r.y,width:r.width,height:r.height}));
+      const metrics=e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect();return {tag:e.tagName,text:e.textContent,rect:{x:r.x,y:r.y,width:r.width,height:r.height},fontFamily:s.fontFamily,fontSize:s.fontSize,lineHeight:s.lineHeight,marginTop:s.marginTop,marginBottom:s.marginBottom,paddingTop:s.paddingTop,paddingBottom:s.paddingBottom,borderTopWidth:s.borderTopWidth,borderBottomWidth:s.borderBottomWidth,minHeight:s.minHeight,scrollHeight:e.scrollHeight,clientHeight:e.clientHeight}};
+      return {lineCount:new Set(lines.map(r=>r.y)).size,lines,toolbar:metrics(toolbar),title:metrics(title),children:[...toolbar.children].map(metrics)};
+     })()`)}));
      const toolbarHeight=region==='aspen'?44:width===667?75.5:53;
      // 1024 half widens to the accepted 316px: compare height with c04f5d6 at that same width.
      if(width===1024&&state==='half')assert.equal(m.toolbar[2],316,label+' toolbar accepted width');
