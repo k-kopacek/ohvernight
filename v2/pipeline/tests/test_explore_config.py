@@ -59,6 +59,18 @@ class ExploreConfigTests(unittest.TestCase):
         other = json.loads((V2 / 'regions/douglas-co/explore.json').read_text())
         self.assertEqual(other['storage_keys'], {'plan': 'ohvernight-douglas-plan-v1', 'notes': 'ohvernight-douglas-plan-v1-notes', 'trip': 'ohvernight-douglas-plan-v1-trip'})
 
+    def test_M4B_water_titles_match_the_approved_literals(self):
+        expected = {'water_streams': 'Rivers and streams', 'water_bodies': 'Lakes and reservoirs',
+                    'waterways': 'Rivers and streams', 'waterbodies': 'Lakes and reservoirs'}
+        for region in ('aspen', 'douglas-co'):
+            config = json.loads((V2 / f'regions/{region}/explore.json').read_text())
+            titles = {layer['layer_id']: layer['title'] for layer in config['layers']
+                      if layer['layer_id'] in expected}
+            wanted = {ident: title for ident, title in expected.items()
+                      if ident in {layer['id'] for layer in
+                                   json.loads((V2 / f'regions/{region}/region.json').read_text())['layers']}}
+            self.assertEqual(titles, wanted, region)
+
     def test_T11_aspen_season_check_remains_off(self):
         self.assertIs(self.config['capabilities']['trail_season_check'], False)
 

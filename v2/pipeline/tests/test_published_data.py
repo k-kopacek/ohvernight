@@ -129,10 +129,11 @@ class PublishedDataTests(unittest.TestCase):
                 geometry = self.assert_geometry(feature["geometry"])
                 self.assertIn(geometry.geom_type, geometry_types[layer_name])
                 feature_west, feature_south, feature_east, feature_north = geometry.bounds
-                self.assertGreaterEqual(feature_west, west - 1e-6)
-                self.assertGreaterEqual(feature_south, south - 1e-6)
-                self.assertLessEqual(feature_east, east + 1e-6)
-                self.assertLessEqual(feature_north, north + 1e-6)
+                water_padding = 0.005 if layer_name in {"waterways", "waterbodies"} else 0
+                self.assertGreaterEqual(feature_west, west - water_padding - 1e-6)
+                self.assertGreaterEqual(feature_south, south - water_padding - 1e-6)
+                self.assertLessEqual(feature_east, east + water_padding + 1e-6)
+                self.assertLessEqual(feature_north, north + water_padding + 1e-6)
 
                 evidence = properties["evidence"]
                 self.assertTrue(evidence["source_url"].startswith("http"))

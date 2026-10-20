@@ -58,6 +58,8 @@ Field definitions:
 | `layers[].fields.source` | Property names copied or renamed from source attributes without interpretation. |
 | `layers[].fields.derived` | Property names computed or mapped by the pipeline. |
 | `layers[].display` | Optional derived delivery artifact declaration, allowed only on `feature_collection` layers; its path is under `regions/<region.id>/display/`. |
+| `layers[].display.select` | Optional water-only selector: `streams` for grouped flowlines or `bodies` for individually selected waterbodies. |
+| `water_review` | Optional `{path}` reference to region-scoped `water-review.json`; absent means both reviewed lists are empty. |
 | `rules` | `null` or a path to a region-scoped rules registry. |
 | `coverage.display` | Optional derived display artifact for the coverage feature; its path is under `regions/<region.id>/display/`. |
 | `known_gaps` | Strings recording what the region does not answer; an empty array is allowed. |
@@ -248,7 +250,7 @@ a cached resolver. JSON Pointer resolution implements `~0` and `~1`.
 | R05 | In `fact_coverage`, every `layer_ids` entry is a declared layer; `context` has at least one; and `reviewed_partial` meets 5.5 (non-null rules, or a `reviewed_sites` layer with at least one feature). |
 | R10 | Coverage resolves to a GeoJSON Feature whose geometry is a valid, non-empty Polygon or MultiPolygon within longitude ±180 and latitude ±90. |
 | R20 | A `feature_collection` layer resolves to an object with `type == "FeatureCollection"` and a `features` list. |
-| R21 | Every feature `properties.id` is a non-empty string, unique across **all** `feature_collection` layers of the region. |
+| R21 | Every feature `properties.id` is a non-empty string, unique across **all** distinct canonical `feature_collection` path/pointer pairs of the region. When multiple declarations reference the same canonical path and pointer, that collection is counted once for uniqueness; the declarations remain separate display layers. |
 | R22 | Geometry is `null` only when `allow_null_geometry`. Otherwise it is valid, non-empty, of a declared type, and its bounds lie within the coverage bounds expanded by `extent_padding_deg + 1e-6`. An empty `geometry_types` list therefore permits no non-null geometry. |
 | R23 | Every feature has `evidence` with an `http(s)` `source_url`, non-empty `agency`, an RFC 3339 UTC `retrieved_at`, and a `verification_method` key that is present and is either `null` or one of the six approved strings. A missing key, an empty string or any other string fails. |
 | R24 | For a layer whose sources are all `agency` or `derived`: every feature's `evidence.source_url` equals a declared `source_urls` entry of one of the layer's sources, or starts with such an entry followed by `/` or `?`. A shared textual prefix without that boundary is not sufficient. |
@@ -315,11 +317,21 @@ The stable display rules are:
 | ID | Full rule |
 |---|---|
 | R60 | A `display.path` obeys R03 and lies under `regions/<region.id>/display/`. `index.json` exists, lists exactly the layers (and coverage) that declare `display`, and each listed `sha256` and `bytes` match the file. |
-| R61 | Each display file is a FeatureCollection whose `layer_id` equals the layer. Every feature ID exists in the canonical layer, and `feature_count` equals the number of features. `source_feature_count` equals the canonical feature count. Every canonical feature is present, except features excluded by the water selection rule in 12.1. |
-| R62 | For every display feature, restoring `evidence` from `evidence_table` gives an object equal to the canonical feature's `evidence`, and every other property equals the canonical property. |
-| R63 | Every display geometry equals the canonical geometry transformed by 12.1 step 2: coordinates rounded to six decimals, consecutive duplicates removed, degenerate parts dropped (A1). Geometry type is unchanged. The geometry is non-empty and structurally well-formed: every line has at least two positions and every ring is closed with at least four. This is checked for every feature, whether or not the coordinates match. The index entry's `dropped_degenerate_parts` equals the number of parts dropped. Topological validity is not required of display geometry. |
+| R61 | Each display file is a FeatureCollection whose `layer_id` equals the layer. Ungrouped layers retain canonical ID/count checks; grouped water features must have computed group IDs, and source counts still equal canonical counts. |
+| R62 | For ordinary features, restored evidence equals canonical evidence and other properties match. Group evidence and properties are checked against canonical members through R71. |
+| R63 | Ordinary display geometry equals canonical geometry transformed by six-decimal rounding, duplicate removal and degenerate-part handling. Grouped stream geometry is checked against ordered, R63-transformed members by R71. Structural validity and drop counts remain checked. |
 | R64 | The canonical-file `sha256` recorded in `index.json` equals the current file's. A canonical data change without regenerating display files fails. |
 | R65 | The key set of `index.json` `transport` equals the layer IDs whose `status_ref` is non-null, for both feature collections and place lists. Each value equals the referenced canonical object exactly, without normalisation. A region with no display artifact has no index and is not subject to this rule. |
+| R69 | A water display set equals exactly the features/groups selected from canonical data by section 8.2, the configured area threshold and reviewed lists. |
+| R70 | Grouping invariants G1–G7 and G9–G11 hold, and canonical `group_id` values equal computed drawn membership. |
+| R71 | Group geometry equals ordered, R63-transformed member geometry; member count, geodesic length, name and GNIS ID equal computed values. |
+| R72 | Disallowed water classes never display; streams and lakes are perennial, reservoirs have eligible fcodes, except reviewed inclusions. Unknown-category reservoirs remain unknown. |
+| R73 | Optional water review records resolve to canonical/group IDs, use allowed reason codes and complete non-community HTTP(S) agency evidence, include a non-name-only statement and RFC 3339 review time, and excluded records are absent from display. |
+
+Grouped water declarations use `display.select: streams` or `bodies`. These
+rules can be exercised against offline fixtures before section 3 creates the
+new display artifacts; this section leaves the current M4-A display output
+unchanged.
 
 ## Known non-conformance register
 

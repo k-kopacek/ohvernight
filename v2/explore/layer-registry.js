@@ -5,6 +5,26 @@
     constructor(message){super(message);this.name='LayerRegistryError';}
   }
 
+  const WATER_STREAM_FIT_POLICY={tap:{max_zoom_out:2},list:{min_zoom:11}};
+  function fitPolicy(value){
+    const fail=()=>{throw new LayerRegistryError('Explore fit policy is invalid');};
+    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length!==2||!Object.hasOwn(value,'tap')||!Object.hasOwn(value,'list'))fail();
+    const result={};
+    if(Object.hasOwn(value,'tap')){
+      const tap=value.tap;
+      if(!tap||typeof tap!=='object'||Array.isArray(tap)||Object.keys(tap).length!==1||!Object.hasOwn(tap,'max_zoom_out')||
+         !Number.isInteger(tap.max_zoom_out)||tap.max_zoom_out<0||tap.max_zoom_out>14)fail();
+      result.tap={max_zoom_out:tap.max_zoom_out};
+    }
+    if(Object.hasOwn(value,'list')){
+      const list=value.list;
+      if(!list||typeof list!=='object'||Array.isArray(list)||Object.keys(list).length!==1||!Object.hasOwn(list,'min_zoom')||
+         !Number.isInteger(list.min_zoom)||list.min_zoom<5||list.min_zoom>19)fail();
+      result.list={min_zoom:list.min_zoom};
+    }
+    return result;
+  }
+
   function validateConfig(manifest,config){
     const fail=()=>{throw new LayerRegistryError('Explore configuration is invalid');};
     const object=(value,keys,required=[])=>{
@@ -21,9 +41,10 @@
     if(Object.values(config.capabilities).some(value=>typeof value!=='boolean'))fail();
     if(!Array.isArray(config.layers)||!Array.isArray(config.official_links))fail();
     for(const item of config.layers){
-      object(item,['layer_id','title','order','default_on','min_zoom'],['layer_id','title','order','default_on','min_zoom']);
+      object(item,['layer_id','title','order','default_on','min_zoom','fit_policy'],['layer_id','title','order','default_on','min_zoom']);
       if(typeof item.layer_id!=='string'||typeof item.title!=='string'||!item.title||!Number.isFinite(item.order)||typeof item.default_on!=='boolean'||
         (item.min_zoom!==null&&(!Number.isFinite(item.min_zoom)||item.min_zoom<5||item.min_zoom>19)))fail();
+      if(item.fit_policy!==undefined)fitPolicy(item.fit_policy);
     }
     for(const item of config.official_links){
       object(item,['label','url'],['label','url']);
@@ -67,11 +88,16 @@
       const layer=manifestLayers.get(item.layer_id);
       if(!layer) throw new LayerRegistryError('Explore layer is not in the manifest: '+item.layer_id);
       seen.add(item.layer_id);
+      if(item.fit_policy!==undefined&&!(layer.kind==='water'&&layer.display?.select==='streams'))throw new LayerRegistryError('Explore fit policy is only available for water stream layers');
+      const fit=item.fit_policy===undefined?
+        (layer.kind==='water'&&layer.display?.select==='streams'?WATER_STREAM_FIT_POLICY:null):fitPolicy(item.fit_policy);
       return {
         id:item.layer_id,
         title:item.title,
         description:layer.limitations,
         kind:layer.kind,
+        displaySelect:layer.display?.select||null,
+        fitPolicy:fit?{...(fit.tap?{tap:{...fit.tap}}:{}),...(fit.list?{list:{...fit.list}}:{})}:null,
         spatialPrecision:layer.spatial_precision,
         classificationSourceField:layer.classification_source_field||null,
         statusRef:layer.status_ref||null,

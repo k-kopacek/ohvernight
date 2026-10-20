@@ -11,6 +11,7 @@
     "sources": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/source"}},
     "layers": {"type": "array", "items": {"$ref": "#/$defs/layer"}},
     "rules": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/path_ref"}]},
+    "water_review": {"$ref": "#/$defs/water_review_ref"},
     "fact_coverage": {
       "type": "object",
       "additionalProperties": false,
@@ -32,6 +33,14 @@
     "path_ref": {
       "type": "object", "additionalProperties": false, "required": ["path"],
       "properties": {"path": {"$ref": "#/$defs/path"}, "pointer": {"type": "string"}}
+    },
+    "display_ref": {
+      "type": "object", "additionalProperties": false, "required": ["path"],
+      "properties": {"path": {"$ref": "#/$defs/path"}, "select": {"enum": ["streams", "bodies"]}}
+    },
+    "water_review_ref": {
+      "type": "object", "additionalProperties": false, "required": ["path"],
+      "properties": {"path": {"type": "string", "pattern": "^regions/[a-z0-9-]+/water-review\\.json$"}}
     },
     "path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
     "region": {
@@ -82,7 +91,7 @@
         "path": {"$ref": "#/$defs/path"}, "pointer": {"type": "string"},
         "source_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "status_ref": {"$ref": "#/$defs/status_ref"},
-        "display": {"$ref": "#/$defs/path_ref"},
+        "display": {"$ref": "#/$defs/display_ref"},
         "max_age_hours": {"type": ["number", "null"], "exclusiveMinimum": 0},
         "geometry_types": {"type": "array", "items": {"enum": ["Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon"]}},
         "allow_null_geometry": {"type": "boolean"},

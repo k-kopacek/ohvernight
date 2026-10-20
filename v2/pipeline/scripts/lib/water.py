@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import math
 import re
+import copy
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -95,6 +96,478 @@ def ensure_supported_ftype(ftype: Any, config: dict[str, Any] | None = None) -> 
     if water_class is None:
         raise ValueError(f"unsupported water ftype {ftype}")
     return water_class
+
+
+def _reviewed_ids(review: dict[str, Any] | None, key: str) -> set[str]:
+    if not review:
+        return set()
+    result = set()
+    for item in review.get(key, []):
+        if isinstance(item, dict) and isinstance(item.get("feature_id"), str):
+            result.add(item["feature_id"])
+    return result
+
+
+def waterbody_inclusion_allowed(feature: dict[str, Any],
+                                config: dict[str, Any] | None = None) -> bool:
+    """Whether section 8.5 permits reviewing this canonical waterbody in."""
+    config = config or water_display_config()
+    props = feature.get("properties") or {}
+    if (props.get("source_layer") or props.get("kind")) != "waterbody":
+        return False
+    try:
+        water_class, hydro_category = classify(props.get("ftype"), props.get("fcode"), config)
+    except (KeyError, TypeError, ValueError):
+        return False
+    if water_class == "lake_pond":
+        return (hydro_category == "intermittent"
+                or (props.get("fcode") == 39000 and hydro_category == "unknown"))
+    return (water_class == "reservoir" and props.get("fcode") == 43614
+            and hydro_category == "intermittent")
+
+
+def select_water_features(features: list[dict[str, Any]], config: dict[str, Any] | None = None,
+                          review: dict[str, Any] | None = None, *,
+                          threshold_sqkm: float | None = None) -> list[dict[str, Any]]:
+    """Return the 8.2 eligibility decision for each canonical water feature.
+
+    The optional threshold is for offline comparison reports only; contract
+    validation calls this without it and therefore always uses configuration.
+    No name content is inspected, only whether a source name is non-empty.
+    """
+    config = config or water_display_config()
+    threshold = (config["unnamed_waterbody_min_area_sqkm"] if threshold_sqkm is None
+                 else threshold_sqkm)
+    if isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or threshold < 0:
+        raise ValueError("waterbody threshold must be a non-negative number")
+    exclusions = _reviewed_ids(review, "exclusions")
+    inclusions = _reviewed_ids(review, "inclusions")
+    results = []
+    for feature in features:
+        props = feature.get("properties") or {}
+        ident = props.get("id")
+        source_layer = props.get("source_layer") or props.get("kind")
+        try:
+            water_class, hydro_category = classify(props.get("ftype"), props.get("fcode"), config)
+        except (KeyError, TypeError, ValueError):
+            water_class, hydro_category = "other", "unknown"
+        named = isinstance(props.get("name"), str) and bool(props["name"].strip())
+        eligible, reason = False, "unsupported_layer"
+
+        if ident in exclusions:
+            reason = "reviewed_exclusion"
+        elif source_layer in {"flowline", "stream"}:
+            if water_class != "stream":
+                reason = "non_stream_flowline"
+            elif not named:
+                reason = "unnamed_stream"
+            elif not isinstance(props.get("gnis_id"), str) or not props["gnis_id"].strip():
+                reason = "stream_without_gnis_id"
+            elif hydro_category != "perennial":
+                reason = f"stream_{hydro_category}"
+            else:
+                eligible, reason = True, "eligible_perennial_stream"
+        elif source_layer in {"waterbody", "lake", "reservoir"}:
+            allowed_review_inclusion = (ident in inclusions
+                                        and waterbody_inclusion_allowed(feature, config))
+            reservoir_code_ok = (water_class != "reservoir" or
+                                 props.get("fcode") in config["reservoir_eligible_fcodes"])
+            if allowed_review_inclusion:
+                eligible, reason = True, "reviewed_inclusion"
+            elif water_class not in {"lake_pond", "reservoir"} or not reservoir_code_ok:
+                reason = "ineligible_waterbody_class_or_code"
+            elif hydro_category == "intermittent":
+                reason = "intermittent_waterbody"
+            elif water_class == "lake_pond" and hydro_category != "perennial":
+                reason = "unstated_lake_category"
+            elif water_class == "reservoir" and hydro_category not in {"perennial", "unknown"}:
+                reason = "ineligible_reservoir_category"
+            elif named:
+                eligible, reason = True, "eligible_named_waterbody"
+            else:
+                area = props.get("area_sqkm")
+                if (isinstance(area, (int, float)) and not isinstance(area, bool)
+                        and area >= threshold):
+                    eligible, reason = True, "eligible_unnamed_waterbody_at_threshold"
+                elif area is None:
+                    reason = "unnamed_waterbody_area_unknown"
+                else:
+                    reason = "unnamed_waterbody_below_threshold"
+        results.append({"feature": feature, "eligible": eligible, "reason": reason,
+                        "water_class": water_class, "hydro_category": hydro_category})
+    return results
+
+
+def _line_parts(feature: dict[str, Any]) -> list[list[list[float]]]:
+    geometry = feature.get("geometry") or {}
+    if geometry.get("type") == "LineString":
+        return geometry.get("coordinates", []) and [geometry["coordinates"]] or []
+    if geometry.get("type") == "MultiLineString":
+        return geometry.get("coordinates", [])
+    raise ValueError(f"flowline {feature.get('properties', {}).get('id')} has non-line geometry")
+
+
+def geodesic_length_km(features: list[dict[str, Any]]) -> float:
+    """Measure canonical line geometry on the WGS84 ellipsoid in kilometres."""
+    from pyproj import Geod
+
+    geod = Geod(ellps="WGS84")
+    total_m = 0.0
+    for feature in features:
+        for line in _line_parts(feature):
+            if len(line) < 2:
+                continue
+            lon = [float(point[0]) for point in line]
+            lat = [float(point[1]) for point in line]
+            total_m += abs(geod.line_length(lon, lat))
+    return total_m / 1000.0
+
+
+def _rounded_line_parts(feature: dict[str, Any]) -> tuple[list[list[list[float]]], int]:
+    lines, dropped = [], 0
+    for line in _line_parts(feature):
+        rounded = []
+        for point in line:
+            coordinate = [round(float(point[0]), 6), round(float(point[1]), 6)]
+            if not rounded or rounded[-1] != coordinate:
+                rounded.append(coordinate)
+        if len(rounded) < 2:
+            dropped += 1
+        else:
+            lines.append(rounded)
+    return lines, dropped
+
+
+def _endpoint_keys(feature: dict[str, Any]) -> set[tuple[float, float]]:
+    points = set()
+    for line in _line_parts(feature):
+        if len(line) >= 2:
+            points.add(tuple(round(float(value), 6) for value in line[0][:2]))
+            points.add(tuple(round(float(value), 6) for value in line[-1][:2]))
+    return points
+
+
+def _flowline_candidates(features: list[dict[str, Any]], *, include_connectors: bool = True):
+    by_gnis: dict[str, list[dict[str, Any]]] = {}
+    support_ids = set()
+    connector_ids = set()
+    for feature in features:
+        props = feature.get("properties") or {}
+        ident = props.get("id")
+        water_class = props.get("water_class")
+        gnis = props.get("gnis_id")
+        support_for = props.get("support_for")
+        if support_for:
+            if gnis and gnis != support_for:
+                raise ValueError(f"support feature {ident} carries foreign GNIS ID {gnis} for {support_for}")
+            if water_class in {"stream", "artificial_path", "connector"}:
+                by_gnis.setdefault(str(support_for), []).append(feature)
+                support_ids.add(ident)
+            continue
+        if not isinstance(gnis, str) or not gnis.strip():
+            continue
+        if water_class in {"stream", "artificial_path"}:
+            by_gnis.setdefault(gnis, []).append(feature)
+        elif include_connectors and water_class == "connector":
+            by_gnis.setdefault(gnis, []).append(feature)
+            connector_ids.add(ident)
+    return by_gnis, support_ids, connector_ids
+
+
+def _connected_components(nodes: list[str], adjacency: dict[str, set[str]]) -> list[list[str]]:
+    remaining = set(nodes)
+    result = []
+    while remaining:
+        start = min(remaining)
+        pending, found = [start], set()
+        while pending:
+            ident = pending.pop()
+            if ident in found:
+                continue
+            found.add(ident)
+            pending.extend(sorted(adjacency[ident] - found, reverse=True))
+        remaining.difference_update(found)
+        result.append(sorted(found))
+    return result
+
+
+def _component_groups(features: list[dict[str, Any]], config: dict[str, Any], review: dict[str, Any],
+                      *, include_connectors: bool):
+    by_gnis, support_ids, connector_ids = _flowline_candidates(
+        features, include_connectors=include_connectors)
+    selected = {row["feature"]["properties"].get("id"): row["eligible"]
+                for row in select_water_features(features, config, review)}
+    output_groups, water_groups, assignments = [], {}, {
+        (feature.get("properties") or {}).get("id"): None for feature in features
+    }
+    summaries, connectors_used = [], []
+    for gnis_id, candidates in sorted(by_gnis.items()):
+        candidates = sorted(candidates, key=lambda f: f["properties"]["id"])
+        lookup = {feature["properties"]["id"]: feature for feature in candidates}
+        names = {}
+        for feature in candidates:
+            props = feature.get("properties") or {}
+            ident = props.get("id")
+            if ident in support_ids:
+                continue
+            name = props.get("name")
+            names.setdefault(name, []).append(ident)
+        if len(names) > 1:
+            detail = ", ".join(f"{name!r}: {sorted(ids)}" for name, ids in
+                                sorted(names.items(), key=lambda row: repr(row[0])))
+            raise ValueError(f"multiple names under GNIS {gnis_id}: {detail}")
+        name = next(iter(names), None)
+        if not isinstance(name, str) or not name.strip():
+            continue
+        endpoint_index: dict[tuple[float, float], set[str]] = {}
+        for feature in candidates:
+            ident = feature["properties"]["id"]
+            for endpoint in _endpoint_keys(feature):
+                endpoint_index.setdefault(endpoint, set()).add(ident)
+        adjacency = {ident: set() for ident in lookup}
+        for connected in endpoint_index.values():
+            for ident in connected:
+                adjacency[ident].update(connected - {ident})
+        parts = _connected_components(sorted(lookup), adjacency)
+        displayable = []
+        for part in parts:
+            seeds = {ident for ident in part if selected.get(ident, False)
+                     and ident not in support_ids}
+            if not seeds:
+                continue
+            drawn = set(seeds)
+            pending = sorted(seeds)
+            while pending:
+                current = pending.pop(0)
+                for neighbor in sorted(adjacency[current] - drawn):
+                    props = lookup[neighbor]["properties"]
+                    if (props.get("water_class") == "artificial_path"
+                            and neighbor not in support_ids):
+                        drawn.add(neighbor)
+                        pending.append(neighbor)
+            member_ids = sorted(drawn)
+            part_length = geodesic_length_km([lookup[ident] for ident in member_ids])
+            displayable.append({"all_ids": part, "drawn_ids": member_ids,
+                                "drawn_length_km": part_length,
+                                "tie_id": min(member_ids)})
+        displayable.sort(key=lambda part: (-part["drawn_length_km"], part["tie_id"]))
+        for part_number, part in enumerate(displayable, start=1):
+            group_id = f"nhd-gnis-{gnis_id}" + (f"-p{part_number}" if part_number > 1 else "")
+            exclusion_ids = _reviewed_ids(review, "exclusions")
+            if group_id in exclusion_ids:
+                continue
+            members = [lookup[ident] for ident in part["drawn_ids"]]
+            name_set = {feature["properties"].get("name") for feature in members}
+            if len(name_set) != 1 or next(iter(name_set)) != name:
+                raise ValueError(f"G2 group {group_id} member names differ")
+            lines = []
+            for member in members:
+                member_lines, dropped = _rounded_line_parts(member)
+                if dropped and not member_lines:
+                    raise ValueError(f"R63 drawn member {member['properties']['id']} collapses after rounding")
+                lines.extend(member_lines)
+            length_km = part["drawn_length_km"]
+            evidence = copy.deepcopy(members[0]["properties"].get("evidence"))
+            group_feature = {
+                "type": "Feature",
+                "geometry": {"type": "MultiLineString", "coordinates": lines},
+                "properties": {"id": group_id, "name": name, "gnis_id": gnis_id,
+                               "water_class": "stream", "hydro_category": "perennial",
+                               "member_count": len(members), "length_km": round(length_km, 3),
+                               "evidence": evidence},
+            }
+            output_groups.append(group_feature)
+            water_groups[group_id] = part["drawn_ids"]
+            for ident in part["drawn_ids"]:
+                if assignments.get(ident) is not None:
+                    raise ValueError(f"G4 member {ident} belongs to more than one group")
+                assignments[ident] = group_id
+            connector_records = []
+            for ident in part["all_ids"]:
+                if ident not in connector_ids:
+                    continue
+                connector = lookup[ident]["properties"]
+                if connector.get("gnis_id") != gnis_id or connector.get("name") != name:
+                    raise ValueError(f"G11 connector {ident} GNIS or name differs from group {group_id}")
+                record = {"id": ident, "gnis_id": gnis_id, "name": connector.get("name"),
+                          "group_id": group_id,
+                          "length_km": round(geodesic_length_km([lookup[ident]]), 6)}
+                connector_records.append(record)
+                connectors_used.append(record)
+            connectivity_ids = sorted(set(part["all_ids"]) - set(part["drawn_ids"]))
+            summaries.append({"group_id": group_id, "gnis_id": gnis_id, "name": name,
+                              "member_ids": part["drawn_ids"], "connectivity_ids": connectivity_ids,
+                              "connector_ids": [item["id"] for item in connector_records],
+                              "drawn_length_km": length_km, "line_count": len(lines),
+                              "member_count": len(members)})
+    feature_ids = set(assignments)
+    collisions = feature_ids & set(water_groups)
+    if collisions:
+        raise ValueError(f"group ID collides with a canonical feature ID: {sorted(collisions)}")
+    return {"groups": output_groups, "water_groups": water_groups,
+            "group_assignments": assignments, "group_summaries": summaries,
+            "connectors_used": sorted(connectors_used, key=lambda row: (row["gnis_id"], row["id"]))}
+
+
+def _river_source_stats(features: list[dict[str, Any]], groups: list[dict[str, Any]],
+                        water_groups: dict[str, list[str]], config: dict[str, Any], region_id: str):
+    expected = config.get("expected_major_rivers", {}).get(region_id, [])
+    groups_by_gnis = {}
+    for feature in groups:
+        props = feature["properties"]
+        groups_by_gnis.setdefault(props.get("gnis_id"), []).append(feature)
+    by_id = {(feature.get("properties") or {}).get("id"): feature for feature in features}
+    checks = []
+    for row in expected:
+        gnis_id = row["gnis_id"]
+        minimum = row.get("minimum_drawn_fraction", 0.8)
+        source = [feature for feature in features
+                  if not (feature.get("properties") or {}).get("support_for")
+                  and (feature.get("properties") or {}).get("gnis_id") == gnis_id
+                  and ((feature.get("properties") or {}).get("water_class") == "artificial_path"
+                       or ((feature.get("properties") or {}).get("water_class") == "stream"
+                           and (feature.get("properties") or {}).get("hydro_category") == "perennial"))]
+        denominator = geodesic_length_km(source)
+        drawn_features = []
+        for group_feature in groups_by_gnis.get(gnis_id, []):
+            group_id = group_feature["properties"]["id"]
+            drawn_features.extend(by_id[ident] for ident in water_groups.get(group_id, [])
+                                  if ident in by_id)
+        numerator = geodesic_length_km(drawn_features)
+        checks.append({"gnis_id": gnis_id, "minimum_drawn_fraction": minimum,
+                       "group_ids": [feature["properties"]["id"] for feature in groups_by_gnis.get(gnis_id, [])],
+                       "group_present": bool(groups_by_gnis.get(gnis_id)),
+                       "seed_present": any((feature.get("properties") or {}).get("water_class") == "stream"
+                                            and (feature.get("properties") or {}).get("hydro_category") == "perennial"
+                                            for feature in source),
+                       "drawn_length_km": numerator, "source_length_km": denominator,
+                       "drawn_fraction": min(1.0, numerator / denominator) if denominator else 0.0,
+                       "member_gnis_ids": [feature["properties"].get("gnis_id") for feature in drawn_features]})
+    return checks
+
+
+def _extent_edge_splits(group_summaries, features, coverage):
+    if coverage is None:
+        return []
+    from shapely.geometry import Point, shape
+
+    if hasattr(coverage, "boundary"):
+        boundary = coverage.boundary
+    else:
+        geometry = coverage.get("geometry") if isinstance(coverage, dict) and coverage.get("type") == "Feature" else coverage
+        boundary = shape(geometry).boundary
+    by_id = {(feature.get("properties") or {}).get("id"): feature for feature in features}
+    summaries_by_gnis = {}
+    for row in group_summaries:
+        summaries_by_gnis.setdefault(row["gnis_id"], []).append(row)
+    splits = []
+    from pyproj import Geod
+    geod = Geod(ellps="WGS84")
+    for gnis_id, rows in sorted(summaries_by_gnis.items()):
+        if len(rows) < 2:
+            continue
+        edge = False
+        for row in rows:
+            for ident in row["member_ids"]:
+                for line in _line_parts(by_id[ident]):
+                    for coordinate in (line[0], line[-1]):
+                        if boundary.distance(Point(float(coordinate[0]), float(coordinate[1]))) <= 1e-6:
+                            edge = True
+        if edge:
+            row_endpoints = []
+            for row in rows:
+                endpoints = []
+                for ident in row["member_ids"]:
+                    for line in _line_parts(by_id[ident]):
+                        if len(line) >= 2:
+                            endpoints.extend((line[0][:2], line[-1][:2]))
+                row_endpoints.append(endpoints)
+            gaps = []
+            for index in range(len(row_endpoints) - 1):
+                distances = []
+                for left in row_endpoints[index]:
+                    for right in row_endpoints[index + 1]:
+                        _, _, distance = geod.inv(float(left[0]), float(left[1]),
+                                                   float(right[0]), float(right[1]))
+                        distances.append(abs(distance))
+                gaps.append(round(min(distances), 3) if distances else None)
+            splits.append({"gnis_id": gnis_id, "group_ids": [row["group_id"] for row in rows],
+                           "line_counts": [row["line_count"] for row in rows],
+                           "drawn_lengths_km": [row["drawn_length_km"] for row in rows],
+                           "gaps_m": gaps})
+    return splits
+
+
+def validate_expected_major_rivers(result: dict[str, Any], config: dict[str, Any], region_id: str):
+    """Fail on missing, short or foreign expected rivers; report only the one pending absence."""
+    expected = config.get("expected_major_rivers", {}).get(region_id, [])
+    pending = config.get("pending_external_source_refresh")
+    if pending is not None and (set(pending) != {"region_id", "gnis_id", "state", "reason"}
+                                or pending.get("state") != "PENDING_EXTERNAL_SOURCE_REFRESH"
+                                or not pending.get("reason")
+                                or pending.get("region_id") != "douglas-co"
+                                or pending.get("gnis_id") != "00201759"):
+        raise ValueError("invalid pending external source refresh marker")
+    checks = {row["gnis_id"]: row for row in result.get("major_river_checks", [])}
+    if (pending is not None and pending.get("region_id") == region_id
+            and checks.get(pending.get("gnis_id"), {}).get("seed_present")):
+        raise ValueError(
+            f"PENDING_EXTERNAL_SOURCE_REFRESH marker must be removed for river {pending['gnis_id']} after its perennial seed is present")
+    pending_rows = []
+    for river in expected:
+        gnis_id = river["gnis_id"]
+        check = checks.get(gnis_id)
+        minimum = river.get("minimum_drawn_fraction", 0.8)
+        if (isinstance(minimum, bool) or not isinstance(minimum, (int, float))
+                or not 0 <= minimum <= 1):
+            raise ValueError(f"invalid minimum drawn fraction for major river {gnis_id}")
+        if check is None:
+            raise ValueError(f"expected major river {gnis_id} missing validation record")
+        is_pending = (pending is not None and pending.get("region_id") == region_id
+                      and pending.get("gnis_id") == gnis_id and not check["seed_present"])
+        if not check["group_present"] or not check["seed_present"]:
+            if is_pending:
+                pending_rows.append({**check, "state": pending["state"], "reason": pending["reason"]})
+                continue
+            raise ValueError(f"expected major river {gnis_id} missing a perennial drawn group")
+        foreign = sorted({value for value in check["member_gnis_ids"] if value != gnis_id})
+        group_gnis = {feature.get("properties", {}).get("id"):
+                      feature.get("properties", {}).get("gnis_id")
+                      for feature in result.get("groups", [])}
+        foreign.extend(sorted(group_id for group_id in check.get("group_ids", [])
+                              if group_gnis.get(group_id) != gnis_id))
+        if foreign:
+            raise ValueError(f"expected major river {gnis_id} has foreign group members {foreign}")
+        if check["drawn_fraction"] < check["minimum_drawn_fraction"]:
+            raise ValueError(f"expected major river {gnis_id} drawn fraction {check['drawn_fraction']:.6f} below {check['minimum_drawn_fraction']:.6f}")
+    result["pending_external_source_refresh"] = pending_rows
+    return pending_rows
+
+
+def group_flowlines(features: list[dict[str, Any]], config: dict[str, Any] | None = None, *,
+                    region_id: str, review: dict[str, Any] | None = None, coverage=None,
+                    enforce_major: bool = True) -> dict[str, Any]:
+    """Group canonical flowlines without mutating them or inventing coordinates."""
+    config = config or water_display_config()
+    review = review or {"inclusions": [], "exclusions": []}
+    ids = [(feature.get("properties") or {}).get("id") for feature in features]
+    if any(not ident for ident in ids) or len(ids) != len(set(ids)):
+        raise ValueError("grouping requires unique non-empty canonical feature IDs")
+    with_connectors = _component_groups(features, config, review, include_connectors=True)
+    without_connectors = _component_groups(features, config, review, include_connectors=False)
+    if {ident for ident, group_id in with_connectors["group_assignments"].items() if group_id} != {
+            ident for ident, group_id in without_connectors["group_assignments"].items() if group_id}:
+        raise ValueError("G11 connector participation changed the drawn member set")
+    checks = _river_source_stats(features, with_connectors["groups"], with_connectors["water_groups"],
+                                 config, region_id)
+    result = {**with_connectors, "major_river_checks": checks,
+              "multi_part_gnis_ids": sorted({row["gnis_id"] for row in with_connectors["group_summaries"]
+                                              if sum(other["gnis_id"] == row["gnis_id"]
+                                                     for other in with_connectors["group_summaries"]) > 1})}
+    result["extent_edge_splits"] = _extent_edge_splits(result["group_summaries"], features, coverage)
+    if enforce_major:
+        validate_expected_major_rivers(result, config, region_id)
+    return result
 
 
 def normalize_source_fields(layer: str, source_properties: dict[str, Any]) -> dict[str, Any]:
