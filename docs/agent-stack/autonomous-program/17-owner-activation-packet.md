@@ -1,32 +1,62 @@
 # 17 — Owner activation packet
 
-**Status: AWAITING OWNER DECISIONS.** Coordinator, 2026-10-19. One packet for every decision needed to move from today's supervised operation to bounded autonomous development. Evidence: [16 — reconciliation](16-reconciliation-with-current-authority.md) and the Codex [runtime feasibility assessment](../proposals/autonomy-runtime-feasibility.md). Nothing below is active until the owner answers. Silence approves nothing.
+**Status: AWAITING OWNER DECISIONS.** Coordinator, 2026-10-19; consolidated the same day at the owner's direction. This is the one packet for PRs #38 (this charter) and #40 (the governance amendments). Evidence: [16 — reconciliation](16-reconciliation-with-current-authority.md) and the Codex [runtime feasibility assessment](../proposals/autonomy-runtime-feasibility.md).
 
-## Bottom line
+Nothing below is active because a draft PR exists, because a PR merges, or because the owner is silent. Each grant takes effect only from the owner's explicit answer, and merging #38 and #40 records those answers; it does not add to them.
 
-Development autonomy can start as soon as decisions D1–D3 are answered and the governance PR (D9) merges. That means continuous design, coding, testing, independent review and draft PRs within approved specifications, without asking at each step. Unattended operation across usage resets cannot start yet. The building blocks exist, but the assessment found nine UNKNOWNs (U1–U9), and the two most important are unresolved: Claude usage can't be read freshly while idle, and Orca can't hand an orphaned run to a new coordinator. D7 approves the work that would resolve them. Until then autonomy is `RUNTIME_NOT_READY`: the coordinator works while a session is open and checkpoints when it closes.
+## Three separate grants
 
-## Decisions
+Autonomy is split into three grants. Each one is decided on its own, and approving one never implies another.
 
-| ID | Decision | Options | Recommendation |
-|---|---|---|---|
-| D1 | Adopt the target product and charter (files 00–15) as the program's direction | Approve / approve with changes / reject | **Approve.** The charter preserves every current trust, licensing, merge and device rule. |
-| D2 | Merge authority (C1) | (a) **Conservative:** owner approves each exact-SHA merge; agents run everything up to that point. (b) Delegated low-risk merges under the conditions in file 10, via a new ADR superseding part of ADR-002. | **(a) now.** Revisit (b) after the runtime has run under supervision without incident. Main deploys production; your iPhone checks have found Safari defects that Chrome missed. |
-| D3 | Specification approval for M5–M8 (C2) | (a) Owner approves each milestone spec once; inside it, agents decide everything routine. (b) Coordinator writes and adopts specs within the charter. | **(a).** One review per milestone is where product and trust decisions concentrate; everything inside it proceeds without prompts. |
-| D4 | Colorado-wide scope (C3) | Add a Colorado coverage program to `ROADMAP.md` as a delivery track with its own specification, or defer | **Add as a track.** Spec drafted after M4 closes; no loader or catalog change before that spec is approved. |
-| D5 | Usage ceiling (C4) | (a) `min(90%, 100% − current reserve)` per window: at most 75% consumed for the shared Codex/Hermes pool and 85% for Claude. (b) 90% hard ceiling with the next-day implementation cost kept as a predictive stop. | **(a) until telemetry is verified (U5/U6, U8); then (b).** The assessment shows that only conservative admission is possible today, not a hard ceiling. |
-| D6 | Where run state lives (C5) | Sanitized queue, locks, approvals and reports in `docs/agent-stack/runs/`; lease, heartbeat, quota and session IDs in private host state | **Approve** (one sentence in `master-coordinator.md`). |
-| D7 | Runtime path (C6) | Approve, in order: (i) a specification for a model-free observer and admission controller (no activation); (ii) its offline implementation with the tests in the assessment; (iii) one documented authenticated quota read each for Codex (`account/rateLimits/read`) and Claude (a selected-field status-line bridge), using existing sign-ins, with no extra model calls; (iv) an isolated lifecycle pilot in a disposable Orca run, with your permission to restart Orca, sleep and reboot once, covering U1–U4 and U7; (v) activation, decided separately afterwards. | **Approve (i)–(iv). Decide (v) after reviewing the pilot results.** |
-| D8 | Record the local Qwen/Odysseus pause in the repository (K1) | One line in `tools/local-ai/qwen/README.md` | **Approve.** |
-| D9 | Governance PR | The coordinator prepares one documentation PR applying D2–D6 and D8, plus corrections K3 and K6, to `AGENTS.md`, `master-coordinator.md`, `roles.md`, `capacity-routing.md`, `overnight-autonomy.md`, `orca-bootstrap.md`, `ROADMAP.md`, ADR-002 and the Qwen README. K2 stays with PR #30. | **Prepared as draft PR #40** (2026-10-19), applying the recommended answer to each decision. If you choose differently, it is edited to match. It still needs your exact-SHA merge approval, after this PR. |
-| D10 | Codex startup update prompt (added 2026-10-19) | Every new Codex worker stops at an "Update available 0.160.1 → 0.163.0" prompt before it can receive its task. Orca correctly refuses agent input to that prompt (`agent_prompt_blocked`), so no worker can be dispatched, supervised or unattended, until a person answers it. Options: (a) you update the Codex CLI once now, and the coordinator re-checks the app-server quota schema the runtime assessment used; (b) you choose "Skip until next version" in the waiting terminal, which recurs at each Codex release; (c) additionally approve a Codex configuration that suppresses the startup update check for agent launches, so an unattended runtime is never stopped by it, with updates done deliberately by you. | **(a) now, and (c) as part of D7's runtime work.** Until one of these happens, Codex dispatch is blocked; the M4-C worker is waiting in its terminal. |
+| | Grant | What it allows | What it never allows | Decisions |
+|---|---|---|---|---|
+| **1** | **Development autonomy** | Inside an owner-approved milestone spec: continuous design, coding, testing, independent review, CI, draft PRs, rebases, research and spec drafting, without asking at each step. The coordinator escalates only protected decisions. | Merging. Changing trust wording, thresholds, licence interpretations or source selection. Starting work on a milestone whose spec is unapproved, beyond drafting and read-only research. Spending money. | D1, D3, D4, D6, D8 |
+| **2** | **Production-merge authority** | Unchanged: an agent merges only after the owner approves that specific PR at its exact head SHA. | Any standing or delegated merge permission. Auto-merge. Merging because CI is green or a review passed. | D2 |
+| **3** | **Unattended runtime** | After the pilot and a separate activation decision: work continuing across sessions and usage resets under a model-free supervisor. | Starting before the pilot is reviewed. Bypassing a usage limit by changing account, model or identity. | D5, D7, D10 |
 
-Not decisions, recorded for completeness: Hermes web research stopped on 2026-10-08 with a billing error (K4); no spending happens without you. No standing merge permission exists, and none is activated by this packet.
+Grant 1 needs nothing from grants 2 or 3. Until grant 3 is activated the program is `RUNTIME_NOT_READY`: the coordinator works while a session is open and checkpoints when it closes.
 
-## What continues regardless of these answers
+## Recommended defaults — one reply accepts them all
 
-M4-B final gate (your iPhone check, then exact-SHA approval of PR #17); the shared mobile-sheet structural fix (in review); draft PRs #15, #20 and #22–#36 awaiting review; M4-C preparation within the approved M4 specification; read-only M5–M8 research.
+| ID | Decision | Recommended default |
+|---|---|---|
+| D1 | Adopt the target product and charter (files 00–15) as the program's direction | **Approve.** The charter keeps every current trust, licensing, merge and device rule. |
+| D3 | How M5–M8 specs are approved | **(a)** The owner approves each milestone spec once. Inside it, agents decide routine matters. |
+| D4 | Colorado-wide scope | **Add a Colorado coverage track** to `ROADMAP.md`. Its spec is drafted after M4 closes. No loader or catalog change before that spec is approved. |
+| D6 | Where run state lives | Sanitized queue, locks, approvals and reports go in `docs/agent-stack/runs/`. Lease, heartbeat, quota and session IDs stay in private host state. |
+| D8 | Record the Qwen/Odysseus pause in the repo | **Approve** one banner line in `tools/local-ai/qwen/README.md`. |
+| D2 | Merge authority | **(a)** Per-PR exact-SHA owner approval stays. A delegated low-risk merge policy (file 10) would need its own ADR. That ADR is not proposed now. |
+| D5 | Usage ceiling | **(a)** `min(90%, 100% − reserve)` per window: at most 75% of the shared Codex/Hermes pool and 85% of Claude. This holds until telemetry is verified, then becomes a plain 90%. |
+| D7 | Runtime path | **Approve (i)–(iv):** (i) observer/admission-controller spec, (ii) offline implementation and tests, (iii) one authenticated quota read each for Codex and Claude using existing sign-ins, (iv) a disposable lifecycle pilot, with permission to restart Orca, sleep and reboot once. **(v) activation is decided later**, after the pilot results. |
+| D10 | Codex startup update prompt | The owner is handling the prompt in the terminal (2026-10-19). **Also approve (c)** within D7: a Codex setting that suppresses the startup update check for agent launches, so an unattended run is never stopped by it. The owner applies updates deliberately. |
+| D9 | Governance PR | Draft PR #40 already applies these defaults. If an answer differs, it is edited to match before approval. |
+
+## Material risks, flagged separately
+
+- **R1 — Development autonomy is a real change.** Under grant 1 the coordinator dispatches and reviews without asking. The owner sees work at three points: spec approval, each exact-SHA merge, and the iPhone checks. Bear case: a misdirected sequence of draft PRs costs agent capacity before the owner sees it. Mitigation: work is confined to approved specs, and every PR stays a draft until the owner acts.
+- **R2 — No delegated merge.** Keeping D2 (a) means every production change waits for the owner. That is the throughput limit, and it is intended. Main deploys production, and real-device checks have repeatedly found Safari defects that automated checks missed.
+- **R3 — Quota telemetry is not verified (U5, U6, U8).** Until D7 (iii) succeeds, every pool is `QUOTA_UNKNOWN`. Dispatch stays attended and conservative. No usage percentage is reported.
+- **R4 — The D7 (iv) pilot restarts Orca and reboots once.** It runs in a disposable run, only with this approval.
+
+## Approval order
+
+1. Answer this packet, in the format below.
+2. Approve PR #38 at its exact head SHA. This records the proposal and the answers.
+3. Approve PR #40 at its exact head SHA. This applies them to the canonical contracts.
+
+Grant 1 starts when #40 merges.
 
 ## How to answer
 
-Reply with one line per decision, for example: `D1 approve; D2 a; D3 a; D4 add; D5 a; D6 approve; D7 i-iv; D8 approve; D9 approve; D10 a+c`. Any change of wording or scope can be given inline. Merging PR #38 itself records the proposal and this packet; it activates nothing.
+`Autonomy: accept defaults`, or list changes inline, for example `Autonomy: accept defaults except D4 defer`.
+
+## Recorded, not decisions
+
+- **K4.** Hermes web research stopped on 2026-10-08 with a billing error. No spending happens without the owner.
+- **Paused.** Local Qwen/Odysseus work stays `PAUSED_BY_OWNER`.
+- **Continues under current authority, whatever the answers:**
+  - the M4-B final gates;
+  - the PR #39 mobile-sheet fix;
+  - M4-C commits 1–3, which need Codex;
+  - spec drafting for M5 (PR #41) and the source-neutral part of M6;
+  - review-debt triage.
