@@ -194,11 +194,7 @@
      "explore-zoom-out",
      "explore-sheet-toggle",
      "explore-detail-back",
-     "Sources & coverage",
-     "explore-layers",
-     "explore-search",
-     "explore-satellite",
-     "explore-topo"
+     "Sources & coverage"
     ],
     "sheetSequence": [
      "explore-sheet-toggle",
@@ -585,11 +581,7 @@
      "explore-zoom-out",
      "explore-sheet-toggle",
      "explore-detail-back",
-     "Sources & coverage",
-     "PILOT MOCKUP · after · n",
-     "explore-layers",
-     "explore-search",
-     "explore-satellite"
+     "Sources & coverage"
     ],
     "sheetSequence": [
      "explore-sheet-toggle",
@@ -597,7 +589,7 @@
      "Sources & coverage"
     ],
     "sheetFollowsVisualOrder": true,
-    "allVisible": false
+    "allVisible": true
    }
   },
   {
@@ -951,11 +943,7 @@
      "explore-zoom-out",
      "explore-sheet-toggle",
      "explore-detail-back",
-     "Sources & coverage",
-     "explore-layers",
-     "explore-search",
-     "explore-satellite",
-     "explore-topo"
+     "Sources & coverage"
     ],
     "sheetSequence": [
      "explore-sheet-toggle",
@@ -1317,11 +1305,7 @@
      "explore-zoom-out",
      "explore-sheet-toggle",
      "explore-detail-back",
-     "Sources & coverage",
-     "PILOT MOCKUP · before · ",
-     "explore-layers",
-     "explore-search",
-     "explore-satellite"
+     "Sources & coverage"
     ],
     "sheetSequence": [
      "explore-sheet-toggle",
@@ -1329,7 +1313,7 @@
      "Sources & coverage"
     ],
     "sheetFollowsVisualOrder": true,
-    "allVisible": false
+    "allVisible": true
    }
   },
   {
@@ -1708,11 +1692,7 @@
      "explore-zoom-out",
      "explore-sheet-toggle",
      "explore-detail-back",
-     "Sources & coverage",
-     "explore-layers",
-     "explore-search",
-     "explore-satellite",
-     "explore-topo"
+     "Sources & coverage"
     ],
     "sheetSequence": [
      "explore-sheet-toggle",
@@ -2074,11 +2054,7 @@
      "explore-zoom-out",
      "explore-sheet-toggle",
      "explore-detail-back",
-     "Sources & coverage",
-     "PILOT MOCKUP · proposal ",
-     "explore-layers",
-     "explore-search",
-     "explore-satellite"
+     "Sources & coverage"
     ],
     "sheetSequence": [
      "explore-sheet-toggle",
@@ -2086,7 +2062,7 @@
      "Sources & coverage"
     ],
     "sheetFollowsVisualOrder": true,
-    "allVisible": false
+    "allVisible": true
    }
   },
   {
