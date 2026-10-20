@@ -6,7 +6,7 @@ Runtime: `RUNTIME_NOT_READY` (no verified host supervisor). Capacity: `QUOTA_UNK
 
 | ID | Task | Owner | Base | State | Lock / next |
 |---|---|---|---|---|---|
-| Q1 | M4-C claim machinery, commits 1–3 (validators R74/R76, freshness, detail rendering; fixtures only) — brief `.missions/codex-m4c-machinery-mission.md` | Codex, Task `task_776d515916bf` | `06d6425` (PR #17 head), branch `k-kopacek/m4c-recreation-claims` | Blocked at start | L4: dispatch `ctx_6f8c085e5eec` failed at `agent_readiness` (Codex update prompt). Terminal retained. Retry: same Task, `--retry-of ctx_6f8c085e5eec`, after the owner answers the prompt. |
+| Q1 | M4-C claim machinery, commits 1–3 (validators R74/R76, freshness, detail rendering; fixtures only) — brief `.missions/codex-m4c-machinery-mission.md` | Codex, Task `task_776d515916bf` | `06d6425` (PR #17 head), branch `k-kopacek/m4c-recreation-claims` | **Done** — draft PR #44 at `a107255` (stacked on #17), commits reviewed; worker `ctx_6c261778d5b6` released | Commits 4–6: L5 (owner C-1…C-5) |
 | Q2 | PR #39 CI `browser` failure ("native Back jitter works", douglas-co 390×844) — brief `.missions/codex-pr39-ci-back-jitter.md` | Codex (not yet started) | `b83b2b0` | Queued | L4. Evidence: CI failed 2/2 (run 39339500144 and rerun); local harness passed 3/3 at the same head. |
 | Q3 | Draft M5 land classification specification | Claude worker `ctx_461a2762feee` (settled, released) | `c04f5d6` | **Done** — draft PR #41 at `37572d1`, coordinator review: no blocking finding | Owner: 17 decisions M5-D1…D17, then spec approval |
 | Q4 | Triage review debt: draft PRs #15, #20, #22–#35 | Coordinator | — | **Done** — see [review-debt-triage.md](review-debt-triage.md) | Owner approvals listed there |
