@@ -72,3 +72,4 @@ The tool is `npx -y ccusage@20.0.30 claude blocks --offline`. The version is pin
 - Codex: the provider-reported 5h reset (18:28Z) has passed. The last reading (92%, 14:57Z) is pre-reset. The first post-reset reading is being captured from the worker's own session; if it is ≥ 75%, dispatch stops.
 - Dispatched owner-approved MR1 removal: dispatch `ctx_827752d8f6c3`, worktree `aspen-hide-research-areas`, base 3965dbf. The PR #36 reconcile stays queued until MR1 is reviewed (one Codex worker at a time while the reading is unconfirmed).
 - Claude: ccusage active block $27.95 (~65% of the ~$43 calibrated cap), block ends ~19:00Z. No new Claude worker.
+- 18:32Z: Codex reset verified by a fresh reading: 5h 1.0% (as_of 18:31:53Z, next reset 23:31Z), weekly 15%. Mode ACTIVE. Dispatched PR #36 reconcile: `ctx_645d9e8ebfa8`, worktree `other-listed-sites-v2`. Two Codex workers running (the cap).
