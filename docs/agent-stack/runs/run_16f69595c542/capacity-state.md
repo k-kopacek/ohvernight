@@ -15,6 +15,7 @@ Reset condition for Codex: a verified reset (a supported reading or an owner sta
 | Task | State | Also gated by |
 |---|---|---|
 | Rebase #26, #28, #25 (drop `@expectedFailure`) after #22 merges | Ready once #22 merges | Owner approval of #22 |
+| **PR #39 desktop toolbar-height pin** (CI 39440087880 at `e9d9f4d`: the mobile jitter check now passes; Douglas 1024-half toolbar is 75.5 vs a macOS-pinned 53, most likely a font wrap) — brief `.missions/codex-pr39-desktop-toolbar-pin.md` | Ready, **critical path for M4/#39** | Codex capacity |
 | Rebase #27 onto main | Ready | — |
 | Rebase #36 onto merged #39 (drop its own sheet changes) | Ready once #39 merges | L2 |
 | Protected-token CI test (design D2) | Brief to write | Owner answer on PR #43 |
@@ -28,4 +29,4 @@ Reset condition for Codex: a verified reset (a supported reading or an owner sta
 2. Implementation-ready Codex briefs for M5 PR A and M6-A, so Codex can start the moment the owner approves (briefs only; no production edits).
 3. Coordinator review of PR #44 CI and PR #39 CI as they finish (coordinator, event-driven).
 
-Next autonomous action: on `worker_done` from `ctx_e63673a0f954`, review, push to #39 and read Linux CI. Then admit no further Codex work until the reset.
+Next autonomous action: `ctx_e63673a0f954` is done (`e9d9f4d`, reviewed and pushed, worker released). PR #39 is WAITING_FOR_CODEX_CAPACITY on the toolbar-pin brief. Nothing further is admitted to Codex until a verified reset or an owner exception.
