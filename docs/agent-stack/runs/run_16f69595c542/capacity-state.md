@@ -44,3 +44,18 @@ The probe now reports Claude tokens over the trailing 5 hours as a relative load
 Percentages for Claude still come from owner observations. A rejection record moves Claude to SUSPENDED until its `resetsAt`. `~/.claude/.credentials.json` holds credentials and is not read.
 
 Codex 14:57Z: 92%. The in-flight worker overshot after the SUSPENDED message, and no new Codex work has been admitted.
+
+## Claude calibration with ccusage (2026-10-20 15:27Z)
+
+The tool is `npx -y ccusage@20.0.30 claude blocks --offline`. The version is pinned to an older release: MIT, no dependencies, it reads `~/.claude/projects` locally, and `--offline` stops it fetching prices. It was owner-suggested and is not installed globally.
+
+**Estimated cap.** The 5-hour block that hit Claude's limit on 2026-10-19 to 20 began about 21:20Z; it was rejected with a reset at 02:20Z. It had used **$43.15** cost-equivalent, with 416k output tokens. That figure is the empirical cap. It is an estimate, because the provider's limit is not defined in dollars.
+
+**Current block (14:00 to 19:00Z).** $19.02 used, about **44% of the estimated cap**. The burn rate is $13.07 an hour. At that rate the block would reach the cap around 17:15Z. That reading conflicts with the owner's ~6% observation, which may be a weekly figure.
+
+**Mode: Claude CONSERVE until 19:00Z.**
+- No new Claude worker is dispatched; the observer-spec worker `ctx_d68c424d40ac` finishes.
+- The coordinator acts only on events.
+- The conservative reading governs until a better reading exists.
+
+**Codex** is SUSPENDED until 18:28Z (92%).
