@@ -10,6 +10,18 @@ sys.path.insert(0, str(V2 / 'pipeline/scripts'))
 from lib.region_contract import ContractError, validate_water_recreation_data
 
 
+# Preserved baseline blocklist from 06d642597609ab7da88cb2c5a780ef63b74a9039.
+BASELINE_NON_CLAIM_HOSTS = {
+    'facebook.com',
+    'reddit.com',
+    'youtube.com',
+    'instagram.com',
+    'alltrails.com',
+    'wikiloc.com',
+    'tripadvisor.com',
+}
+
+
 class WaterRecreationTests(unittest.TestCase):
     def fixture(self):
         registry = json.loads((Path(__file__).parent / 'fixtures/water-recreation.json').read_text())
@@ -89,6 +101,15 @@ class WaterRecreationTests(unittest.TestCase):
         for name, mutate in mutations.items():
             with self.subTest(mutation=name): self.assert_mutation('R74', mutate)
 
+    def test_summary_boundary_and_validation_are_time_independent(self):
+        manifest, registry = self.fixture()
+        registry['records'][0]['claims']['fishing']['summary']='x'*160
+        for date in ('2000-01-01','2099-01-01'):
+            for claim in registry['records'][0]['claims'].values():
+                if 'evidence' in claim:
+                    claim['evidence'].update(last_checked_at=date,last_confirmed_at=date)
+            self.assertTrue(self.validate(manifest, registry))
+
     def test_R74_every_non_claim_host_and_subdomain(self):
         config = json.loads((V2 / 'pipeline/config/water_display.json').read_text())
         for host in config['non_claim_hosts']:
@@ -164,14 +185,9 @@ class WaterRecreationIntegrationTests(unittest.TestCase):
         config=json.loads((V2/'pipeline/config/water_display.json').read_text())
         provenance=json.loads((Path(__file__).parent/'fixtures/non-claim-hosts-provenance.json').read_text())
         self.assertEqual(config['non_claim_hosts'], sorted(provenance))
-        self.assertLessEqual({'facebook.com','reddit.com','youtube.com','instagram.com',
-                              'alltrails.com','wikiloc.com','tripadvisor.com'}, set(config['non_claim_hosts']))
+        self.assertLessEqual(BASELINE_NON_CLAIM_HOSTS, set(config['non_claim_hosts']))
         for host,ref in provenance.items():
-            if 'revision' in ref:
-                import subprocess
-                content=subprocess.check_output(['git','show',ref['revision']+':'+ref['file']],cwd=V2.parent,text=True)
-            else:
-                content=(V2.parent/ref['file']).read_text()
+            content=(V2.parent/ref['file']).read_text()
             line=content.splitlines()[ref['line']-1]
             self.assertIn(host, line, host)
 

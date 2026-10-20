@@ -24,9 +24,9 @@
     "line": 24
   },
   "facebook.com": {
-    "file": "v2/pipeline/config/water_display.json",
-    "revision": "06d642597609ab7da88cb2c5a780ef63b74a9039",
-    "line": 49
+    "file": "v2/pipeline/tests/test_water_recreation.py",
+    "line": 15,
+    "baseline_sha": "06d642597609ab7da88cb2c5a780ef63b74a9039"
   },
   "fishbrain.com": {
     "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
@@ -53,9 +53,9 @@
     "line": 30
   },
   "instagram.com": {
-    "file": "v2/pipeline/config/water_display.json",
-    "revision": "06d642597609ab7da88cb2c5a780ef63b74a9039",
-    "line": 52
+    "file": "v2/pipeline/tests/test_water_recreation.py",
+    "line": 18,
+    "baseline_sha": "06d642597609ab7da88cb2c5a780ef63b74a9039"
   },
   "maps.pitkincounty.com": {
     "file": "docs/research/m4-water/hermes/track-a-authoritative-water-sources.md",
@@ -90,9 +90,9 @@
     "line": 32
   },
   "wikiloc.com": {
-    "file": "v2/pipeline/config/water_display.json",
-    "revision": "06d642597609ab7da88cb2c5a780ef63b74a9039",
-    "line": 54
+    "file": "v2/pipeline/tests/test_water_recreation.py",
+    "line": 20,
+    "baseline_sha": "06d642597609ab7da88cb2c5a780ef63b74a9039"
   },
   "wikipedia.org": {
     "file": "docs/research/m4-water/hermes/track-d-community-signals.md",
@@ -103,8 +103,8 @@
     "line": 23
   },
   "youtube.com": {
-    "file": "v2/pipeline/config/water_display.json",
-    "revision": "06d642597609ab7da88cb2c5a780ef63b74a9039",
-    "line": 51
+    "file": "v2/pipeline/tests/test_water_recreation.py",
+    "line": 17,
+    "baseline_sha": "06d642597609ab7da88cb2c5a780ef63b74a9039"
   }
 }

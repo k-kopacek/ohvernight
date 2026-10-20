@@ -8,17 +8,24 @@ from pathlib import Path
 V2 = Path(__file__).resolve().parents[2]
 
 
+def water_recreation_bytes(manifest):
+    ref = manifest.get("water_recreation")
+    return (V2 / ref["path"]).read_bytes() if ref else b""
+
+
 class DisplayBudgetTests(unittest.TestCase):
     def test_T13_display_files_stay_within_feature_and_byte_budgets(self):
         for region_dir in (V2 / "regions").glob("*/display"):
             manifest = json.loads((region_dir.parent / "region.json").read_text())
             index = json.loads((region_dir / "index.json").read_text())
             total_features = 0
-            total_gzip = 0
+            recreation = water_recreation_bytes(manifest)
+            total_gzip = len(gzip.compress(recreation, mtime=0)) if recreation else 0
             map_usable = sum((V2 / relative).stat().st_size for relative in [
                 str((region_dir.parent / "region.json").relative_to(V2)),
                 str((region_dir / "index.json").relative_to(V2)),
             ])
+            map_usable += len(recreation)
             config = json.loads((region_dir.parent / "explore.json").read_text())
             map_usable += (region_dir.parent / "explore.json").stat().st_size
             html = (V2 / "index.html").read_text()
@@ -49,3 +56,11 @@ class DisplayBudgetTests(unittest.TestCase):
             self.assertLessEqual(total_gzip, 1500000, f"{region_dir.parent.name} default-on gzip growth budget")
             all_loaded = map_usable + sum((V2 / artifact["path"]).stat().st_size for artifact in index["artifacts"] if artifact["layer_id"] != "coverage")
             self.assertLessEqual(all_loaded, 4500000, f"{region_dir.parent.name} all display bytes")
+
+    def test_optional_recreation_registry_counts_toward_raw_and_gzip_budgets(self):
+        fixture = "pipeline/tests/fixtures/water-recreation.json"
+        self.assertEqual(water_recreation_bytes({}), b"")
+        raw = water_recreation_bytes({"water_recreation": {"path": fixture}})
+        self.assertEqual(len(raw), (V2 / fixture).stat().st_size)
+        self.assertGreater(len(raw), 0)
+        self.assertGreater(len(gzip.compress(raw, mtime=0)), 0)

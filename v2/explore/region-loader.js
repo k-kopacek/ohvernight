@@ -125,6 +125,16 @@
           placeDocuments[layer.id]=document;
         }catch(error){places[layer.id]={state:'failed',error:error.message};}
       }));
+      let waterRecreation=null;
+      if(manifest.water_recreation){
+        try{
+          const path=manifest.water_recreation.path;
+          if(path!=='regions/'+regionId+'/water-recreation.json')throw new Error('Registry path is outside active region');
+          waterRecreation=await readJson(fetcher,makeUrl(activePath(regionId,path,'water recreation')));
+          if(!waterRecreation||waterRecreation.schema_version!==1||!Array.isArray(waterRecreation.records))
+            throw new Error('Registry shape is invalid');
+        }catch(error){throw new RegionLoaderError('REGION_NOT_AVAILABLE','Water recreation registry could not be loaded: '+error.message);}
+      }
       let rules=null;
       if(manifest.rules?.path){
         try{rules=await readJson(fetcher,makeUrl(activePath(regionId,manifest.rules.path,'rules')));}catch{}
@@ -175,7 +185,7 @@
         }
         return result;
       }
-      return {regionId,manifest,config,index,coverage,places,placeDocuments,rules,registry:entries,layers:state,loadLayer,loadDefaultLayers};
+      return {regionId,manifest,config,index,coverage,places,placeDocuments,rules,waterRecreation,registry:entries,layers:state,loadLayer,loadDefaultLayers};
     }
     return {loadRegion,resolveRegionId:(search)=>resolveRegionId(search,options.defaultRegion)};
   }

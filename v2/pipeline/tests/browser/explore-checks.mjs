@@ -431,6 +431,40 @@ export async function runExploreChecks(client,origin,signal,root){
   assert.equal(await evaluate('explore.state.selection?.featureId'),search.id,'M4 water search selects through shared selection function');await assertSelection('M4 water search selection');assert.equal(await evaluate('explore.$("detail-title").textContent'),search.name,'M4 water search opens same group detail');
   await evaluate('explore.$("detail-back").click();explore.sheet.setState("collapsed")');
   result.checks.push('M4 real grouped stream taps and labels, waterbody camera, detail wording, source-name search, long-river fit cap and class exclusions');
+  // Synthetic IDs and fixture content only; never attach claims to real waters.
+  const recreationFixture=JSON.parse(await readFile(resolve(root,'v2/pipeline/tests/fixtures/water-recreation.json')));
+  await evaluate(`(()=>{
+   window.__m4cPriorRegistry=explore.region.waterRecreation;
+   const registry=${JSON.stringify(recreationFixture)};
+   for(const claim of Object.values(registry.records[0].claims))if(claim.evidence)claim.evidence.last_confirmed_at='2000-01-01';
+   explore.region.waterRecreation=registry;
+   window.__m4cFeature={type:'Feature',geometry:null,properties:{id:'fixture-lake',name:'Fixture Lake',water_class:'lake_pond',hydro_category:'perennial'}};
+   window.__m4cEntry=explore.region.registry.find(e=>e.kind==='water');
+   explore.showDetail(window.__m4cEntry,window.__m4cFeature);
+  })()`);
+  try{
+   const statement=await evaluate(`(()=>{const body=explore.$('detail-body');return {
+    heading:[...body.querySelectorAll('h3')].map(e=>e.textContent),
+    lines:[...body.querySelectorAll('p')].map(e=>e.textContent),
+    links:[...body.querySelectorAll('p a')].map(e=>({text:e.textContent,url:e.href,target:e.target,rel:e.rel}))}})()`);
+   assert.ok(statement.heading.includes('Agency or operator statement'),'M4-C fixture statement heading');
+   assert.deepEqual(statement.lines.slice(-7),['Fixture Operator',
+    'Boating (motorized or trailered): Prohibited. Synthetic boating statement. Fixture Operator. Reviewed 2000-01-01. Review overdue.',
+    'Paddling: Restricted. Synthetic paddling statement. Fixture Operator. Reviewed 2000-01-01. Review overdue.',
+    'Fishing: Not established. Fixture Operator. Reviewed 2000-01-01.',
+    'Swimming: Not established.','Access: Not established.',
+    'A mapped water feature is not permission to enter, fish, boat, paddle, swim, park or camp.'],'M4-C synthetic overdue detail byte-exact lines');
+   assert.equal(statement.links.length,3,'M4-C each non-unknown fixture claim has its own inline source link');
+   for(const link of statement.links)assert.deepEqual(link,{text:'Fixture Operator',url:'https://operator.example/water/fixture',target:'_blank',rel:'noopener noreferrer'});
+   await evaluate('explore.region.waterRecreation=null;explore.showDetail(window.__m4cEntry,window.__m4cFeature)');
+   const noRecord=await evaluate(`[...explore.$('detail-body').querySelectorAll('p')].map(e=>e.textContent)`);
+   assert.deepEqual(noRecord.slice(-2),['Mapped water. Access and allowed activities are not established.',
+    'A mapped water feature is not permission to enter, fish, boat, paddle, swim, park or camp.']);
+   assert.ok(!noRecord.some(line=>/Fishing|Boating|Paddling|Swimming|Agency or operator statement/.test(line)));
+  }finally{
+   await evaluate('explore.region.waterRecreation=window.__m4cPriorRegistry;delete window.__m4cPriorRegistry;delete window.__m4cFeature;delete window.__m4cEntry;explore.$("detail-back").click();explore.sheet.setState("collapsed")');
+  }
+  result.checks.push('M4-C synthetic registry inline links, overdue restrictions, no-record wording and final WW2');
   await evaluate('explore.$("fit").click()');
   result.a12LandFeatures=[];
   const landIds=await evaluate('explore.region.layers.get(explore.region.registry.find(e=>e.kind==="land_management").id).data.features.filter(f=>f.geometry).map(f=>f.properties.id)');

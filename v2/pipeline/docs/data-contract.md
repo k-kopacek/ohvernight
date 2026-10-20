@@ -277,7 +277,7 @@ a cached resolver. JSON Pointer resolution implements `~0` and `~1`.
 | R02 | `region.id` equals the manifest's directory name. |
 | R03 | Every path is relative, has no `..` and no leading `/`, and resolves to an existing file under `v2/`. This includes coverage, layer, rules, and status-reference paths. |
 | R04 | Layer IDs are unique. Every `source_id` is declared. Every declared source is used by a layer or by `coverage`. |
-| R05 | In `fact_coverage`, every `layer_ids` entry is a declared layer; `context` has at least one; and `reviewed_partial` meets 5.5 (non-null rules, or a `reviewed_sites` layer with at least one feature). |
+| R05 | In `fact_coverage`, every `layer_ids` entry is a declared layer; `context` has at least one; and `reviewed_partial` meets 5.5 (non-null rules, a `reviewed_sites` layer with at least one feature, or for `recreation_permission` only, a qualifying water recreation registry under R76). |
 | R10 | Coverage resolves to a GeoJSON Feature whose geometry is a valid, non-empty Polygon or MultiPolygon within longitude ±180 and latitude ±90. |
 | R20 | A `feature_collection` layer resolves to an object with `type == "FeatureCollection"` and a `features` list. |
 | R21 | Every feature `properties.id` is a non-empty string, unique across **all** distinct canonical `feature_collection` path/pointer pairs of the region. When multiple declarations reference the same canonical path and pointer, that collection is counted once for uniqueness; the declarations remain separate display layers. |
@@ -357,6 +357,8 @@ The stable display rules are:
 | R71 | Group geometry equals ordered, R63-transformed member geometry; member count, geodesic length, name and GNIS ID equal computed values. |
 | R72 | Disallowed water classes never display; streams and lakes are perennial, reservoirs have eligible fcodes, except reviewed inclusions. Unknown-category reservoirs remain unknown. |
 | R73 | Optional water review records resolve to canonical/group IDs, use allowed reason codes and complete non-community HTTP(S) agency evidence, include a non-name-only statement and RFC 3339 review time, and excluded records are absent from display. |
+| R74 | The optional water recreation registry conforms to M4 section 9.2: display IDs resolve uniquely, four activities have valid statuses and independent complete evidence for non-unknown claims, forbidden hosts are rejected, access is unknown/restricted only, and all-unknown records are omitted. |
+| R76 | Recreation permission is reviewed_partial if and only if the water registry has a non-unknown activity or access claim; its layer_ids name exactly the water layers. |
 
 Grouped water declarations use `display.select: streams` or `bodies`. These
 rules can be exercised against offline fixtures before section 3 creates the
@@ -393,5 +395,3 @@ All checks are offline and time-independent. Adding or changing a layer,
 source, or property requires updating its region manifest in the same pull
 request; CI enforces that decision. The map layers remain research context,
 not legal access or availability guarantees.
-
-M4-C validator additions: **R74** validates the water recreation registry against section 9.2 of the M4 specification; **R76** checks its bidirectional recreation-permission coverage declaration and water layer IDs.
