@@ -59,3 +59,10 @@ The tool is `npx -y ccusage@20.0.30 claude blocks --offline`. The version is pin
 - The conservative reading governs until a better reading exists.
 
 **Codex** is SUSPENDED until 18:28Z (92%).
+
+**16:15Z.**
+- **Claude:** the current block is at $27.43, about 64% of the estimated cap (ccusage). That leaves roughly $11 to the owner's 90% ceiling. Only the observer-spec worker runs, no new Claude worker is admitted, and the coordinator is event-driven.
+- **Codex:** SUSPENDED until the verified reset (18:28Z).
+- **Queue at reset, in priority order:**
+  1. MR1 fail-closed removal (owner approved);
+  2. PR #36 reconcile.
