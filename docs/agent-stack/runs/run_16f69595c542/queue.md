@@ -34,3 +34,8 @@ Done this run:
   - **PR #39.** Desktop toolbar fix `7b671c4` (Codex; diagnostic PR #46 confirmed a font-metric wrap: 2 lines on macOS, 3 on Linux) was finished under SUSPENDED. The coordinator ran the local browser harness (exit 0) and the Python self-test (OK), then pushed.
   - **Codex-ready briefs.** `.missions/codex-m5-pr-a-brief.md`, `codex-m6-a-brief.md` and `codex-m6-b-brief.md` are written and record 27 spec gaps. Dispatch also needs #17 and #44 merged, the M6 9.1 MVUM amendment, the TM1–TM5 literals, and sequencing of M5-A before M6-A.
   - **M7 spec.** Draft PR #47 at `86807fc`, reviewed, no blocking finding. MR1 (51 computed research areas) and MR6 (RIDB agreement unread) concern current production.
+- 2026-10-20 ~15:45Z:
+  - **PR #39 MERGED** (`3965dbf`). Diagnostic PR #46 closed. Issue #48 records the landscape design debt.
+  - **PR #36** reconcile brief queued for the Codex reset (~18:28Z).
+  - **MR1** closure audit dispatched to Claude `ctx_f1ccb3f48a3a`. It is read-only, in the shared runtime-observer-spec worktree; the worker was warned that the worktree is shared.
+  - **MR6:** RIDB lock L12.
