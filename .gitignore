@@ -1,0 +1,55 @@
+# Operating-system and editor files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100/
+.Trashes/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+
+# Python environments, caches, and test output
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# JavaScript dependencies and build output
+node_modules/
+dist/
+build/
+coverage/
+
+# Pipeline inputs and generated staging output. v2/map-data-v2.json is the
+# tracked public copy; processed output stays ignored.
+v2/pipeline/_selftest_scratch/
+# Reviewed records may contain submitted private details; add intentionally only.
+v2/pipeline/data/raw/*
+!v2/pipeline/data/raw/.gitkeep
+# Reviewed import audit copies are kept deliberately.
+!v2/pipeline/data/raw/ridb-import-*.json
+v2/pipeline/data/processed/*
+!v2/pipeline/data/processed/.gitkeep
+
+# Archives and local delivery artifacts
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+# Optional advisory run artifacts; default storage is outside this repository.
+.qwen-runs/

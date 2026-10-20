@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-labelledby="title"><title id="title">Lime green o in front of mountains and a starry night</title><defs><clipPath id="night-disc"><circle cx="16" cy="16" r="16"/></clipPath><linearGradient id="night-sky" x2="0" y2="1"><stop stop-color="#111b27"/><stop offset="1" stop-color="#2e4147"/></linearGradient></defs>
+<g clip-path="url(#night-disc)">
+<circle cx="16" cy="16" r="16" fill="url(#night-sky)"/>
+<g fill="#d7dfd1"><circle cx="6" cy="8" r=".65"/><circle cx="16" cy="4.5" r=".55"/><circle cx="28" cy="12" r=".45"/><circle cx="4" cy="15" r=".4"/><path d="m24 4 .5 1.8 1.8.5-1.8.5-.5 1.8-.5-1.8-1.8-.5 1.8-.5Z"/></g>
+<path d="M-3 28 7 13 14 21 24 11 36 29V35H-3Z" fill="#62716b"/>
+<path d="m7 13-2.6 3.9L7 15.8l1.8 1.3Z M24 11l-3.4 3.4 3.1-1 3.2 2.5Z" fill="#b5c0b0"/>
+<path d="M-4 32 4 22 10 27 20 18 36 32Z" fill="#344b43"/>
+<path d="M-4 34 7 28 15 31 25 25 36 31V36Z" fill="#22372f"/>
+</g>
+<text x="16" y="27" text-anchor="middle" fill="#d5f780" stroke="#18251e" stroke-width=".55" paint-order="stroke" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="32" font-weight="750" letter-spacing="-1.3">o</text></svg>

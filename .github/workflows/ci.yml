@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: v2/pipeline/requirements.txt
+      - run: pip install -r v2/pipeline/requirements.txt
+      - run: python v2/pipeline/scripts/00_selftest.py
+      - name: Offline optional Qwen adapter tests
+        run: python -B tools/local-ai/qwen/offline_tests.py
+
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: |
+          node --check v2/app.js
+          node --check v2/map-layers.js
+          node --check v2/trail-discovery.js
+          node --check v2/trip-rules.js
+          node --check v2/trust.js
+          node --check v2/explore/transport.js
+          node --check v2/explore/layer-registry.js
+          node --check v2/explore/region-loader.js
+          node --check v2/regions/douglas-co/extras.js
+          node --check v2/explore/trail-seasons.js
+          node --check v2/explore/map-adapter.js
+          node --check v2/explore/evidence.js
+          node --check v2/explore/land-style.js
+          node --check v2/explore/shell.js
+          node --check v2/explore/sheet.js
+          node --check v2/explore/drawer.js
+          node --check v2/explore/browse.js
+          node --check v2/explore/capabilities.js
+          node --check v2/pipeline/tests/browser/run.mjs
+          node --check v2/pipeline/tests/browser/explore-checks.mjs
+          node --check v2/pipeline/tests/browser/measure.mjs
+          node --check app.js
+          node --check trip-rules.js
+      - run: node --test v2/pipeline/tests/*.test.cjs
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node v2/pipeline/tests/browser/run.mjs

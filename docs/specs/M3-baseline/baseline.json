@@ -1,0 +1,599 @@
+[
+ {
+  "page": "aspen",
+  "viewport": "320x568",
+  "cpuThrottle": 4,
+  "readyMs": 2757,
+  "wallMs": 6225,
+  "longTasks": {
+   "n": 10,
+   "total": 2543,
+   "max": 1264
+  },
+  "sameOriginRequests": 18,
+  "sameOriginBytes": 11821383,
+  "heapUsedMB": 33.4,
+  "domNodes": 430,
+  "layoutCount": 13,
+  "toggleHeavyLayerMs": {
+   "off": 62.7,
+   "on": 153.3
+  },
+  "freeMapPct": 68.8,
+  "sheet": [
+   0,
+   472,
+   320,
+   96
+  ],
+  "topbar": [
+   14,
+   12,
+   292,
+   44
+  ],
+  "tools": [
+   116,
+   403,
+   192,
+   44
+  ],
+  "hscroll": false,
+  "smallTargets": [
+   "Leaflet 34x10",
+   "USGS The National  88x10",
+   "ohvernightFIELD TE 127x30",
+   "satellite 68x38",
+   "terrain 50x38"
+  ],
+  "layerDrawer": {
+   "rect": [
+    18,
+    85,
+    284,
+    483
+   ],
+   "coverPct": 75.4,
+   "modal": true
+  }
+ },
+ {
+  "page": "aspen",
+  "viewport": "390x844",
+  "cpuThrottle": 4,
+  "readyMs": 2669,
+  "wallMs": 6734,
+  "longTasks": {
+   "n": 7,
+   "total": 2186,
+   "max": 1234
+  },
+  "sameOriginRequests": 18,
+  "sameOriginBytes": 11821383,
+  "heapUsedMB": 33.4,
+  "domNodes": 432,
+  "layoutCount": 13,
+  "toggleHeavyLayerMs": {
+   "off": 61.5,
+   "on": 139.3
+  },
+  "freeMapPct": 79,
+  "sheet": [
+   0,
+   734,
+   390,
+   110
+  ],
+  "topbar": [
+   14,
+   12,
+   362,
+   44
+  ],
+  "tools": [
+   186,
+   665,
+   192,
+   44
+  ],
+  "hscroll": false,
+  "smallTargets": [
+   "Leaflet 34x10",
+   "USGS The National  88x10",
+   "ohvernightFIELD TE 127x30",
+   "satellite 68x38",
+   "terrain 50x38"
+  ],
+  "layerDrawer": {
+   "rect": [
+    18,
+    127,
+    354,
+    717
+   ],
+   "coverPct": 77.2,
+   "modal": true
+  }
+ },
+ {
+  "page": "aspen",
+  "viewport": "768x1024",
+  "cpuThrottle": 4,
+  "readyMs": 2866,
+  "wallMs": 8616,
+  "longTasks": {
+   "n": 10,
+   "total": 2600,
+   "max": 1440
+  },
+  "sameOriginRequests": 18,
+  "sameOriginBytes": 11821383,
+  "heapUsedMB": 33.6,
+  "domNodes": 444,
+  "layoutCount": 12,
+  "toggleHeavyLayerMs": {
+   "off": 52.6,
+   "on": 124.6
+  },
+  "freeMapPct": 48.7,
+  "sheet": [
+   24,
+   90,
+   380,
+   912
+  ],
+  "topbar": [
+   24,
+   20,
+   720,
+   44
+  ],
+  "tools": [
+   459,
+   938,
+   285,
+   44
+  ],
+  "hscroll": false,
+  "smallTargets": [
+   "Leaflet 43x12",
+   "USGS The National  110x12",
+   "ohvernightFIELD TE 259x41",
+   "satellite 72x38",
+   "terrain 54x38",
+   "zoom-in 34x44",
+   "zoom-out 34x44",
+   "room-backups 144x35",
+   "What has been chec 314x35",
+   "Forest Service ale 129x15",
+   "Pitkin County noti 133x15",
+   "All 72x36",
+   "Campgrounds 99x36",
+   "Dispersed 77x36",
+   "Rooms 72x36",
+   "show-conflicts 17x17"
+  ],
+  "layerDrawer": {
+   "rect": [
+    174,
+    77,
+    420,
+    870
+   ],
+   "coverPct": 46.5,
+   "modal": true
+  }
+ },
+ {
+  "page": "aspen",
+  "viewport": "1440x900",
+  "cpuThrottle": 1,
+  "readyMs": 620,
+  "wallMs": 3984,
+  "longTasks": {
+   "n": 3,
+   "total": 378,
+   "max": 231
+  },
+  "sameOriginRequests": 18,
+  "sameOriginBytes": 11821383,
+  "heapUsedMB": 33.5,
+  "domNodes": 452,
+  "layoutCount": 10,
+  "toggleHeavyLayerMs": {
+   "off": 11,
+   "on": 33.8
+  },
+  "freeMapPct": 72.5,
+  "sheet": [
+   24,
+   90,
+   380,
+   788
+  ],
+  "topbar": [
+   24,
+   20,
+   1392,
+   44
+  ],
+  "tools": [
+   1131,
+   814,
+   285,
+   44
+  ],
+  "hscroll": false,
+  "smallTargets": [
+   "Leaflet 43x12",
+   "USGS The National  110x12",
+   "ohvernightFIELD TE 259x41",
+   "satellite 72x38",
+   "terrain 54x38",
+   "zoom-in 34x44",
+   "zoom-out 34x44",
+   "room-backups 144x35",
+   "What has been chec 303x35",
+   "Forest Service ale 129x15",
+   "Pitkin County noti 133x15",
+   "All 66x36",
+   "Campgrounds 99x36",
+   "Dispersed 77x36",
+   "Rooms 66x36",
+   "show-conflicts 17x17"
+  ],
+  "layerDrawer": {
+   "rect": [
+    510,
+    68,
+    420,
+    765
+   ],
+   "coverPct": 24.8,
+   "modal": true
+  }
+ },
+ {
+  "page": "douglas",
+  "viewport": "320x568",
+  "cpuThrottle": 4,
+  "readyMs": 1482,
+  "wallMs": 4868,
+  "longTasks": {
+   "n": 8,
+   "total": 1427,
+   "max": 550
+  },
+  "sameOriginRequests": 10,
+  "sameOriginBytes": 6368868,
+  "heapUsedMB": 27.6,
+  "domNodes": 533,
+  "layoutCount": 9,
+  "toggleHeavyLayerMs": {
+   "off": 50.6,
+   "on": 176.4
+  },
+  "freeMapPct": 64.7,
+  "sheet": [
+   0,
+   427,
+   320,
+   121
+  ],
+  "topbar": [
+   12,
+   12,
+   296,
+   32
+  ],
+  "tools": [
+   12,
+   58,
+   296,
+   46
+  ],
+  "hscroll": false,
+  "smallTargets": [
+   "Leaflet 39x11",
+   "ohvernight 143x32",
+   "notices 165x36",
+   "saved 84x36"
+  ],
+  "layerDrawer": {
+   "rect": [
+    19,
+    34,
+    282,
+    500
+   ],
+   "coverPct": 77.5,
+   "modal": true
+  }
+ },
+ {
+  "page": "douglas",
+  "viewport": "390x844",
+  "cpuThrottle": 4,
+  "readyMs": 1478,
+  "wallMs": 5899,
+  "longTasks": {
+   "n": 8,
+   "total": 1426,
+   "max": 538
+  },
+  "sameOriginRequests": 10,
+  "sameOriginBytes": 6368868,
+  "heapUsedMB": 27.6,
+  "domNodes": 537,
+  "layoutCount": 9,
+  "toggleHeavyLayerMs": {
+   "off": 50,
+   "on": 180.5
+  },
+  "freeMapPct": 76.7,
+  "sheet": [
+   0,
+   703,
+   390,
+   121
+  ],
+  "topbar": [
+   12,
+   12,
+   366,
+   32
+  ],
+  "tools": [
+   12,
+   58,
+   366,
+   44
+  ],
+  "hscroll": false,
+  "smallTargets": [
+   "Leaflet 39x11",
+   "ohvernight 143x32",
+   "notices 165x36",
+   "saved 84x36"
+  ],
+  "layerDrawer": {
+   "rect": [
+    19,
+    75,
+    352,
+    694
+   ],
+   "coverPct": 74.2,
+   "modal": true
+  }
+ },
+ {
+  "page": "douglas",
+  "viewport": "768x1024",
+  "cpuThrottle": 4,
+  "readyMs": 1497,
+  "wallMs": 8674,
+  "longTasks": {
+   "n": 8,
+   "total": 1261,
+   "max": 518
+  },
+  "sameOriginRequests": 10,
+  "sameOriginBytes": 6368868,
+  "heapUsedMB": 28,
+  "domNodes": 544,
+  "layoutCount": 6,
+  "toggleHeavyLayerMs": {
+   "off": 44,
+   "on": 153.1
+  },
+  "freeMapPct": 84.5,
+  "sheet": [
+   18,
+   860,
+   440,
+   140
+  ],
+  "topbar": [
+   18,
+   16,
+   732,
+   32
+  ],
+  "tools": [
+   18,
+   68,
+   732,
+   44
+  ],
+  "hscroll": false,
+  "smallTargets": [
+   "+ 30x30",
+   "− 30x30",
+   "Leaflet 39x11",
+   "ohvernight 158x32"
+  ],
+  "layerDrawer": {
+   "rect": [
+    89,
+    190,
+    590,
+    645
+   ],
+   "coverPct": 48.4,
+   "modal": true
+  }
+ },
+ {
+  "page": "douglas",
+  "viewport": "1440x900",
+  "cpuThrottle": 1,
+  "readyMs": 437,
+  "wallMs": 4284,
+  "longTasks": {
+   "n": 2,
+   "total": 188,
+   "max": 130
+  },
+  "sameOriginRequests": 10,
+  "sameOriginBytes": 6368868,
+  "heapUsedMB": 28.2,
+  "domNodes": 558,
+  "layoutCount": 6,
+  "toggleHeavyLayerMs": {
+   "off": 9.9,
+   "on": 36.7
+  },
+  "freeMapPct": 86.7,
+  "sheet": [
+   18,
+   736,
+   440,
+   140
+  ],
+  "topbar": [
+   18,
+   16,
+   1404,
+   32
+  ],
+  "tools": [
+   18,
+   68,
+   1404,
+   44
+  ],
+  "hscroll": false,
+  "smallTargets": [
+   "+ 30x30",
+   "− 30x30",
+   "Leaflet 39x11",
+   "ohvernight 158x32"
+  ],
+  "layerDrawer": {
+   "rect": [
+    425,
+    128,
+    590,
+    645
+   ],
+   "coverPct": 29.4,
+   "modal": true
+  }
+ },
+ {
+  "page": "aspen",
+  "viewport": "390x844",
+  "cpuThrottle": 1,
+  "readyMs": 615,
+  "wallMs": 2986,
+  "longTasks": {
+   "n": 2,
+   "total": 377,
+   "max": 289
+  },
+  "sameOriginRequests": 18,
+  "sameOriginBytes": 11821383,
+  "heapUsedMB": 33.4,
+  "domNodes": 432,
+  "layoutCount": 13,
+  "toggleHeavyLayerMs": {
+   "off": 10.5,
+   "on": 28.4
+  },
+  "freeMapPct": 79,
+  "sheet": [
+   0,
+   734,
+   390,
+   110
+  ],
+  "topbar": [
+   14,
+   12,
+   362,
+   44
+  ],
+  "tools": [
+   186,
+   665,
+   192,
+   44
+  ],
+  "hscroll": false,
+  "smallTargets": [
+   "Leaflet 34x10",
+   "USGS The National  88x10",
+   "ohvernightFIELD TE 127x30",
+   "satellite 68x38",
+   "terrain 50x38"
+  ],
+  "layerDrawer": {
+   "rect": [
+    18,
+    127,
+    354,
+    717
+   ],
+   "coverPct": 77.2,
+   "modal": true
+  }
+ },
+ {
+  "page": "douglas",
+  "viewport": "390x844",
+  "cpuThrottle": 1,
+  "readyMs": 381,
+  "wallMs": 2834,
+  "longTasks": {
+   "n": 3,
+   "total": 240,
+   "max": 133
+  },
+  "sameOriginRequests": 10,
+  "sameOriginBytes": 6368868,
+  "heapUsedMB": 27.6,
+  "domNodes": 537,
+  "layoutCount": 9,
+  "toggleHeavyLayerMs": {
+   "off": 11.4,
+   "on": 40.5
+  },
+  "freeMapPct": 76.7,
+  "sheet": [
+   0,
+   703,
+   390,
+   121
+  ],
+  "topbar": [
+   12,
+   12,
+   366,
+   32
+  ],
+  "tools": [
+   12,
+   58,
+   366,
+   44
+  ],
+  "hscroll": false,
+  "smallTargets": [
+   "Leaflet 39x11",
+   "ohvernight 143x32",
+   "notices 165x36",
+   "saved 84x36"
+  ],
+  "layerDrawer": {
+   "rect": [
+    19,
+    75,
+    352,
+    694
+   ],
+   "coverPct": 74.2,
+   "modal": true
+  }
+ }
+]

@@ -1,0 +1,29 @@
+{
+  "measured_at": "2026-10-04",
+  "commit": "6073bb9",
+  "chrome": "Google Chrome 154.0.8037.95",
+  "command": "python3 -m http.server 8765 --bind 127.0.0.1; node docs/specs/M3-baseline/measure.mjs",
+  "method": "The committed baseline measurement script, local static server, browser cache cleared per run, same machine.",
+  "comparison": {
+    "baseline_source": "docs/specs/M3-baseline/baseline.json",
+    "scope": "PR A keeps both existing pages and does not yet use the display loader; PR B timing gates are reported for context and are not claimed as PR A passes.",
+    "aspen_same_origin_bytes": {"baseline": 11821383, "pr_a": 11838941, "delta": 17558},
+    "aspen_same_origin_requests": {"baseline": 18, "pr_a": 19, "delta": 1},
+    "douglas_same_origin_bytes": {"baseline": 6368868, "pr_a": 6368868, "delta": 0},
+    "douglas_same_origin_requests": {"baseline": 10, "pr_a": 10, "delta": 0},
+    "heap_mb": {"aspen_baseline": 33.4, "aspen_pr_a_range": [33.4, 33.6], "douglas_baseline": 27.6, "douglas_pr_a_range": [27.5, 28.0]},
+    "note": "The PR A smoke run is the required existing-page regression evidence. Unified Explore timing and 16.4 relative gates are PR B measurements; no renderer trigger was hit."
+  },
+  "runs": [
+    {"page":"aspen","viewport":"320x568","cpuThrottle":4,"readyMs":3239,"wallMs":6485,"longTaskMaxMs":1746,"heapUsedMB":33.4,"sameOriginRequests":19,"sameOriginBytes":11838941,"toggleMs":{"off":56.8,"on":136.9}},
+    {"page":"aspen","viewport":"390x844","cpuThrottle":4,"readyMs":2793,"wallMs":7195,"longTaskMaxMs":1357,"heapUsedMB":33.5,"sameOriginRequests":19,"sameOriginBytes":11838941,"toggleMs":{"off":57.4,"on":130.1}},
+    {"page":"aspen","viewport":"768x1024","cpuThrottle":4,"readyMs":3115,"wallMs":9057,"longTaskMaxMs":1547,"heapUsedMB":33.6,"sameOriginRequests":19,"sameOriginBytes":11838941,"toggleMs":{"off":55.2,"on":134.8}},
+    {"page":"aspen","viewport":"1440x900","cpuThrottle":1,"readyMs":927,"wallMs":4493,"longTaskMaxMs":253,"heapUsedMB":33.6,"sameOriginRequests":19,"sameOriginBytes":11838941,"toggleMs":{"off":11.2,"on":41.5}},
+    {"page":"douglas","viewport":"320x568","cpuThrottle":4,"readyMs":1613,"wallMs":5032,"longTaskMaxMs":584,"heapUsedMB":27.5,"sameOriginRequests":10,"sameOriginBytes":6368868,"toggleMs":{"off":56.5,"on":195.1}},
+    {"page":"douglas","viewport":"390x844","cpuThrottle":4,"readyMs":1603,"wallMs":6210,"longTaskMaxMs":580,"heapUsedMB":27.6,"sameOriginRequests":10,"sameOriginBytes":6368868,"toggleMs":{"off":59.5,"on":202.4}},
+    {"page":"douglas","viewport":"768x1024","cpuThrottle":4,"readyMs":1754,"wallMs":9689,"longTaskMaxMs":648,"heapUsedMB":28.0,"sameOriginRequests":10,"sameOriginBytes":6368868,"toggleMs":{"off":47.0,"on":159.7}},
+    {"page":"douglas","viewport":"1440x900","cpuThrottle":1,"readyMs":521,"wallMs":4417,"longTaskMaxMs":157,"heapUsedMB":28.2,"sameOriginRequests":10,"sameOriginBytes":6368868,"toggleMs":{"off":10.3,"on":40.2}},
+    {"page":"aspen","viewport":"390x844","cpuThrottle":1,"readyMs":688,"wallMs":3114,"longTaskMaxMs":314,"heapUsedMB":33.5,"sameOriginRequests":19,"sameOriginBytes":11838941,"toggleMs":{"off":11.9,"on":30.5}},
+    {"page":"douglas","viewport":"390x844","cpuThrottle":1,"readyMs":417,"wallMs":2912,"longTaskMaxMs":144,"heapUsedMB":27.6,"sameOriginRequests":10,"sameOriginBytes":6368868,"toggleMs":{"off":12.5,"on":41.5}}
+  ]
+}

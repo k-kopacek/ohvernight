@@ -1,0 +1,34 @@
+version: 2
+# Metadata checked on 2026-09-24. Each run validates its required fields.
+# A fetch verifies retrieval, not permission or road passability.
+sources:
+  land:
+    base_url: https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_SMA_LimitedScale/MapServer
+    layer: 1
+    agency: BLM multi-agency Surface Management Agency
+    scope: Limited-scale ownership context; not a parcel survey or camping authorization.
+  wilderness:
+    base_url: https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_Wilderness_01/MapServer
+    layer: 0
+    agency: USFS
+  roads:
+    base_url: https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_02/MapServer
+    layer: 1
+    agency: USFS
+  water:
+    base_url: https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer
+    layers: {flowline: 6, area: 9, waterbody: 12}
+    agency: USGS
+  ridb:
+    base_url: https://ridb.recreation.gov/api/v1
+    agency: Recreation.gov / RIDB
+    credential: RIDB_API_KEY
+  wildlife:
+    base_url: https://maps.codot.gov/server/rest/services/21511_Wildlife_Infrastructure_Context_MIL2/MapServer
+    enabled: false
+    reason: Service returned ArcGIS error 404 on 2026-09-24. Habitat is not a closure.
+  fire:
+    url: https://pitkincounty.com/CivicAlerts.asp
+    agency: Pitkin County
+    mode: change_detection_only
+    scope: Review dated notices and jurisdiction; no current stage inferred.

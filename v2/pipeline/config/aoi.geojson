@@ -1,0 +1,17 @@
+{
+  "type": "Feature",
+  "properties": {
+    "name": "Aspen pilot AOI",
+    "note": "Aspen/Snowmass pilot expanded east and south to include Lincoln Creek and its approach. Coverage is a research extent, not permission to camp."
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[
+      [-107.05, 39.00],
+      [-106.57, 39.00],
+      [-106.57, 39.26],
+      [-107.05, 39.26],
+      [-107.05, 39.00]
+    ]]
+  }
+}

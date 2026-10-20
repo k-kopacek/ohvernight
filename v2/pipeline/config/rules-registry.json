@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "default": {"camping_permission": "unknown", "stay_limit_days": null, "seasonality": "unknown"},
+  "rules": [
+    {
+      "id": "lincoln-creek-listed-sites",
+      "place_ids": ["lincolncreek", "ridb-259461"],
+      "road_names": ["LINCOLN CREEK"],
+      "scope": "Agency-listed Lincoln Creek dispersed sites only; not blanket permission along the road",
+      "source_url": "https://www.fs.usda.gov/r02/whiteriver/recreation/lincoln-creek-dispersed-camping",
+      "last_confirmed_at": "2026-09-25T03:15:51Z",
+      "max_age_hours": 720,
+      "stay_limit_days": 5,
+      "requires_high_clearance": true,
+      "four_wheel_drive": "recommended",
+      "seasonality": "unknown",
+      "camping_permission": "unknown",
+      "notes": "The listing supports car camping at 22 sites. Current closures, exact site and approach remain unverified. Do not infer permission from this road-name match."
+    }
+  ]
+}

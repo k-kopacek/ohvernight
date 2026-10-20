@@ -1,0 +1,66 @@
+{
+  "feature": {
+    "properties": {
+      "id": "segment-1",
+      "name": "A & <B>",
+      "trail_number": "42",
+      "activities": {
+        "hiking": {
+          "accpt": "06/01-09/30"
+        },
+        "motorcycling": {
+          "accpt": "12/01-03/14"
+        }
+      },
+      "evidence": {
+        "source_url": "https://example.test/source",
+        "retrieved_at": "2026-09-25"
+      }
+    },
+    "geometry": {
+      "type": "MultiLineString",
+      "coordinates": [
+        [
+          [
+            -107,
+            39
+          ],
+          [
+            -106,
+            39
+          ]
+        ],
+        [
+          [
+            -106,
+            39
+          ],
+          [
+            -105.9,
+            39.1
+          ]
+        ]
+      ]
+    }
+  },
+  "expected": {
+    "exported_at": "2026-10-01T00:00:00.000Z",
+    "trip": {
+      "start": "2026-10-01",
+      "end": "2026-10-02",
+      "activity": "hiking",
+      "vehicle": "Car / SUV"
+    },
+    "saved": [
+      {
+        "id": "segment-1",
+        "name": "A & <B>",
+        "type": "Trail segment",
+        "source": "https://example.test/source",
+        "source_fetched": "2026-09-25"
+      }
+    ],
+    "notes": "fixed notes",
+    "limitations": "Research only. Closures, road connections, camping permission, vehicle suitability and availability are unconfirmed."
+  }
+}

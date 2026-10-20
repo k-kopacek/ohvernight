@@ -1,0 +1,10 @@
+[
+  {"name": "River", "kind": "flowline", "geometry": {"type": "LineString", "coordinates": [[-105, 39], [-105.1, 39.1]]}, "expected": true},
+  {"name": "Lake", "kind": "waterbody", "geometry": {"type": "Polygon", "coordinates": [[[-105, 39], [-105.1, 39], [-105.1, 39.1], [-105, 39], [-105, 39]]]}, "expected": true},
+  {"name": "Wetland", "kind": "area", "geometry": {"type": "Polygon", "coordinates": [[[-105, 39], [-105.1, 39], [-105.1, 39.1], [-105, 39], [-105, 39]]]}, "expected": false},
+  {"name": "River", "kind": "flowline", "geometry": {"type": "Polygon", "coordinates": [[[-105, 39], [-105.1, 39], [-105.1, 39.1], [-105, 39], [-105, 39]]]}, "expected": false},
+  {"name": "Lake", "kind": "waterbody", "geometry": {"type": "LineString", "coordinates": [[-105, 39], [-105.1, 39.1]]}, "expected": false},
+  {"name": "", "kind": "flowline", "geometry": {"type": "LineString", "coordinates": [[-105, 39], [-105.1, 39.1]]}, "expected": false},
+  {"name": "  ", "kind": "waterbody", "geometry": {"type": "Polygon", "coordinates": [[[-105, 39], [-105.1, 39], [-105.1, 39.1], [-105, 39], [-105, 39]]]}, "expected": false},
+  {"name": "River", "kind": "flowline", "geometry": null, "expected": false}
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "input": {"status": "available", "completed_at": "2026-01-01T00:00:00Z"},
+    "record": {"status": "available", "completed_at": "2026-01-01T00:00:00Z", "last_checked_at": "2026-01-01T00:00:00Z", "last_retrieved_at": "2026-01-01T00:00:00Z"},
+    "used": ["completed_at"]
+  },
+  {
+    "input": {"status": "available", "retrieved_at": "2026-01-01T00:00:00Z"},
+    "record": {"status": "available", "retrieved_at": "2026-01-01T00:00:00Z", "last_checked_at": "2026-01-01T00:00:00Z", "last_retrieved_at": "2026-01-01T00:00:00Z"},
+    "used": ["retrieved_at"]
+  },
+  {
+    "input": {"status": "failed", "checked_at": "2026-01-01T00:00:00Z", "error": "nope"},
+    "record": {"status": "unavailable", "checked_at": "2026-01-01T00:00:00Z", "error": "nope", "last_checked_at": "2026-01-01T00:00:00Z", "reason": "nope"},
+    "used": ["checked_at", "failed", "error"]
+  },
+  {
+    "input": {"status": "available", "last_checked_at": "2026-01-01T00:00:00Z", "last_confirmed_at": "2026-01-01T00:00:00Z"},
+    "record": {"status": "available", "last_checked_at": "2026-01-01T00:00:00Z", "last_confirmed_at": "2026-01-01T00:00:00Z", "last_retrieved_at": "2026-01-01T00:00:00Z"},
+    "used": ["inferred_retrieval", "last_confirmed_at"]
+  }
+]
