@@ -332,7 +332,7 @@ Activity claims live in a reviewed registry, never as properties on a segment or
 
 Every key of 9.1 is present in every record. A status of `unknown` has no other key. One evidence object is never shared by two claims (M4 9.2 rule 5).
 
-### 9.3 Invariants (validated where they can be; R106–R111)
+### 9.3 Invariants (validated where they can be; R106–R110)
 
 - **AE1. Unknown is the default** and is stored as `{"status": "unknown"}` or as absence of a record. A trail with no record has every activity unknown.
 - **AE2. No inference across activities or classes.** `motorcycle` never sets `atv`; `mountain_biking` never sets an e-bike class; `hiking` never sets anything.
