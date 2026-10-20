@@ -59,20 +59,6 @@
       "min_zoom": null
     },
     {
-      "layer_id": "dispersed_corridors",
-      "title": "Areas to research",
-      "order": 70,
-      "default_on": true,
-      "min_zoom": null
-    },
-    {
-      "layer_id": "dispersed_corridor_points",
-      "title": "Research points",
-      "order": 80,
-      "default_on": true,
-      "min_zoom": null
-    },
-    {
       "layer_id": "leads",
       "title": "Community leads",
       "order": 90,

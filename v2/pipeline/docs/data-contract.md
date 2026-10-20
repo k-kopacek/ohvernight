@@ -286,6 +286,8 @@ their evaluated trip. The browser keeps roads and research areas visible for
 every trip, styles roads neutrally, and labels research areas with the trip
 for which they were screened.
 
+2026-10-20 (M7-MR1, owner-approved interim presentation mitigation): Aspen research areas are not displayed in any discovery path. The canonical data and the producer are unchanged until their M7 retirement.
+
 BLM native polygon conversion preserves ring holes and islands using even/odd
 filling and repairs invalid topology with Shapely. The source is generalized
 management context; county parcel precision and campsite legality cannot be
