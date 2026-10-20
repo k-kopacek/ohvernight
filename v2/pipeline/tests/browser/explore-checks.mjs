@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {runLinuxTapDiagnostics} from './linux-tap-diag.mjs';
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -282,6 +283,7 @@ export async function runExploreChecks(client,origin,signal,root){
  }
  const results=[];
  try{
+ await runLinuxTapDiagnostics(client,origin,evaluate,navigate);
  const sheetLayouts=await runSheetLayoutChecks(client,origin,evaluate,navigate);
  results.push({sheetLayouts});
  for(const id of ['aspen','douglas-co'])for(const [width,height,minimum] of [[320,568,72],[390,844,80],[768,1024,80],[1440,900,75]]){
