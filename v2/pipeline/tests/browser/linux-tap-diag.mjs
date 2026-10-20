@@ -2,8 +2,9 @@
 import {setTimeout as delay} from 'node:timers/promises';
 
 export async function runLinuxTapDiagnostics(client,origin,evaluate,navigate){
+ console.log('TAP_DIAG_INPUT SyntheticPointerActions enabled by diagnostic runner');
  console.log('TAP_DIAG_ENV '+JSON.stringify(await client.command('Browser.getVersion')));
- const cases=['immediate','wait1500','autoAfterPrior','noneAfterAutoPrior','thirdTap','noPrior'];
+ const cases=['immediate','idle300','noPrior','touchActionAuto','wait350','wait1500'];
  for(let round=0;round<2;round++)for(const region of ['aspen','douglas-co'])for(const variant of cases){
   await client.command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:2,mobile:true});
   await client.command('Emulation.setTouchEmulationEnabled',{enabled:true});
@@ -25,7 +26,7 @@ export async function runLinuxTapDiagnostics(client,origin,evaluate,navigate){
   await evaluate(`(()=>{const b=explore.$('sheet-body');b.scrollTop=Math.min(200,b.scrollHeight-b.clientHeight)})()`);
   const setup=await evaluate(`(()=>{
    const b=explore.$('sheet-body'),button=explore.$('detail-back'),header=explore.$('sheet-header');b.scrollTop=0;
-   ${variant==='noneAfterAutoPrior'?"header.style.touchAction='auto';":''}
+   ${variant==='touchActionAuto'?"header.style.touchAction='auto';":''}
    const r=button.getBoundingClientRect(),p={x:r.x+r.width/2,y:r.y+r.height/2};
    const name=e=>e?.id||e?.tagName;
    const chain=[];for(let e=button;e;e=e.parentElement){const s=getComputedStyle(e);chain.push({id:name(e),touchAction:s.touchAction,overflowY:s.overflowY,scrollTop:e.scrollTop,scrollHeight:e.scrollHeight,clientHeight:e.clientHeight});}
