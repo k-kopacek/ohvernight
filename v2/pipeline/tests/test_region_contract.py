@@ -73,7 +73,7 @@ class RegionContractTests(unittest.TestCase):
         reports = {p.parent.name: validate_region(p, V2) for p in manifests}
         self.assertEqual(reports["aspen"]["unrecorded_status_layers"], ["trails"])
         self.assertEqual(reports["douglas-co"]["unrecorded_status_layers"], ["roads", "trails"])
-        self.assertEqual(set(reports["aspen"]["legacy_transport"]), {"land_ownership", "wilderness", "mvum_roads", "hydrology", "fire_restriction_stage", "dispersed_corridors", "dispersed_corridor_points", "leads", "reviewed_sites", "ridb_options"})
+        self.assertEqual(set(reports["aspen"]["legacy_transport"]), {"land_ownership", "wilderness", "mvum_roads", "hydrology", "fire_restriction_stage", "leads", "reviewed_sites", "ridb_options"})
 
     def test_declared_surface_and_fact_dimensions(self):
         expected = {
@@ -87,7 +87,9 @@ class RegionContractTests(unittest.TestCase):
             self.assertEqual(set(manifest["fact_coverage"]), dimensions)
             if path.parent.name == "aspen":
                 data = self.load("map-data-v2.json")
-                self.assertTrue(set(data["layers"]) <= {layer["id"] for layer in manifest["layers"]})
+                # MR1 retains canonical research evidence without publishing its layers.
+                hidden = {"dispersed_corridors", "dispersed_corridor_points"}
+                self.assertEqual(set(data["layers"]) - {layer["id"] for layer in manifest["layers"]}, hidden)
             else:
                 data = self.load("regions/douglas-co/research.json")
                 self.assertTrue(set(data["layers"]) - {"coverage"} <= {layer["id"] for layer in manifest["layers"]})

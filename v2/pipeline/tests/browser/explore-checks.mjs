@@ -302,6 +302,32 @@ export async function runExploreChecks(client,origin,signal,root){
   const url=id==='douglas-co'?origin+'/v2/regions/douglas-co/':origin+'/v2/?region='+id+'&view=map';await navigate(url);
   assert.equal(await evaluate('explore.state.error'),undefined,'B7 isolated region load');
   const result={region:id,viewport:[width,height],checks:[]};
+  if(id==='aspen'){
+   const canonical=JSON.parse(await readFile(resolve(root,'v2/map-data-v2.json'))),hidden=['dispersed_corridors','dispersed_corridor_points'];
+   const ids=hidden.flatMap(id=>canonical.layers[id].features.map(f=>f.properties.id));
+   const exposed=await evaluate(`(()=>{const ids=new Set(${JSON.stringify(ids)});return {
+    registry:explore.region.registry.filter(e=>e.kind==='research_areas'||${JSON.stringify(hidden)}.includes(e.id)).map(e=>e.id),
+    drawer:[...explore.$('layer-list').children].filter(e=>${JSON.stringify(hidden)}.includes(e.dataset.layerId)).map(e=>e.dataset.layerId),
+    rendered:window.__rendered.flatMap(g=>Object.values(g._layers)).filter(l=>ids.has(l.feature?.properties?.id)).map(l=>l.feature.properties.id),
+    results:[...document.querySelectorAll('[data-place],[data-feature]')].filter(e=>ids.has(e.dataset.place||e.dataset.feature)).map(e=>e.dataset.place||e.dataset.feature),
+    saved:Object.values(explore.capabilities.plan).filter(id=>ids.has(id))};})()`);
+   assert.deepEqual(exposed,{registry:[],drawer:[],rendered:[],results:[],saved:[]},'MR1 research areas absent from map, drawer, results and saved trip');
+   assert.equal(current.responses.some(x=>/dispersed_corridors|dispersed_corridor_points/.test(x.url)),false,'MR1 no research display fetch');
+   await evaluate(`explore.$('search').click();explore.$('query').value=${JSON.stringify(ids[0])};explore.$('query').dispatchEvent(new Event('input'))`);
+   assert.equal(await evaluate('explore.$("search-results").children.length'),0,'MR1 research-area ID cannot be found');
+   await evaluate('explore.$("query").value="";explore.$("query").dispatchEvent(new Event("input"));explore.$("search-back").click();explore.sheet.setState("collapsed")');
+   if(width===320){
+    const stored={trip:{resort:'aspen',arrive:'2026-07-10',depart:'2026-07-12',vehicle:'passenger_car'},plan:{a:ids[0],b:'silverbar'}};
+    const seed=await client.command('Page.addScriptToEvaluateOnNewDocument',{source:`try{localStorage.setItem('ohvernight-trip-v1',${JSON.stringify(JSON.stringify(stored))})}catch{}`});
+    try{
+     await navigate(url);
+     assert.deepEqual(await evaluate('explore.capabilities.plan'),{a:null,b:'silverbar'},'MR1 saved research ID is discarded while supported backup remains');
+     assert.equal(await evaluate(`[...document.querySelectorAll('[data-place]')].some(e=>e.dataset.place===${JSON.stringify(ids[0])})`),false,'MR1 stale saved research area produces no result');
+    }finally{await client.command('Page.removeScriptToEvaluateOnNewDocument',{identifier:seed.identifier});}
+    await navigate(url);
+   }
+   result.checks.push('MR1 research areas hidden');
+  }
   const free=await evaluate(AREA),sheet=await evaluate('('+RECT+')(explore.$("sheet"))');assert.ok(free>=minimum,'B1 free map '+free);if(width<768)assert.ok(sheet.height<=(width===320?88:96));else assert.ok(sheet.width<=(width===768?360:380));result.freeMapPct=free;result.checks.push('B1');
   assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,'B2 horizontal scroll');
   const small=await evaluate(`[...document.querySelectorAll('button,input,select,textarea,summary,[role=button],a')].filter(${visible}).filter(e=>!e.closest('.leaflet-control-attribution')&&!(e.tagName==='A'&&e.closest('p')&&e.parentElement.childNodes.length>1)).filter(e=>{const r=e.getBoundingClientRect();return r.width<44||r.height<44}).map(e=>e.id||e.textContent)`);assert.deepEqual(small,[],'B2 target size');result.checks.push('B2');

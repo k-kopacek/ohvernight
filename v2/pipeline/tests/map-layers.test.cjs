@@ -18,9 +18,9 @@ test('trail pilot is independently loaded and missing trail data is explicit',as
   const missing=await createRegionLoader({fetch:async p=>{if(p.startsWith('regions/aspen/display/trails.geojson'))throw Error('missing');return read(p);},defaultRegion:'aspen'}).loadRegion('');
   assert.equal((await missing.loadLayer('trails')).state,'failed');
 });
-test('real map data is represented independently of the trip, including wilderness and research areas',async()=>{
+test('real map data is represented independently of the trip, including roads and wilderness',async()=>{
   const region=await load();
-  for(const key of ['mvum_roads','dispersed_corridors','wilderness']){
+  for(const key of ['mvum_roads','wilderness']){
     const result=await region.loadLayer(key);assert.equal(result.count,bundle.layers[key].features.length);assert.ok(result.count>0);
   }
   assert.equal(region.coverage.features.length,1);
