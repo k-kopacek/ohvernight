@@ -1,0 +1,657 @@
+{
+  "status": "illustrative_example_not_product_truth",
+  "plans": [
+    {
+      "plan_id": "Plan A",
+      "trip_intent": {
+        "parties": [
+          {
+            "party_id": "rider-party",
+            "role": "rider",
+            "facts": [
+              {
+                "value": "Dirt-bike outing described in archived plan",
+                "fact_class": "community signal",
+                "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan A"
+              }
+            ]
+          },
+          {
+            "party_id": "family-party",
+            "role": "family",
+            "facts": [
+              {
+                "value": "Family day-use outing at Cabin Ridge Picnic Area described in archived plan",
+                "fact_class": "community signal",
+                "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan A"
+              }
+            ]
+          }
+        ],
+        "geography": [
+          {
+            "value": "Rampart Range / Cabin Ridge area",
+            "fact_class": "unknown",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan A"
+          }
+        ],
+        "dates": [
+          {
+            "value": "Archive discusses an October weekend; exact candidate dates are not established here",
+            "fact_class": "unknown",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan A"
+          }
+        ],
+        "activities": [
+          {
+            "value": "Motorcycle riding; family day use",
+            "fact_class": "community signal",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan A"
+          }
+        ],
+        "vehicle_and_access_profile": [
+          {
+            "value": "Pickup; small trailer fit and route suitability unresolved",
+            "fact_class": "unknown",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan A"
+          }
+        ],
+        "overnight_preference": [
+          {
+            "value": "No overnight option is specified for the family plan; picnic area is recorded as day use",
+            "fact_class": "official recreation information",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#cabin-ridge-picnic-area"
+          }
+        ],
+        "optional_constraints_and_preferences": [
+          {
+            "value": "Family/rider reunion without the unplated bike using a road is desired; link is unresolved",
+            "fact_class": "community signal",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#reuniting-the-parties"
+          }
+        ]
+      },
+      "adventure_candidate": {
+        "parts": {
+          "primary_activity_features": [
+            {
+              "entity_id": "usfs-trail-8964041",
+              "facts": [
+                {
+                  "value": "Trail 0675 CABIN RIDGE",
+                  "fact_class": "source fact",
+                  "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-ride-options.md#plan-a"
+                }
+              ]
+            }
+          ],
+          "activity_permission": [
+            {
+              "value": "Motorcycle use claims and conflicting readings are retained in the archive; no Ohvernight permission assertion",
+              "fact_class": "official recreation information",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-ride-options.md#plan-a"
+            },
+            {
+              "value": "Current trail condition is unknown",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-route-and-conditions.md#unknowns"
+            }
+          ],
+          "access_or_staging_point": {
+            "entity_id": "recreation-3311789",
+            "facts": [
+              {
+                "value": "Cabin Ridge Trailhead",
+                "fact_class": "source fact",
+                "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#cabin-ridge-trailhead"
+              }
+            ]
+          },
+          "approach_and_access_context": [
+            {
+              "value": "Approach route and trailer suitability are not established for this candidate",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-route-and-conditions.md#unknowns"
+            }
+          ],
+          "overnight_option": [
+            {
+              "value": "No overnight option in this candidate; Cabin Ridge Picnic Area is a day-use place",
+              "fact_class": "official recreation information",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#cabin-ridge-picnic-area"
+            }
+          ],
+          "backup_overnight_option": [
+            {
+              "value": "No backup overnight option identified",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#alternates"
+            }
+          ],
+          "distance_and_travel_relationship": [
+            {
+              "value": "Candidate place separation is archive-derived straight-line distance; it is not a route or travel time",
+              "fact_class": "derived fact",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#plan-a"
+            }
+          ],
+          "applicable_restrictions": [
+            {
+              "value": "The archive retains unresolved Fire Stage 1 status and separate order/designation readings; scope and applicability are not resolved here",
+              "fact_class": "official recreation information",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#fire-restriction-conflict"
+            }
+          ],
+          "evidence_and_provenance": [
+            {
+              "value": "Evidence and retrieval times are in the archived research documents; not refreshed for this example",
+              "fact_class": "source fact",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#sources"
+            }
+          ],
+          "freshness": [
+            {
+              "value": "Freshness not evaluated for a future trip",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+            }
+          ],
+          "unresolved_unknowns": [
+            {
+              "question": "Hammock use, tree straps, or free-standing frame requirements",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+            },
+            {
+              "question": "Pickup and small-trailer fit at staging lot and sites",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+            },
+            {
+              "question": "Whether staging lot is posted/signed for parking under the cited order",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#parking-order"
+            },
+            {
+              "question": "Current open status and availability on trip dates",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#current-status"
+            },
+            {
+              "question": "Trail and road condition on trip dates",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-route-and-conditions.md#unknowns"
+            },
+            {
+              "question": "Whether a walkable path connects staging and family day-use site",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#reuniting-the-parties"
+            }
+          ],
+          "viability_explanation": [
+            {
+              "value": "Illustrative candidate arrangement only; evidence gaps and unresolved links prevent an Ohvernight viability conclusion",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#plan-a"
+            }
+          ],
+          "alternates": [
+            {
+              "name": "Topaz Point Picnic Area",
+              "entity_id": "not in Ohvernight data",
+              "facts": [
+                {
+                  "value": "Archive lists as a family-site alternate; status/fee conflicts and current availability unresolved",
+                  "fact_class": "official recreation information",
+                  "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#alternates"
+                }
+              ]
+            },
+            {
+              "name": "Plan A staging alternative",
+              "entity_id": "recreation-3311789",
+              "facts": [
+                {
+                  "value": "Alternate staging arrangement described in archive; links and suitability unresolved",
+                  "fact_class": "community signal",
+                  "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#plan-a"
+                }
+              ]
+            }
+          ],
+          "first_party_observations": [
+            {
+              "value": "None recorded",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#sources"
+            }
+          ]
+        },
+        "relationships": [
+          {
+            "type": "starts_at",
+            "origin": "unknown",
+            "from_entity_id": "usfs-trail-8964041",
+            "to_entity_id": "recreation-3311789",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#plan-a"
+          },
+          {
+            "type": "accessed_from",
+            "origin": "unknown",
+            "from_entity_id": "usfs-trail-8964041",
+            "to_entity_id": "recreation-3311789",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#plan-a"
+          },
+          {
+            "type": "approached_via",
+            "origin": "unknown",
+            "from_entity_id": "recreation-3311789",
+            "to_entity_id": "not in Ohvernight data",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-route-and-conditions.md#unknowns"
+          },
+          {
+            "type": "associated_with",
+            "origin": "unknown",
+            "from_entity_id": "not in Ohvernight data",
+            "to_entity_id": "not in Ohvernight data",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#dutch-fred-conflicts"
+          },
+          {
+            "type": "relevant_to",
+            "origin": "unknown",
+            "from_entity_id": "usfs-trail-8964041",
+            "to_entity_id": "recreation-3316544",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#reuniting-the-parties"
+          },
+          {
+            "type": "governed_by",
+            "origin": "unknown",
+            "from_entity_id": "recreation-3311789",
+            "to_entity_id": "not in Ohvernight data",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#sources"
+          },
+          {
+            "type": "constrained_by",
+            "origin": "unknown",
+            "from_entity_id": "usfs-trail-8964041",
+            "to_entity_id": "not in Ohvernight data",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#fire-restriction-conflict"
+          }
+        ],
+        "evidence_coverage": [
+          {
+            "category": "ownership and management",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#sources"
+          },
+          {
+            "category": "access",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#parking-order"
+          },
+          {
+            "category": "motorized-use rules",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-ride-options.md#plan-a"
+          },
+          {
+            "category": "camping rules",
+            "result": "not checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+          },
+          {
+            "category": "seasonal closures",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-route-and-conditions.md#sources"
+          },
+          {
+            "category": "fire and emergency closures",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#fire-restriction-conflict"
+          },
+          {
+            "category": "reservation and permit requirements",
+            "result": "not checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+          },
+          {
+            "category": "water activity rules",
+            "result": "not checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+          },
+          {
+            "category": "road and access restrictions",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#parking-order"
+          }
+        ]
+      }
+    },
+    {
+      "plan_id": "Plan B",
+      "trip_intent": {
+        "parties": [
+          {
+            "party_id": "rider-party",
+            "role": "rider",
+            "facts": [
+              {
+                "value": "Dirt-bike outing described in archived plan",
+                "fact_class": "community signal",
+                "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan B"
+              }
+            ]
+          },
+          {
+            "party_id": "family-party",
+            "role": "family",
+            "facts": [
+              {
+                "value": "Family day-use outing at Cabin Ridge Picnic Area described in archived plan",
+                "fact_class": "community signal",
+                "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan B"
+              }
+            ]
+          }
+        ],
+        "geography": [
+          {
+            "value": "Rampart Range / Cabin Ridge area",
+            "fact_class": "unknown",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan B"
+          }
+        ],
+        "dates": [
+          {
+            "value": "Archive discusses an October weekend; exact candidate dates are not established here",
+            "fact_class": "unknown",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan B"
+          }
+        ],
+        "activities": [
+          {
+            "value": "Motorcycle riding; family day use",
+            "fact_class": "community signal",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan B"
+          }
+        ],
+        "vehicle_and_access_profile": [
+          {
+            "value": "Pickup; small trailer fit and route suitability unresolved",
+            "fact_class": "unknown",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#Plan B"
+          }
+        ],
+        "overnight_preference": [
+          {
+            "value": "No overnight option is specified for the family plan; picnic area is recorded as day use",
+            "fact_class": "official recreation information",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#cabin-ridge-picnic-area"
+          }
+        ],
+        "optional_constraints_and_preferences": [
+          {
+            "value": "Family/rider reunion without the unplated bike using a road is desired; link is unresolved",
+            "fact_class": "community signal",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#reuniting-the-parties"
+          }
+        ]
+      },
+      "adventure_candidate": {
+        "parts": {
+          "primary_activity_features": [
+            {
+              "entity_id": "usfs-trail-8971352",
+              "facts": [
+                {
+                  "value": "Trail 0679 DUTCH FRED",
+                  "fact_class": "source fact",
+                  "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-ride-options.md#plan-b"
+                }
+              ]
+            }
+          ],
+          "activity_permission": [
+            {
+              "value": "Motorcycle use claims and conflicting readings are retained in the archive; no Ohvernight permission assertion",
+              "fact_class": "official recreation information",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-ride-options.md#plan-b"
+            },
+            {
+              "value": "Current trail condition is unknown",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-route-and-conditions.md#unknowns"
+            }
+          ],
+          "access_or_staging_point": {
+            "entity_id": "recreation-3306075",
+            "facts": [
+              {
+                "value": "Dutch Fred Trailhead",
+                "fact_class": "source fact",
+                "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#dutch-fred-trailhead"
+              }
+            ]
+          },
+          "approach_and_access_context": [
+            {
+              "value": "Approach route and trailer suitability are not established for this candidate",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-route-and-conditions.md#unknowns"
+            }
+          ],
+          "overnight_option": [
+            {
+              "value": "No overnight option in this candidate; Cabin Ridge Picnic Area is a day-use place",
+              "fact_class": "official recreation information",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#cabin-ridge-picnic-area"
+            }
+          ],
+          "backup_overnight_option": [
+            {
+              "value": "No backup overnight option identified",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#alternates"
+            }
+          ],
+          "distance_and_travel_relationship": [
+            {
+              "value": "Candidate place separation is archive-derived straight-line distance; it is not a route or travel time",
+              "fact_class": "derived fact",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#plan-b"
+            }
+          ],
+          "applicable_restrictions": [
+            {
+              "value": "The archive retains unresolved Fire Stage 1 status and separate order/designation readings; scope and applicability are not resolved here",
+              "fact_class": "official recreation information",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#fire-restriction-conflict"
+            }
+          ],
+          "evidence_and_provenance": [
+            {
+              "value": "Evidence and retrieval times are in the archived research documents; not refreshed for this example",
+              "fact_class": "source fact",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#sources"
+            }
+          ],
+          "freshness": [
+            {
+              "value": "Freshness not evaluated for a future trip",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+            }
+          ],
+          "unresolved_unknowns": [
+            {
+              "question": "Hammock use, tree straps, or free-standing frame requirements",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+            },
+            {
+              "question": "Pickup and small-trailer fit at staging lot and sites",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+            },
+            {
+              "question": "Whether staging lot is posted/signed for parking under the cited order",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#parking-order"
+            },
+            {
+              "question": "Current open status and availability on trip dates",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#current-status"
+            },
+            {
+              "question": "Trail and road condition on trip dates",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-route-and-conditions.md#unknowns"
+            },
+            {
+              "question": "Whether a walkable path connects staging and family day-use site",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#reuniting-the-parties"
+            }
+          ],
+          "viability_explanation": [
+            {
+              "value": "Illustrative candidate arrangement only; evidence gaps and unresolved links prevent an Ohvernight viability conclusion",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#plan-b"
+            }
+          ],
+          "alternates": [
+            {
+              "name": "Topaz Point Picnic Area",
+              "entity_id": "not in Ohvernight data",
+              "facts": [
+                {
+                  "value": "Archive lists as a family-site alternate; status/fee conflicts and current availability unresolved",
+                  "fact_class": "official recreation information",
+                  "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#alternates"
+                }
+              ]
+            },
+            {
+              "name": "Plan A staging alternative",
+              "entity_id": "recreation-3311789",
+              "facts": [
+                {
+                  "value": "Alternate staging arrangement described in archive; links and suitability unresolved",
+                  "fact_class": "community signal",
+                  "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#plan-a"
+                }
+              ]
+            }
+          ],
+          "first_party_observations": [
+            {
+              "value": "None recorded",
+              "fact_class": "unknown",
+              "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#sources"
+            }
+          ]
+        },
+        "relationships": [
+          {
+            "type": "starts_at",
+            "origin": "unknown",
+            "from_entity_id": "usfs-trail-8971352",
+            "to_entity_id": "recreation-3306075",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#plan-b"
+          },
+          {
+            "type": "accessed_from",
+            "origin": "unknown",
+            "from_entity_id": "usfs-trail-8971352",
+            "to_entity_id": "recreation-3306075",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#plan-b"
+          },
+          {
+            "type": "approached_via",
+            "origin": "unknown",
+            "from_entity_id": "recreation-3306075",
+            "to_entity_id": "not in Ohvernight data",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-route-and-conditions.md#unknowns"
+          },
+          {
+            "type": "associated_with",
+            "origin": "unknown",
+            "from_entity_id": "not in Ohvernight data",
+            "to_entity_id": "not in Ohvernight data",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#dutch-fred-conflicts"
+          },
+          {
+            "type": "relevant_to",
+            "origin": "unknown",
+            "from_entity_id": "usfs-trail-8971352",
+            "to_entity_id": "recreation-3316544",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#reuniting-the-parties"
+          },
+          {
+            "type": "governed_by",
+            "origin": "unknown",
+            "from_entity_id": "recreation-3306075",
+            "to_entity_id": "not in Ohvernight data",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#sources"
+          },
+          {
+            "type": "constrained_by",
+            "origin": "unknown",
+            "from_entity_id": "usfs-trail-8971352",
+            "to_entity_id": "not in Ohvernight data",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#fire-restriction-conflict"
+          }
+        ],
+        "evidence_coverage": [
+          {
+            "category": "ownership and management",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-facilities.md#sources"
+          },
+          {
+            "category": "access",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#parking-order"
+          },
+          {
+            "category": "motorized-use rules",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-ride-options.md#plan-b"
+          },
+          {
+            "category": "camping rules",
+            "result": "not checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+          },
+          {
+            "category": "seasonal closures",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-route-and-conditions.md#sources"
+          },
+          {
+            "category": "fire and emergency closures",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#fire-restriction-conflict"
+          },
+          {
+            "category": "reservation and permit requirements",
+            "result": "not checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+          },
+          {
+            "category": "water activity rules",
+            "result": "not checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-plan-and-gaps.md#unknowns"
+          },
+          {
+            "category": "road and access restrictions",
+            "result": "checked",
+            "evidence_pointer": "docs/research/overnight-2026-10-08/rampart-weekend-legality-links-orders.md#parking-order"
+          }
+        ]
+      }
+    }
+  ]
+}
