@@ -5,7 +5,7 @@ from shapely.geometry import shape
 from lib.arcgis_client import new_session, get_json, query_layer_geojson
 from lib.common import clip_geometry, properties
 from lib.evidence import make_evidence, now
-from fetch_trails import URL as TRAIL_URL, normalize as trail
+from fetch_trails import URL as TRAIL_URL, REQUIRED_FIELDS as TRAIL_REQUIRED_FIELDS, normalize as trail
 
 COUNTY_URL = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1'
 ROAD_URL = 'https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_02/MapServer'
@@ -53,10 +53,10 @@ def main():
     county, boundary = county_boundary(client)
     layers = {'coverage': county}
     print('Verified Douglas County boundary', flush=True)
-    for key, url, layer_id, normalize in [('trails',TRAIL_URL,0,lambda row,e:trail(row,e,boundary)),
-                                         ('roads',ROAD_URL,1,lambda row,e:normalize_road(row,boundary,e))]:
+    for key, url, layer_id, normalize, required in [('trails',TRAIL_URL,0,lambda row,e:trail(row,e,boundary),TRAIL_REQUIRED_FIELDS),
+                                         ('roads',ROAD_URL,1,lambda row,e:normalize_road(row,boundary,e),['objectid'])]:
         raw = query_layer_geojson(url,layer_id,boundary.bounds,session=client,
-                                 required_fields=['objectid'],page_size=100,max_pages=40,timeout=45)
+                                 required_fields=required,page_size=100,max_pages=40,timeout=45)
         evidence = make_evidence(f'{url}/{layer_id}','USDA Forest Service','high','arcgis_rest_query',
                                  notes='Retrieved source geometry, not current access or camping approval.')
         features = [f for row in raw['features'] if (f := normalize(row,evidence))]
