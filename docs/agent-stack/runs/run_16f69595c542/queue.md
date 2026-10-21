@@ -46,3 +46,10 @@ Done this run:
 - MR1: coordinator authorized removing only the orphaned manifest source declaration (it attributed only the removed layer; canonical provenance unchanged). Retried as `ctx_72989761c14c` in the same worktree.
 - PR #36 reconcile: reviewed; production files and Node tests are byte-identical to 0bb34dd, and the sheet files are untouched. Committed 2a5eb85, bb60efe; draft PR #49. The Aspen screenshot approach was accepted.
 - Observer-spec worker `ctx_d68c424d40ac`: dispatched 13:57Z, no heartbeat or file changes since. Treated as stalled; not redispatched yet.
+
+### 2026-10-20 22:00Z
+- PR #50 (MR1) at dd8ad19 and PR #49 (#36 replacement) at bb60efe: CI green, coordinator-reviewed; awaiting the owner's iPhone check and exact-SHA approval. The device server serves #50 on :8741.
+- The owner removed Chrome on purpose. Brave 155 was installed at the owner's direction; one local pass, then a repeated headless startup hang. The owner said to set Brave aside; the CI browser job is the browser gate.
+- Observer spec redispatched as `ctx_3c5152d2eb0a` (the old `ctx_d68c424d40ac` was stopped after it never started), with addendum incident 2 (unanswered worker questions).
+- M8 source-neutral spec draft dispatched as `ctx_fae63dca08c0`, following the roadmap at the owner's direction "remember the milestone roadmap for next steps".
+- Claude: new block, about $1 used. Two Claude workers plus the coordinator.
