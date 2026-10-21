@@ -53,3 +53,8 @@ Done this run:
 - Observer spec redispatched as `ctx_3c5152d2eb0a` (the old `ctx_d68c424d40ac` was stopped after it never started), with addendum incident 2 (unanswered worker questions).
 - M8 source-neutral spec draft dispatched as `ctx_fae63dca08c0`, following the roadmap at the owner's direction "remember the milestone roadmap for next steps".
 - Claude: new block, about $1 used. Two Claude workers plus the coordinator.
+
+### 2026-10-21 03:35Z
+- Observer spec draft: PR #51 (69335ce). 4 machines, 30 states, 57 transitions, 88 tests, 8 scenarios. OD1–OD8 and MR1–MR6. Owner-gated.
+- M8 source-neutral spec draft: PR #52 (26f1820). R150–R268, LOCKED L12–L17, M8-D1..D20 (D19 has no recommendation), M8-MR1..MR7. Owner-gated.
+- Workers released. No authorized implementation is queued: M4-C commits 4–6 need C-1..C-5, and the M5–M8 specs are unapproved. Coordinator idle and event-driven until owner input.
