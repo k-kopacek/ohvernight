@@ -1,0 +1,24 @@
+/*
+  PILOT ONLY - not loaded by the app.
+  The CSS changes of PR #39 (head b83b2b00c0de7c8841b318ed90770fd33131aa60,
+  `git diff origin/main...b83b2b0 -- v2/explore/explore.css`), copied without
+  design changes and layered over the main stylesheet so the mockup can show
+  the "after" structure. Where main sets a value the PR deleted, the main
+  value is reset here (marked "reset").
+*/
+.explore-sheet{height:var(--sheet-header-height,64px)}
+.explore-sheet[data-state=half]{height:calc(var(--usable-height)*.4)}.explore-sheet[data-state=expanded]{height:calc(var(--usable-height)*.75)}
+.explore-sheet-head{touch-action:none;flex:0 0 auto}
+.explore-sheet-header{touch-action:auto;flex:initial;height:auto;padding:4px 12px 0;border-bottom:1px solid var(--line)} /* reset: touch-action, flex, height */
+.explore-summary{white-space:normal;overflow-wrap:anywhere;text-overflow:clip;overflow:visible} /* reset: text-overflow, overflow */
+.explore-sheet-body{flex:1 1 auto;min-height:0;overflow-y:auto}
+.explore-detail-heading{position:static;background:transparent;z-index:auto;margin:0 12px;min-height:44px} /* reset: position, background, z-index */
+.explore-detail-heading h2{flex:1;min-width:0;overflow-wrap:anywhere;margin:4px 0}
+.explore-sheet[data-view=detail] .explore-sheet-body{padding-top:0}
+.explore-sheet[data-state=collapsed] .explore-detail-heading{display:none}
+@media(min-width:768px),(orientation:landscape) and (max-height:500px){
+ .explore-sheet[data-state=collapsed]{height:64px}
+ .explore-sheet-header{height:64px;padding:4px 12px}
+ .explore-summary{white-space:nowrap;text-overflow:ellipsis;overflow:hidden;padding-bottom:0}
+ .explore-detail-heading{margin-top:12px}
+}

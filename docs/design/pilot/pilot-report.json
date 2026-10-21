@@ -1,0 +1,2269 @@
+{
+ "pilot": "sheet-header",
+ "note": "Static mockup in headless Chrome. Chrome rendering is not iPhone Safari; real-device validation remains a human gate.",
+ "runs": [
+  {
+   "viewport": "390x844",
+   "state": "top",
+   "variant": "before",
+   "scrollTop": 0,
+   "bodyTop": 570,
+   "headerBottom": 631,
+   "bodyStartsBelowHeader": false,
+   "summaryClipped": true,
+   "separator": false,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 510,
+     "w": 366,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 554,
+     "w": 366,
+     "h": 17
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 587,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 586,
+     "w": 306,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Source classification: USFS",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale boundary. It canno",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 366,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "focusOrder": {
+    "sequence": [
+     "explore-layers",
+     "explore-search",
+     "explore-satellite",
+     "explore-topo",
+     "explore-fit",
+     "explore-zoom-in",
+     "explore-zoom-out",
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetSequence": [
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetFollowsVisualOrder": true,
+    "allVisible": true
+   }
+  },
+  {
+   "viewport": "390x844",
+   "state": "scrolled",
+   "variant": "before",
+   "scrollTop": 160,
+   "bodyTop": 570,
+   "headerBottom": 631,
+   "bodyStartsBelowHeader": false,
+   "summaryClipped": true,
+   "separator": false,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 510,
+     "w": 366,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 554,
+     "w": 366,
+     "h": 17
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 587,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 586,
+     "w": 306,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [
+    {
+     "text": "Limited-scale boundary. It cannot locate",
+     "row": "detail-back"
+    },
+    {
+     "text": "Limited-scale boundary. It cannot locate",
+     "row": "detail-title"
+    },
+    {
+     "text": "Ownership or management does not establi",
+     "row": "detail-back"
+    },
+    {
+     "text": "Ownership or management does not establi",
+     "row": "detail-title"
+    }
+   ],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale boundary. It canno",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 366,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "screenshot": "screenshots/before-390x844.png"
+  },
+  {
+   "viewport": "390x844",
+   "state": "top",
+   "variant": "after",
+   "scrollTop": 0,
+   "bodyTop": 641,
+   "headerBottom": 637,
+   "bodyStartsBelowHeader": true,
+   "summaryClipped": false,
+   "separator": false,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 510,
+     "w": 366,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 554,
+     "w": 366,
+     "h": 33
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 593,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 592,
+     "w": 306,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Source classification: USFS",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale boundary. It canno",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 366,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "focusOrder": {
+    "sequence": [
+     "explore-layers",
+     "explore-search",
+     "explore-satellite",
+     "explore-topo",
+     "explore-fit",
+     "explore-zoom-in",
+     "explore-zoom-out",
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetSequence": [
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetFollowsVisualOrder": true,
+    "allVisible": true
+   }
+  },
+  {
+   "viewport": "390x844",
+   "state": "scrolled",
+   "variant": "after",
+   "scrollTop": 160,
+   "bodyTop": 641,
+   "headerBottom": 637,
+   "bodyStartsBelowHeader": true,
+   "summaryClipped": false,
+   "separator": false,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 510,
+     "w": 366,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 554,
+     "w": 366,
+     "h": 33
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 593,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 592,
+     "w": 306,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 366,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "screenshot": "screenshots/after-390x844.png"
+  },
+  {
+   "viewport": "390x844",
+   "state": "top",
+   "variant": "proposal",
+   "scrollTop": 0,
+   "bodyTop": 642,
+   "headerBottom": 637,
+   "bodyStartsBelowHeader": true,
+   "summaryClipped": false,
+   "separator": true,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 510,
+     "w": 366,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 554,
+     "w": 366,
+     "h": 33
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 593,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 592,
+     "w": 306,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Source classification: USFS",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale boundary. It canno",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 366,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "focusOrder": {
+    "sequence": [
+     "explore-layers",
+     "explore-search",
+     "explore-satellite",
+     "explore-topo",
+     "explore-fit",
+     "explore-zoom-in",
+     "explore-zoom-out",
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetSequence": [
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetFollowsVisualOrder": true,
+    "allVisible": true
+   }
+  },
+  {
+   "viewport": "390x844",
+   "state": "scrolled",
+   "variant": "proposal",
+   "scrollTop": 160,
+   "bodyTop": 642,
+   "headerBottom": 637,
+   "bodyStartsBelowHeader": true,
+   "summaryClipped": false,
+   "separator": true,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 510,
+     "w": 366,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 554,
+     "w": 366,
+     "h": 33
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 593,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 592,
+     "w": 306,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 366,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "screenshot": "screenshots/proposal-390x844.png"
+  },
+  {
+   "viewport": "430x932",
+   "state": "top",
+   "variant": "before",
+   "scrollTop": 0,
+   "bodyTop": 623,
+   "headerBottom": 684,
+   "bodyStartsBelowHeader": false,
+   "summaryClipped": false,
+   "separator": false,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 563,
+     "w": 406,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 607,
+     "w": 406,
+     "h": 17
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 640,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 639,
+     "w": 346,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Source classification: USFS",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale boundary. It canno",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 406,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "focusOrder": {
+    "sequence": [
+     "explore-layers",
+     "explore-search",
+     "explore-satellite",
+     "explore-topo",
+     "explore-fit",
+     "explore-zoom-in",
+     "explore-zoom-out",
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetSequence": [
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetFollowsVisualOrder": true,
+    "allVisible": true
+   }
+  },
+  {
+   "viewport": "430x932",
+   "state": "scrolled",
+   "variant": "before",
+   "scrollTop": 160,
+   "bodyTop": 623,
+   "headerBottom": 684,
+   "bodyStartsBelowHeader": false,
+   "summaryClipped": false,
+   "separator": false,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 563,
+     "w": 406,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 607,
+     "w": 406,
+     "h": 17
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 640,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 639,
+     "w": 346,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [
+    {
+     "text": "Limited-scale boundary. It cannot locate",
+     "row": "detail-back"
+    },
+    {
+     "text": "Limited-scale boundary. It cannot locate",
+     "row": "detail-title"
+    },
+    {
+     "text": "Ownership or management does not establi",
+     "row": "detail-back"
+    },
+    {
+     "text": "Ownership or management does not establi",
+     "row": "detail-title"
+    }
+   ],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale boundary. It canno",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 406,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "screenshot": "screenshots/before-430x932.png"
+  },
+  {
+   "viewport": "430x932",
+   "state": "top",
+   "variant": "after",
+   "scrollTop": 0,
+   "bodyTop": 678,
+   "headerBottom": 674,
+   "bodyStartsBelowHeader": true,
+   "summaryClipped": false,
+   "separator": false,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 563,
+     "w": 406,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 607,
+     "w": 406,
+     "h": 17
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 629,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 629,
+     "w": 346,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Source classification: USFS",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale boundary. It canno",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 406,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "focusOrder": {
+    "sequence": [
+     "explore-layers",
+     "explore-search",
+     "explore-satellite",
+     "explore-topo",
+     "explore-fit",
+     "explore-zoom-in",
+     "explore-zoom-out",
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetSequence": [
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetFollowsVisualOrder": true,
+    "allVisible": true
+   }
+  },
+  {
+   "viewport": "430x932",
+   "state": "scrolled",
+   "variant": "after",
+   "scrollTop": 160,
+   "bodyTop": 678,
+   "headerBottom": 674,
+   "bodyStartsBelowHeader": true,
+   "summaryClipped": false,
+   "separator": false,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 563,
+     "w": 406,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 607,
+     "w": 406,
+     "h": 17
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 629,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 629,
+     "w": 346,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 406,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "screenshot": "screenshots/after-430x932.png"
+  },
+  {
+   "viewport": "430x932",
+   "state": "top",
+   "variant": "proposal",
+   "scrollTop": 0,
+   "bodyTop": 679,
+   "headerBottom": 674,
+   "bodyStartsBelowHeader": true,
+   "summaryClipped": false,
+   "separator": true,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 563,
+     "w": 406,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 607,
+     "w": 406,
+     "h": 17
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 629,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 629,
+     "w": 346,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Source classification: USFS",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale boundary. It canno",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 406,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "focusOrder": {
+    "sequence": [
+     "explore-layers",
+     "explore-search",
+     "explore-satellite",
+     "explore-topo",
+     "explore-fit",
+     "explore-zoom-in",
+     "explore-zoom-out",
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetSequence": [
+     "explore-sheet-toggle",
+     "explore-detail-back",
+     "Sources & coverage"
+    ],
+    "sheetFollowsVisualOrder": true,
+    "allVisible": true
+   }
+  },
+  {
+   "viewport": "430x932",
+   "state": "scrolled",
+   "variant": "proposal",
+   "scrollTop": 160,
+   "bodyTop": 679,
+   "headerBottom": 674,
+   "bodyStartsBelowHeader": true,
+   "summaryClipped": false,
+   "separator": true,
+   "rows": {
+    "sheet-toggle": {
+     "x": 12,
+     "y": 563,
+     "w": 406,
+     "h": 44
+    },
+    "summary": {
+     "x": 12,
+     "y": 607,
+     "w": 406,
+     "h": 17
+    },
+    "detail-back": {
+     "x": 12,
+     "y": 629,
+     "w": 52,
+     "h": 44
+    },
+    "detail-title": {
+     "x": 72,
+     "y": 629,
+     "w": 346,
+     "h": 45
+    }
+   },
+   "ownership": [
+    {
+     "id": "sheet-toggle",
+     "ownsCentre": true
+    },
+    {
+     "id": "summary",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-back",
+     "ownsCentre": true
+    },
+    {
+     "id": "detail-title",
+     "ownsCentre": true
+    }
+   ],
+   "underHeader": [],
+   "contrast": [
+    {
+     "el": "explore-sheet-toggle",
+     "text": "Results · Expand",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-summary",
+     "text": "102 trail segments · 9 campgroun",
+     "fontPx": 11,
+     "ratio": 5.21,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "text": "Back",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-title",
+     "text": "USFS — Forest Service; generaliz",
+     "fontPx": 18,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Ownership or management does not",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Five limited-scale management po",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "No public-access evidence is loa",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "p",
+     "text": "Limited-scale management context",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    },
+    {
+     "el": "button",
+     "text": "Sources & coverage",
+     "fontPx": 15,
+     "ratio": 14.58,
+     "required": 4.5,
+     "pass": true
+    }
+   ],
+   "targets": [
+    {
+     "el": "explore-sheet-toggle",
+     "w": 406,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "explore-detail-back",
+     "w": 52,
+     "h": 44,
+     "pass": true
+    },
+    {
+     "el": "Sources & coverage",
+     "w": 155,
+     "h": 44,
+     "pass": true
+    }
+   ],
+   "wording": {
+    "W3": true,
+    "W7": true,
+    "W11": true,
+    "label": true,
+    "closures": true
+   },
+   "detailTextSha256": "fe4bb95152b32e0cc34c9bc3f8364e17f0b8d9dc453cb8b5df6e187effaffb2b",
+   "screenshot": "screenshots/proposal-430x932.png"
+  }
+ ],
+ "chrome": "Google Chrome 155.0.8059.80",
+ "blockedNonLocalRequests": 0,
+ "detailTextIdenticalAcrossVariants": true,
+ "summary": {
+  "before": {
+   "bodyStartsBelowHeader": false,
+   "headerRowsOwnTheirCentres": true,
+   "bodyElementsUnderHeaderRows": 8,
+   "summaryClipped": true,
+   "headerBodySeparator": false,
+   "minContrast": 5.21,
+   "contrastFailures": [],
+   "targetFailures": [],
+   "focusFollowsVisualOrder": true,
+   "protectedWordingIntact": true
+  },
+  "after": {
+   "bodyStartsBelowHeader": true,
+   "headerRowsOwnTheirCentres": true,
+   "bodyElementsUnderHeaderRows": 0,
+   "summaryClipped": false,
+   "headerBodySeparator": false,
+   "minContrast": 5.21,
+   "contrastFailures": [],
+   "targetFailures": [],
+   "focusFollowsVisualOrder": true,
+   "protectedWordingIntact": true
+  },
+  "proposal": {
+   "bodyStartsBelowHeader": true,
+   "headerRowsOwnTheirCentres": true,
+   "bodyElementsUnderHeaderRows": 0,
+   "summaryClipped": false,
+   "headerBodySeparator": true,
+   "minContrast": 5.21,
+   "contrastFailures": [],
+   "targetFailures": [],
+   "focusFollowsVisualOrder": true,
+   "protectedWordingIntact": true
+  }
+ }
+}
