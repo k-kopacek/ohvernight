@@ -40,5 +40,6 @@ modules. The source audit below records the existing inventory and gaps.
 1. Add reviewed campground/designated-dispersed inventory via region-aware RIDB import; maintain source-level exclusions for day use.
 2. Add current federal/county restriction evidence, precise parcel context and reviewed facility rules. Source timestamps and failed-refresh messages already accompany imported context.
 3. Add county/state trails after source and reuse review.
-4. Complete real-device checks of both regions in shared Explore before merge.
+4. iPhone Safari validation of both regions passed before M3 merged; iPad and
+   Android device checks remain unverified and deferred.
 5. Test cross-boundary trips explicitly; never assume county-clipped segments describe complete Rampart routes.

@@ -22,4 +22,5 @@ features or weakens restrictions. See the
 Rebuild from the repository root with
 `v2/pipeline/.venv/bin/python v2/pipeline/scripts/build_display.py`; generated
 files are never hand-edited. Automated browser checks cover all four sizes;
-real iOS Safari and Android Chrome checks remain required before merge.
+the final iPhone Safari check passed before M3 merged. iPad and Android device
+checks remain unverified and deferred.
